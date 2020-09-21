@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="BranchesTreeState">
+    <expand>
+      <path>
+        <item name="ROOT" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="LOCAL_ROOT" type="e8cecc67:BranchNodeDescriptor" />
+      </path>
+    </expand>
+    <select />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="5f28a1c0-e56b-430c-84c6-97f1a79a83a8" name="Default Changelist" comment="">
+      <change afterPath="$PROJECT_DIR$/app/controller/api/admin/authRedirect.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/controller/api/admin/authRedirect_test.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/migrate/alipayAuth.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/migrate/merchant.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/migrate/migrate.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/model/alipayAuth.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/model/merchant.go" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Go File" />
+      </list>
+    </option>
+  </component>
+  <component name="GOROOT" path="/usr/local/go" />
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="GoLibraries">
+    <option name="indexEntireGoPath" value="false" />
+  </component>
+  <component name="ProjectId" id="1h5t3qhl9jUDpKFcpjrTBY51Bxk" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">
+    <property name="DefaultGoTemplateProperty" value="Go File" />
+    <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
+    <property name="WebServerToolWindowFactoryState" value="false" />
+    <property name="configurable.Global.GOPATH.is.expanded" value="true" />
+    <property name="configurable.Module.GOPATH.is.expanded" value="false" />
+    <property name="configurable.Project.GOPATH.is.expanded" value="true" />
+    <property name="go.import.settings.migrated" value="true" />
+    <property name="go.sdk.automatically.set" value="true" />
+    <property name="go.tried.to.enable.integration.vgo.integrator" value="true" />
+    <property name="go.vendoring.notification.had.been.shown" value="true" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/app/migrate" />
+    <property name="node.js.detected.package.eslint" value="true" />
+    <property name="node.js.detected.package.tslint" value="true" />
+    <property name="node.js.path.for.package.eslint" value="project" />
+    <property name="node.js.path.for.package.tslint" value="project" />
+    <property name="node.js.selected.package.eslint" value="(autodetect)" />
+    <property name="node.js.selected.package.tslint" value="(autodetect)" />
+    <property name="settings.editor.selected.configurable" value="go.vgo" />
+  </component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/app/migrate" />
+      <recent name="$PROJECT_DIR$/app/controller/api/admin" />
+    </key>
+  </component>
+  <component name="RunManager" selected="Go Test.TestAuthRedirectController_Get in gincmf/app/controller/api/admin">
+    <configuration name="go build gincmf" type="GoApplicationRunConfiguration" factoryName="Go Application" temporary="true" nameIsGenerated="true">
+      <module name="alipay_isv_go" />
+      <working_directory value="$PROJECT_DIR$" />
+      <kind value="PACKAGE" />
+      <filePath value="$PROJECT_DIR$/main.go" />
+      <package value="gincmf" />
+      <directory value="$PROJECT_DIR$" />
+      <method v="2" />
+    </configuration>
+    <configuration name="TestAuthRedirectController_Get in gincmf/app/controller/api/admin" type="GoTestRunConfiguration" factoryName="Go Test" temporary="true" nameIsGenerated="true">
+      <module name="alipay_isv_go" />
+      <working_directory value="$PROJECT_DIR$/app/controller/api/admin" />
+      <framework value="gotest" />
+      <kind value="PACKAGE" />
+      <package value="gincmf/app/controller/api/admin" />
+      <directory value="$PROJECT_DIR$" />
+      <filePath value="$PROJECT_DIR$" />
+      <pattern value="^TestAuthRedirectController_Get$" />
+      <method v="2" />
+    </configuration>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Go Test.TestAuthRedirectController_Get in gincmf/app/controller/api/admin" />
+        <item itemvalue="Go Build.go build gincmf" />
+      </list>
+    </recent_temporary>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+    <option name="oldMeFiltersMigrated" value="true" />
+  </component>
+  <component name="VgoProject">
+    <integration-enabled>true</integration-enabled>
+    <environment>
+      <map>
+        <entry key="GOPROXY" value="goproxy.cn" />
+      </map>
+    </environment>
+  </component>
+  <component name="WindowStateProjectService">
+    <state x="619" y="296" key="EnvironmentVariablesDialog" timestamp="1599328419735">
+      <screen x="0" y="23" width="1440" height="825" />
+    </state>
+    <state x="619" y="296" key="EnvironmentVariablesDialog/0.23.1440.825@0.23.1440.825" timestamp="1599328419735" />
+    <state width="1398" height="330" key="GridCell.Tab.0.bottom" timestamp="1600494896648">
+      <screen x="0" y="23" width="1440" height="824" />
+    </state>
+    <state width="1398" height="330" key="GridCell.Tab.0.bottom/0.0.1440.900@0.0.1440.900" timestamp="1599728403136" />
+    <state width="1398" height="330" key="GridCell.Tab.0.bottom/0.23.1440.824@0.23.1440.824" timestamp="1600494896648" />
+    <state width="1398" height="208" key="GridCell.Tab.0.bottom/0.23.1440.825@0.23.1440.825" timestamp="1599361389828" />
+    <state width="1398" height="208" key="GridCell.Tab.0.bottom/0.23.1440.826@0.23.1440.826" timestamp="1599337480196" />
+    <state width="1398" height="208" key="GridCell.Tab.0.bottom/0.23.1440.827@0.23.1440.827" timestamp="1599315905619" />
+    <state width="1398" height="208" key="GridCell.Tab.0.bottom/0.23.1440.828@0.23.1440.828" timestamp="1599312648637" />
+    <state width="1398" height="330" key="GridCell.Tab.0.center" timestamp="1600494896647">
+      <screen x="0" y="23" width="1440" height="824" />
+    </state>
+    <state width="1398" height="330" key="GridCell.Tab.0.center/0.0.1440.900@0.0.1440.900" timestamp="1599728403134" />
+    <state width="1398" height="330" key="GridCell.Tab.0.center/0.23.1440.824@0.23.1440.824" timestamp="1600494896647" />
+    <state width="1398" height="208" key="GridCell.Tab.0.center/0.23.1440.825@0.23.1440.825" timestamp="1599361389827" />
+    <state width="1398" height="208" key="GridCell.Tab.0.center/0.23.1440.826@0.23.1440.826" timestamp="1599337480195" />
+    <state width="1398" height="208" key="GridCell.Tab.0.center/0.23.1440.827@0.23.1440.827" timestamp="1599315905618" />
+    <state width="1398" height="208" key="GridCell.Tab.0.center/0.23.1440.828@0.23.1440.828" timestamp="1599312648635" />
+    <state width="1398" height="330" key="GridCell.Tab.0.left" timestamp="1600494896646">
+      <screen x="0" y="23" width="1440" height="824" />
+    </state>
+    <state width="1398" height="330" key="GridCell.Tab.0.left/0.0.1440.900@0.0.1440.900" timestamp="1599728403132" />
+    <state width="1398" height="330" key="GridCell.Tab.0.left/0.23.1440.824@0.23.1440.824" timestamp="1600494896646" />
+    <state width="1398" height="208" key="GridCell.Tab.0.left/0.23.1440.825@0.23.1440.825" timestamp="1599361389827" />
+    <state width="1398" height="208" key="GridCell.Tab.0.left/0.23.1440.826@0.23.1440.826" timestamp="1599337480195" />
+    <state width="1398" height="208" key="GridCell.Tab.0.left/0.23.1440.827@0.23.1440.827" timestamp="1599315905609" />
+    <state width="1398" height="208" key="GridCell.Tab.0.left/0.23.1440.828@0.23.1440.828" timestamp="1599312648634" />
+    <state width="1398" height="330" key="GridCell.Tab.0.right" timestamp="1600494896647">
+      <screen x="0" y="23" width="1440" height="824" />
+    </state>
+    <state width="1398" height="330" key="GridCell.Tab.0.right/0.0.1440.900@0.0.1440.900" timestamp="1599728403136" />
+    <state width="1398" height="330" key="GridCell.Tab.0.right/0.23.1440.824@0.23.1440.824" timestamp="1600494896647" />
+    <state width="1398" height="208" key="GridCell.Tab.0.right/0.23.1440.825@0.23.1440.825" timestamp="1599361389827" />
+    <state width="1398" height="208" key="GridCell.Tab.0.right/0.23.1440.826@0.23.1440.826" timestamp="1599337480196" />
+    <state width="1398" height="208" key="GridCell.Tab.0.right/0.23.1440.827@0.23.1440.827" timestamp="1599315905619" />
+    <state width="1398" height="208" key="GridCell.Tab.0.right/0.23.1440.828@0.23.1440.828" timestamp="1599312648636" />
+    <state x="221" y="66" key="SettingsEditor" timestamp="1599328422837">
+      <screen x="0" y="23" width="1440" height="825" />
+    </state>
+    <state x="221" y="66" key="SettingsEditor/0.23.1440.825@0.23.1440.825" timestamp="1599328422837" />
+    <state x="100" y="123" width="1240" height="609" key="com.intellij.history.integration.ui.views.FileHistoryDialog" timestamp="1599441216589">
+      <screen x="0" y="23" width="1440" height="824" />
+    </state>
+    <state x="100" y="123" width="1240" height="609" key="com.intellij.history.integration.ui.views.FileHistoryDialog/0.23.1440.824@0.23.1440.824" timestamp="1599441216589" />
+    <state x="518" y="348" key="com.intellij.openapi.vcs.update.UpdateOrStatusOptionsDialogupdate-v2" timestamp="1599353193586">
+      <screen x="0" y="23" width="1440" height="825" />
+    </state>
+    <state x="518" y="348" key="com.intellij.openapi.vcs.update.UpdateOrStatusOptionsDialogupdate-v2/0.23.1440.825@0.23.1440.825" timestamp="1599353193586" />
+    <state x="385" y="196" width="670" height="676" key="search.everywhere.popup" timestamp="1599706053893">
+      <screen x="0" y="0" width="1440" height="900" />
+    </state>
+    <state x="385" y="196" width="670" height="676" key="search.everywhere.popup/0.0.1440.900@0.0.1440.900" timestamp="1599706053893" />
+  </component>
+</project>
