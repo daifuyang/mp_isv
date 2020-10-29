@@ -1,508 +1,370 @@
 [
   {
-    "unique_name": "settings",
-    "name": "系统设置",
-    "path": "/settings",
+    "unique_name": "admin/dashboard",
+    "name": "工作台",
+    "path": "/admin/dashboard",
     "icon": "",
     "hide_in_menu": 0,
+    "list_order": 1
+  },
+  {
+    "unique_name": "admin/order/default",
+    "name": "订单管理",
+    "path": "/admin/order/default",
+    "icon": "",
+    "hide_in_menu": 0,
+    "list_order": 2,
     "children": [
       {
-        "unique_name": "websites",
-        "name": "站点设置",
-        "path": "/settings/websites",
+        "unique_name": "admin/order/business",
+        "name": "业务订单",
+        "path": "/admin/order/business",
         "icon": "",
         "hide_in_menu": 0,
-        "children": [
-          {
-            "unique_name": "websitesList",
-            "name": "查看",
-            "path": "",
-            "icon": "",
-            "hide_in_menu": 0,
-            "title": "站点设置查看"
-          },
-          {
-            "unique_name": "websitesPost",
-            "name": "提交",
-            "path": "",
-            "icon": "",
-            "hide_in_menu": 0,
-            "title": "站点设置提交"
-          }
-        ]
+        "list_order": 10000
       },
       {
-        "unique_name": "themes",
+        "unique_name": "admin/order/member",
+        "name": "会员订单",
+        "path": "/admin/order/member",
+        "icon": "",
+        "hide_in_menu": 0,
+        "list_order": 10000
+      },
+      {
+        "unique_name": "admin/order/coupon",
+        "name": "卡券订单",
+        "path": "/admin/order/coupon",
+        "icon": "",
+        "hide_in_menu": 0,
+        "list_order": 10000
+      }
+    ]
+  },
+  {
+    "unique_name": "admin/dishes/default",
+    "name": "菜单管理",
+    "path": "/admin/dishes/default",
+    "icon": "",
+    "hide_in_menu": 0,
+    "list_order": 3,
+    "children": [
+      {
+        "unique_name": "admin/dishes/goods",
+        "name": "商品管理",
+        "path": "/admin/dishes/goods",
+        "icon": "",
+        "hide_in_menu": 0,
+        "list_order": 10000
+      },
+      {
+        "unique_name": "admin/dishes/category",
+        "name": "分类管理",
+        "path": "/admin/dishes/category",
+        "icon": "",
+        "hide_in_menu": 0,
+        "list_order": 10000
+      }
+    ]
+  },
+  {
+    "unique_name": "admin/desk/default",
+    "name": "桌位管理",
+    "path": "/admin/desk/default",
+    "icon": "",
+    "hide_in_menu": 0,
+    "list_order": 4,
+    "children": [
+      {
+        "unique_name": "admin/desk/index",
+        "name": "桌位管理",
+        "path": "/admin/desk/index",
+        "icon": "",
+        "hide_in_menu": 0,
+        "list_order": 10000
+      },
+      {
+        "unique_name": "admin/desk/category",
+        "name": "桌位类型",
+        "path": "/admin/desk/category",
+        "icon": "",
+        "hide_in_menu": 0,
+        "list_order": 10000
+      }
+    ]
+  },
+  {
+    "unique_name": "admin/member/default",
+    "name": "会员管理",
+    "path": "/admin/member/default",
+    "icon": "",
+    "hide_in_menu": 0,
+    "list_order": 5,
+    "children": [
+      {
+        "unique_name": "admin/member/index",
+        "name": "用户列表",
+        "path": "/admin/member/index",
+        "icon": "",
+        "hide_in_menu": 0,
+        "list_order": 10000
+      },
+      {
+        "unique_name": "admin/member/group",
+        "name": "用户分组",
+        "path": "/admin/member/group",
+        "icon": "",
+        "hide_in_menu": 0,
+        "list_order": 10000
+      }
+    ]
+  },
+  {
+    "unique_name": "admin/marketing/default",
+    "name": "营销管理",
+    "path": "/admin/marketing/default",
+    "icon": "",
+    "hide_in_menu": 0,
+    "list_order": 70,
+    "children": [
+      {
+        "unique_name": "admin/marketing/card",
+        "name": "会员卡设置",
+        "path": "/admin/marketing/card",
+        "icon": "",
+        "hide_in_menu": 0,
+        "list_order": 10000
+      },
+      {
+        "unique_name": "admin/marketing/coupon",
+        "name": "优惠券管理",
+        "path": "/admin/marketing/coupon",
+        "icon": "",
+        "hide_in_menu": 0,
+        "list_order": 10000
+      },
+      {
+        "unique_name": "admin/marketing/score",
+        "name": "积分设置",
+        "path": "/admin/marketing/score",
+        "icon": "",
+        "hide_in_menu": 0,
+        "list_order": 10000
+      }
+    ]
+  },
+  {
+    "unique_name": "admin/statistics/default",
+    "name": "数据统计",
+    "path": "/admin/statistics/default",
+    "icon": "",
+    "hide_in_menu": 0,
+    "list_order": 80,
+    "children": [
+      {
+        "unique_name": "user/statistics/summary",
+        "name": "店铺概况",
+        "path": "/user_manage/admin_user/summary",
+        "icon": "",
+        "list_order": 1,
+        "hide_in_menu": 0
+      },
+      {
+        "unique_name": "user/statistics/analyze",
+        "name": "经营分析",
+        "path": "/user_manage/admin_user/analyze",
+        "icon": "",
+        "list_order": 2,
+        "hide_in_menu": 0
+      }
+    ]
+  },
+  {
+    "unique_name": "admin/theme/default",
+    "name": "主题管理",
+    "path": "/admin/theme/default",
+    "icon": "",
+    "hide_in_menu": 0,
+    "list_order": 90,
+    "children": [
+      {
+        "unique_name": "admin/theme/index",
         "name": "主题设置",
-        "path": "/settings/themes",
-        "icon": "",
-        "hide_in_menu": 0
-      },
-      {
-        "unique_name": "nav",
-        "name": "导航设置",
-        "path": "/settings/nav",
-        "icon": "",
-        "hide_in_menu": 0
-      },
-      {
-        "unique_name": "slide",
-        "name": "轮播图管理",
-        "path": "/settings/slide",
+        "path": "/admin/theme/index",
         "icon": "",
         "hide_in_menu": 0,
-        "children": [
-          {
-            "unique_name": "slideList",
-            "name": "轮播图列表",
-            "path": "",
-            "icon": "",
-            "hide_in_menu": 0
-          },
-          {
-            "unique_name": "addSlide",
-            "name": "添加轮播图",
-            "path": "",
-            "icon": "",
-            "hide_in_menu": 0
-          },
-          {
-            "unique_name": "editSlide",
-            "name": "编辑轮播图",
-            "path": "",
-            "icon": "",
-            "hide_in_menu": 0
-          },
-          {
-            "unique_name": "deleteSlide",
-            "name": "删除轮播图",
-            "path": "",
-            "icon": "",
-            "hide_in_menu": 0
-          },
-          {
-            "unique_name": "slideItem",
-            "name": "轮播图页面管理",
-            "path": "/settings/slide_item/:id",
-            "icon": "",
-            "hide_in_menu": 1,
-            "children": [
-              {
-                "unique_name": "slideItemIndex",
-                "name": "轮播图页面列表",
-                "path": "",
-                "icon": "",
-                "hide_in_menu": 0
-              },
-              {
-                "unique_name": "addSlideItem",
-                "name": "新增轮播图页面",
-                "path": "",
-                "icon": "",
-                "hide_in_menu": 0
-              },
-              {
-                "unique_name": "editSlideItem",
-                "name": "编辑轮播图页面",
-                "path": "",
-                "icon": "",
-                "hide_in_menu": 0
-              },
-              {
-                "unique_name": "deleteSlideItem",
-                "name": "删除轮播图页面",
-                "path": "",
-                "icon": "",
-                "hide_in_menu": 0
-              }
-            ]
-          }
-        ]
+        "list_order": 10
       },
       {
-        "unique_name": "assets",
-        "name": "素材管理",
-        "path": "/settings/assets",
+        "unique_name": "admin/theme/page",
+        "name": "微页面",
+        "path": "/admin/theme/page",
         "icon": "",
         "hide_in_menu": 0,
-        "children": [
-          {
-            "unique_name": "assetsList",
-            "name": "素材列表",
-            "path": "",
-            "icon": "",
-            "hide_in_menu": 0
-          },
-          {
-            "unique_name": "addAssets",
-            "name": "添加素材",
-            "path": "",
-            "icon": "",
-            "hide_in_menu": 0
-          },
-          {
-            "unique_name": "deleteAssets",
-            "name": "删除素材",
-            "path": "",
-            "icon": "",
-            "hide_in_menu": 0
-          }
-        ]
+        "list_order": 20
       },
       {
-        "unique_name": "upload",
-        "name": "上传设置",
-        "path": "/settings/upload",
+        "unique_name": "admin/theme/assets",
+        "name": "素材中心",
+        "path": "/admin/theme/assets",
         "icon": "",
         "hide_in_menu": 0,
-        "children": [
-          {
-            "unique_name": "uploadList",
-            "name": "查看",
-            "path": "",
-            "icon": "",
-            "hide_in_menu": 0,
-            "title": "上传设置查看"
-          },
-          {
-            "unique_name": "uploadPost",
-            "name": "提交",
-            "path": "",
-            "icon": "",
-            "hide_in_menu": 0,
-            "title": "上传设置提交"
-          }
-        ]
+        "list_order": 10000
+      },
+      {
+        "unique_name": "admin/theme/setting",
+        "name": "店铺设置",
+        "path": "/admin/theme/index",
+        "icon": "",
+        "hide_in_menu": 0,
+        "list_order": 10
       }
     ]
   },
   {
-    "unique_name": "userManage",
+    "unique_name": "admin/store/default",
+    "name": "门店管理",
+    "path": "/admin/store/default",
+    "icon": "",
+    "hide_in_menu": 0,
+    "list_order": 91,
+    "children": [
+      {
+        "unique_name": "admin/store/index",
+        "name": "门店列表",
+        "path": "/admin/store/index",
+        "icon": "",
+        "hide_in_menu": 0,
+        "list_order": 10000
+      },
+      {
+        "unique_name": "admin/store/tags",
+        "name": "门店标签",
+        "path": "/admin/store/tags",
+        "icon": "",
+        "hide_in_menu": 0,
+        "list_order": 10000
+      },
+      {
+        "unique_name": "admin/store/printer",
+        "name": "打印机绑定",
+        "path": "/admin/store/printer",
+        "icon": "",
+        "hide_in_menu": 0,
+        "list_order": 10000
+      }
+    ]
+  },
+  {
+    "unique_name": "admin/user/default",
     "name": "用户管理",
-    "path": "/user_manage",
+    "path": "/admin/user/default",
     "icon": "",
     "hide_in_menu": 0,
+    "list_order": 100,
     "children": [
       {
-        "unique_name": "adminGroup",
-        "name": "管理组",
-        "path": "/user_manage/admin_group",
+        "unique_name": "admin/user/index",
+        "name": "账号设置",
+        "path": "/admin/user/index",
         "icon": "",
         "hide_in_menu": 0,
+        "list_order": 1,
         "children": [
           {
-            "unique_name": "adminRole",
-            "name": "角色管理",
-            "path": "/user_manage/admin_role",
+            "unique_name": "admin/user/add",
+            "name": "添加管理员",
+            "path": "/admin/user/add",
             "icon": "",
-            "hide_in_menu": 0,
-            "children": [
-              {
-                "unique_name": "adminRoleList",
-                "name": "角色列表",
-                "path": "",
-                "icon": "",
-                "hide_in_menu": 0
-              },
-              {
-                "unique_name": "adminRoleEdit",
-                "name": "角色编辑",
-                "path": "",
-                "icon": "",
-                "hide_in_menu": 0
-              },
-              {
-                "unique_name": "adminRoleDelete",
-                "name": "角色删除",
-                "path": "",
-                "icon": "",
-                "hide_in_menu": 0
-              },
-              {
-                "unique_name": "roleAuthorizeAdd",
-                "name": "角色权限添加",
-                "path": "/user_manage/authorize/add",
-                "icon": "",
-                "hide_in_menu": 1
-              },
-              {
-                "unique_name": "roleAuthorizeEdit",
-                "name": "角色权限编辑",
-                "path": "/user_manage/authorize/edit/:id",
-                "icon": "",
-                "hide_in_menu": 1
-              }
-            ]
+            "hide_in_menu": 1
           },
           {
-            "unique_name": "admin",
-            "name": "管理员",
-            "path": "/user_manage/admin",
+            "unique_name": "admin/user/edit",
+            "name": "编辑管理员",
+            "path": "/admin/user/edit/:id",
             "icon": "",
-            "hide_in_menu": 0
+            "hide_in_menu": 1
           }
         ]
       },
       {
-        "unique_name": "userGroup",
-        "name": "用户组",
-        "path": "/user_manage/user_group",
+        "unique_name": "admin/role/default",
+        "name": "角色管理",
+        "path": "/admin/role/default",
         "icon": "",
-        "hide_in_menu": 0
+        "list_order": 10000,
+        "hide_in_menu": 0,
+        "children": [
+          {
+            "unique_name": "admin/role/list",
+            "name": "角色列表",
+            "path": "",
+            "icon": "",
+            "hide_in_menu": 0
+          },
+          {
+            "unique_name": "admin/role/edit",
+            "name": "角色编辑",
+            "path": "",
+            "icon": "",
+            "hide_in_menu": 0
+          },
+          {
+            "unique_name": "admin/role/delete",
+            "name": "角色删除",
+            "path": "",
+            "icon": "",
+            "hide_in_menu": 0
+          },
+          {
+            "unique_name": "admin/authorize/add",
+            "name": "角色权限添加",
+            "path": "/user_manage/authorize/add",
+            "icon": "",
+            "hide_in_menu": 1
+          },
+          {
+            "unique_name": "admin/authorize/edit",
+            "name": "角色权限编辑",
+            "path": "/admin/authorize/edit/:id",
+            "icon": "",
+            "hide_in_menu": 1
+          }
+        ]
       }
     ]
   },
   {
-    "unique_name": "course",
-    "name": "课程管理",
-    "path": "/course",
+    "unique_name": "admin/settings/default",
+    "name": "系统设置",
+    "path": "/admin/settings/default",
     "icon": "",
     "hide_in_menu": 0,
+    "list_order": 110,
     "children": [
       {
-        "unique_name": "courseArticle",
-        "name": "图文管理",
-        "path": "/course/article",
+        "unique_name": "admin/settings/index",
+        "name": "通用设置",
+        "path": "/admin/settings/index",
         "icon": "",
         "hide_in_menu": 0,
-        "children": [
-          {
-            "unique_name": "courseArticleList",
-            "name": "图文列表",
-            "path": "",
-            "icon": "",
-            "hide_in_menu": 0
-          },
-          {
-            "unique_name": "addCourseArticle",
-            "name": "添加图文",
-            "path": "",
-            "icon": "",
-            "hide_in_menu": 0
-          },
-          {
-            "unique_name": "editCourseArticle",
-            "name": "编辑图文",
-            "path": "",
-            "icon": "",
-            "hide_in_menu": 0
-          },
-          {
-            "unique_name": "deleteCourseArticle",
-            "name": "删除图文",
-            "path": "",
-            "icon": "",
-            "hide_in_menu": 0
-          }
-        ]
+        "list_order": 10000
       },
       {
-        "unique_name": "courseAudio",
-        "name": "音频管理",
-        "path": "/course/audio",
+        "unique_name": "admin/settings/logistics",
+        "name": "物流设置",
+        "path": "/admin/settings/logistics",
         "icon": "",
         "hide_in_menu": 0,
-        "children": [
-          {
-            "unique_name": "courseAudioList",
-            "name": "音频列表",
-            "path": "",
-            "icon": "",
-            "hide_in_menu": 0
-          },
-          {
-            "unique_name": "addCourseAudio",
-            "name": "添加音频",
-            "path": "",
-            "icon": "",
-            "hide_in_menu": 0
-          },
-          {
-            "unique_name": "editCourseAudio",
-            "name": "编辑音频",
-            "path": "",
-            "icon": "",
-            "hide_in_menu": 0
-          },
-          {
-            "unique_name": "deleteCourseAudio",
-            "name": "删除音频",
-            "path": "",
-            "icon": "",
-            "hide_in_menu": 0
-          }
-        ]
+        "list_order": 10000
       },
       {
-        "unique_name": "courseVideo",
-        "name": "视频管理",
-        "path": "/course/video",
+        "unique_name": "admin/settings/cashier",
+        "name": "收银配置",
+        "path": "/admin/settings/cashier",
         "icon": "",
         "hide_in_menu": 0,
-        "children": [
-          {
-            "unique_name": "courseVideoList",
-            "name": "视频列表",
-            "path": "",
-            "icon": "",
-            "hide_in_menu": 0
-          },
-          {
-            "unique_name": "addCourseVideo",
-            "name": "添加视频",
-            "path": "",
-            "icon": "",
-            "hide_in_menu": 0
-          },
-          {
-            "unique_name": "editCourseVideo",
-            "name": "编辑视频",
-            "path": "",
-            "icon": "",
-            "hide_in_menu": 0
-          },
-          {
-            "unique_name": "deleteCourseVideo",
-            "name": "删除视频",
-            "path": "",
-            "icon": "",
-            "hide_in_menu": 0
-          }
-        ]
-      },
-      {
-        "unique_name": "coursePackage",
-        "name": "专栏管理",
-        "path": "/course/package",
-        "icon": "",
-        "hide_in_menu": 0,
-        "children": [
-          {
-            "unique_name": "coursePackageList",
-            "name": "专栏列表",
-            "path": "",
-            "icon": "",
-            "hide_in_menu": 0
-          },
-          {
-            "unique_name": "addCoursePackage",
-            "name": "添加专栏",
-            "path": "",
-            "icon": "",
-            "hide_in_menu": 0
-          },
-          {
-            "unique_name": "editCoursePackage",
-            "name": "编辑专栏",
-            "path": "",
-            "icon": "",
-            "hide_in_menu": 0
-          },
-          {
-            "unique_name": "deleteCoursePackage",
-            "name": "删除专栏",
-            "path": "",
-            "icon": "",
-            "hide_in_menu": 0
-          },
-          {
-            "unique_name": "coursePackageItem",
-            "name": "专栏内容管理",
-            "path": "/course/package_item/:id",
-            "icon": "",
-            "hide_in_menu": 1,
-            "children": [
-              {
-                "unique_name": "coursePackageItemList",
-                "name": "商品列表",
-                "path": "",
-                "icon": "",
-                "hide_in_menu": 0
-              },
-              {
-                "unique_name": "addCoursePackageItem",
-                "name": "添加商品",
-                "path": "",
-                "icon": "",
-                "hide_in_menu": 0
-              },
-              {
-                "unique_name": "deleteCoursePackageItem",
-                "name": "移出商品",
-                "path": "",
-                "icon": "",
-                "hide_in_menu": 0
-              }
-            ]
-          }
-        ]
-      },
-      {
-        "unique_name": "courseGroup",
-        "name": "课程分组",
-        "path": "/course/group",
-        "icon": "",
-        "hide_in_menu": 0,
-        "children": [
-          {
-            "unique_name": "courseGroupList",
-            "name": "分组列表",
-            "path": "",
-            "icon": "",
-            "hide_in_menu": 0
-          },
-          {
-            "unique_name": "addCourseGroup",
-            "name": "添加分组",
-            "path": "",
-            "icon": "",
-            "hide_in_menu": 0
-          },
-          {
-            "unique_name": "editCourseGroup",
-            "name": "编辑分组",
-            "path": "",
-            "icon": "",
-            "hide_in_menu": 0
-          },
-          {
-            "unique_name": "deleteCourseGroup",
-            "name": "删除分组",
-            "path": "",
-            "icon": "",
-            "hide_in_menu": 0
-          },
-          {
-            "unique_name": "courseGroupItem",
-            "name": "分组内容管理",
-            "path": "/course/group_item/:id",
-            "icon": "",
-            "hide_in_menu": 1,
-            "children": [
-              {
-                "unique_name": "courseGroupItemList",
-                "name": "商品列表",
-                "path": "",
-                "icon": "",
-                "hide_in_menu": 0
-              },
-              {
-                "unique_name": "addCourseGroupItem",
-                "name": "添加商品",
-                "path": "",
-                "icon": "",
-                "hide_in_menu": 0
-              },
-              {
-                "unique_name": "deleteCourseGroupItem",
-                "name": "移出分组",
-                "path": "",
-                "icon": "",
-                "hide_in_menu": 0
-              }
-            ]
-          }
-        ]
+        "list_order": 10000
       }
     ]
   }

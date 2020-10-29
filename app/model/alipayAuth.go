@@ -7,6 +7,7 @@ package model
 
 type AlipayAuth struct {
 	Id              int    `gorm:"index:inx_id,unique" json:"id"`
+	TenantId        int    `gorm:"type:int(20);comment:租户id;not null" json:"tenant_id"`
 	UserId          string `gorm:"type:varchar(16);comment:授权商户的user_id;not null" json:"user_id"`
 	AuthAppId       string `gorm:"type:varchar(20);comment:授权商户的appid;not null" json:"auth_app_id"`
 	AppAuthToken    string `gorm:"type:varchar(40);comment:应用授权令牌;not null" json:"app_auth_token"`

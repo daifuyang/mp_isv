@@ -3,42 +3,88 @@
 ** @作者　　: return
 ** @描述　　:
  */
-package admin
+package controller
 
 import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"gincmf/app/model"
-	"github.com/gin-gonic/gin"
 	"github.com/gincmf/alipayEasySdk"
 	"github.com/gincmf/alipayEasySdk/base"
 	cmf "github.com/gincmf/cmf/bootstrap"
-	"github.com/gincmf/cmf/controller"
+	"github.com/skip2/go-qrcode"
+	"net/url"
 	"strconv"
 	"strings"
+	"testing"
 )
 
-type AuthRedirectController struct {
-	rc controller.RestController
+func TestAuthRedirectController_OpenAuth(t *testing.T) {
+	baseUrl := "https://openauth.alipay.com/oauth2/appToAppAuth.htm"
+	appId := "2021001192664075"
+	redirectUri := "http://www.gincmf.com/alipay/authRedirect"
+
+	stateMap := make(map[string]string,0)
+	stateMap["merchantId"] = "111222"
+	stateMap["mobile"] = "1762545859"
+
+
+	b,err :=  json.Marshal(stateMap)
+	if err != nil {
+		fmt.Println("err",err)
+	}
+
+	state := base64.StdEncoding.EncodeToString(b)
+
+	fmt.Println("state",state)
+
+	p := url.Values{}
+	p.Add("app_id",appId)
+	p.Add("redirect_uri",redirectUri)
+	p.Add("state",state)
+
+	e := p.Encode()
+
+	//e += "&state="+state
+	fmt.Println("e",e)
+
+
+	qcrodeUrl := baseUrl + "?" + e
+	fmt.Println("qcrodeUrl",qcrodeUrl)
+
+	q, err := qrcode.New(qcrodeUrl, qrcode.Medium)
+	if err != nil {
+		panic(err)
+	}
+
+	q.DisableBorder = true//去掉边框
+
+	//70*70一般手机最小能扫描的尺寸了  输出的文件名称:output.png
+	err = q.WriteFile(200, "output.png")
+	if err != nil {
+		panic(err)
+	}
+
+	// ?app_id=2021001192664075&redirect_uri=http%3A%2F%2Fwww.gincmf.com%2Falipay%2FauthRedirect&state=eyJhIjoxMjMsImIiOjQ1Nn0%3D
 }
 
-func (rest *AuthRedirectController) Get(c *gin.Context) {
+func TestAuthRedirectController_Get(t *testing.T) {
 
-	appId := c.Query("app_id")
-	appAuthCode := c.Query("app_auth_code")
-	fmt.Println("app_id",appId)
-	fmt.Println("app_auth_code",appAuthCode)
-	state := c.Query("state")
+	cmf.Initialize("../../../../conf/config.json")
+
+	appId := "2021001192664075"
+	appAuthCode := "Pe7ce3e638fd041358fd21a7add59e61"
+	state := "eyJhIjoiMTIzIiwiYiI6IjQ1NiJ9"
 
 	decoded, _ := base64.StdEncoding.DecodeString(state)
-	decodestr := string(decoded)
+	decodestr := string(decoded[:])
 
 	fmt.Println("state",decodestr)
 
 	op := alipayEasySdk.OptionsController{
 		Protocol:           "https",
-		GatewayHost:        "openapi.alipaydev.com/gateway.do",
+		GatewayHost:        "openapi.alipay.com/gateway.do",
 		SignType:           "RSA2",
 		AppId:              appId,
 		Charset:            "utf-8",
@@ -49,17 +95,14 @@ func (rest *AuthRedirectController) Get(c *gin.Context) {
 		NotifyUrl:          "",
 		EncryptKey:         "",
 	}
+
 	op.SetOptions()
-
 	oauth := base.Oauth{}
-
-
 	data := oauth.GetOpenToken(appAuthCode)
-
 	var result map[string]interface{}
 	json.Unmarshal(data, &result)
 
-	fmt.Println("result", result)
+	fmt.Println("result",result)
 
 	temp := result["alipay_open_auth_token_app_response"]
 	response := temp.(map[string]interface{})
@@ -111,11 +154,8 @@ func (rest *AuthRedirectController) Get(c *gin.Context) {
 			}else{
 				cmf.Db.Save(&auth)
 			}
-
-			rest.rc.Success(c, "授权成功！", auth)
-			return
 		}
+
 	}
 
-	rest.rc.Error(c, "授权失败！", result)
 }

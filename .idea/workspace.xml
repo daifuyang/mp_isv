@@ -1,23 +1,77 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="BranchesTreeState">
-    <expand>
-      <path>
-        <item name="ROOT" type="e8cecc67:BranchNodeDescriptor" />
-        <item name="LOCAL_ROOT" type="e8cecc67:BranchNodeDescriptor" />
-      </path>
-    </expand>
+    <expand />
     <select />
   </component>
   <component name="ChangeListManager">
     <list default="true" id="5f28a1c0-e56b-430c-84c6-97f1a79a83a8" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/app/controller/api/admin/authRedirect.go" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/controller/api/admin/authRedirect_test.go" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/migrate/alipayAuth.go" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/migrate/merchant.go" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/migrate/migrate.go" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/model/alipayAuth.go" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/model/merchant.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/controller/api/admin/adminMenu.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/controller/api/admin/assets.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/controller/api/admin/authAccess.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/controller/api/admin/authorize.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/controller/api/admin/role.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/controller/api/admin/settings.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/controller/api/admin/upload.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/controller/api/admin/user.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/controller/api/common/oauth.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/controller/api/common/output.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/controller/api/common/smsCode.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/controller/api/tenant/assets.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/controller/api/tenant/mpTheme.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/controller/api/tenant/mpThemePage.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/controller/api/tenant/tenant.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/controller/api/tenant/tenant_test.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/middleware/Db.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/migrate/adminMenu.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/migrate/asset.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/migrate/authAccess.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/migrate/authRule.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/migrate/log.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/migrate/option.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/migrate/role.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/migrate/tenant.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/model/SmsCode.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/model/adminMenu.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/model/asset.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/model/authAccess.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/model/authRule.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/model/default.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/model/log.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/model/mpTheme.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/model/option.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/model/role.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/model/tenant.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/util/smsCode.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/util/smsCode_test.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/util/util.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/plugins/alipayPlugin/controller/index.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/plugins/alipayPlugin/migrate/migrate.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/plugins/alipayPlugin/model/demo.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/plugins/alipayPlugin/router/api.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/plugins/restaurantPlugin/controller/dishes/category.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/plugins/restaurantPlugin/controller/dishes/index.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/plugins/restaurantPlugin/migrate/migrate.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/plugins/restaurantPlugin/router/api.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/public/uploads/default/20201006/23423882bf7de609dc52eed00f7f6b81.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/public/uploads/default/20201006/5c89ce976770a4221d0b61edad9b35d5.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/public/uploads/default/20201006/6ffdd0c13dff8296332ee6771b1fcc21.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/public/uploads/default/20201008/a735e9846bd8287a1ea7494031d3c06f.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/alipay-go" beforeDir="false" afterPath="$PROJECT_DIR$/alipay-go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/controller/api/admin/authRedirect.go" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/alipayPlugin/controller/auth.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/controller/api/admin/authRedirect_test.go" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/alipayPlugin/controller/auth_test.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/middleware/authapi.go" beforeDir="false" afterPath="$PROJECT_DIR$/app/middleware/authapi.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/migrate/migrate.go" beforeDir="false" afterPath="$PROJECT_DIR$/app/migrate/migrate.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/model/alipayAuth.go" beforeDir="false" afterPath="$PROJECT_DIR$/app/model/alipayAuth.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/conf/adminMenu.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/conf/config.json" beforeDir="false" afterPath="$PROJECT_DIR$/conf/config.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/conf/menu.json" beforeDir="false" afterPath="$PROJECT_DIR$/conf/menu.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data.db" beforeDir="false" afterPath="$PROJECT_DIR$/data.db" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/go.mod" beforeDir="false" afterPath="$PROJECT_DIR$/go.mod" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/go.sum" beforeDir="false" afterPath="$PROJECT_DIR$/go.sum" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/main.go" beforeDir="false" afterPath="$PROJECT_DIR$/main.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/router/api.go" beforeDir="false" afterPath="$PROJECT_DIR$/router/api.go" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -44,6 +98,7 @@
     <option name="showLibraryContents" value="true" />
   </component>
   <component name="PropertiesComponent">
+    <property name="ASKED_ADD_EXTERNAL_FILES" value="true" />
     <property name="DefaultGoTemplateProperty" value="Go File" />
     <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
     <property name="WebServerToolWindowFactoryState" value="false" />
@@ -54,22 +109,32 @@
     <property name="go.sdk.automatically.set" value="true" />
     <property name="go.tried.to.enable.integration.vgo.integrator" value="true" />
     <property name="go.vendoring.notification.had.been.shown" value="true" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$/app/migrate" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/plugins" />
     <property name="node.js.detected.package.eslint" value="true" />
     <property name="node.js.detected.package.tslint" value="true" />
     <property name="node.js.path.for.package.eslint" value="project" />
     <property name="node.js.path.for.package.tslint" value="project" />
     <property name="node.js.selected.package.eslint" value="(autodetect)" />
     <property name="node.js.selected.package.tslint" value="(autodetect)" />
-    <property name="settings.editor.selected.configurable" value="go.vgo" />
+    <property name="settings.editor.selected.configurable" value="editing.templates" />
   </component>
   <component name="RecentsManager">
-    <key name="CopyFile.RECENT_KEYS">
-      <recent name="$PROJECT_DIR$/app/migrate" />
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/plugins/restaurantPlugin/controller/dishes" />
+      <recent name="$PROJECT_DIR$/plugins/alipayPlugin/controller" />
+      <recent name="$PROJECT_DIR$/app/controller/api/common" />
+      <recent name="$PROJECT_DIR$/app/controller/api/tenant" />
       <recent name="$PROJECT_DIR$/app/controller/api/admin" />
     </key>
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/plugins" />
+      <recent name="$PROJECT_DIR$/plugins/alipayPlugin/controller" />
+      <recent name="$PROJECT_DIR$/plugins/alipayPlugin" />
+      <recent name="$PROJECT_DIR$/app/migrate" />
+      <recent name="$PROJECT_DIR$/app/controller/api/tenant" />
+    </key>
   </component>
-  <component name="RunManager" selected="Go Test.TestAuthRedirectController_Get in gincmf/app/controller/api/admin">
+  <component name="RunManager" selected="Go Build.go build gincmf">
     <configuration name="go build gincmf" type="GoApplicationRunConfiguration" factoryName="Go Application" temporary="true" nameIsGenerated="true">
       <module name="alipay_isv_go" />
       <working_directory value="$PROJECT_DIR$" />
@@ -79,20 +144,52 @@
       <directory value="$PROJECT_DIR$" />
       <method v="2" />
     </configuration>
-    <configuration name="TestAuthRedirectController_Get in gincmf/app/controller/api/admin" type="GoTestRunConfiguration" factoryName="Go Test" temporary="true" nameIsGenerated="true">
+    <configuration name="TestAuthRedirectController_Get in gincmf/app/controller/api/common" type="GoTestRunConfiguration" factoryName="Go Test" temporary="true" nameIsGenerated="true">
       <module name="alipay_isv_go" />
-      <working_directory value="$PROJECT_DIR$/app/controller/api/admin" />
+      <working_directory value="$PROJECT_DIR$/app/controller/api/common" />
       <framework value="gotest" />
       <kind value="PACKAGE" />
-      <package value="gincmf/app/controller/api/admin" />
+      <package value="gincmf/app/controller/api/common" />
       <directory value="$PROJECT_DIR$" />
       <filePath value="$PROJECT_DIR$" />
       <pattern value="^TestAuthRedirectController_Get$" />
       <method v="2" />
     </configuration>
+    <configuration name="TestAuthRedirectController_OpenAuth in gincmf/app/controller/api/common" type="GoTestRunConfiguration" factoryName="Go Test" temporary="true" nameIsGenerated="true">
+      <module name="alipay_isv_go" />
+      <working_directory value="$PROJECT_DIR$/app/controller/api/common" />
+      <framework value="gotest" />
+      <kind value="PACKAGE" />
+      <package value="gincmf/app/controller/api/common" />
+      <directory value="$PROJECT_DIR$" />
+      <filePath value="$PROJECT_DIR$" />
+      <pattern value="^TestAuthRedirectController_OpenAuth$" />
+      <method v="2" />
+    </configuration>
+    <configuration name="TestName in gincmf" type="GoTestRunConfiguration" factoryName="Go Test" temporary="true" nameIsGenerated="true">
+      <module name="alipay_isv_go" />
+      <working_directory value="$PROJECT_DIR$" />
+      <framework value="gotest" />
+      <kind value="PACKAGE" />
+      <package value="gincmf" />
+      <directory value="$PROJECT_DIR$" />
+      <filePath value="$PROJECT_DIR$" />
+      <pattern value="^TestName$" />
+      <method v="2" />
+    </configuration>
+    <configuration name="TestTenantRegisterController_Post in gincmf/app/controller/api/tenant" type="GoTestRunConfiguration" factoryName="Go Test" temporary="true" nameIsGenerated="true">
+      <module name="alipay_isv_go" />
+      <working_directory value="$PROJECT_DIR$/app/controller/api/tenant" />
+      <framework value="gotest" />
+      <kind value="PACKAGE" />
+      <package value="gincmf/app/controller/api/tenant" />
+      <directory value="$PROJECT_DIR$" />
+      <filePath value="$PROJECT_DIR$" />
+      <pattern value="^TestTenantRegisterController_Post$" />
+      <method v="2" />
+    </configuration>
     <recent_temporary>
       <list>
-        <item itemvalue="Go Test.TestAuthRedirectController_Get in gincmf/app/controller/api/admin" />
         <item itemvalue="Go Build.go build gincmf" />
       </list>
     </recent_temporary>
@@ -106,12 +203,21 @@
       <map>
         <entry key="MAIN">
           <value>
-            <State />
+            <State>
+              <option name="CUSTOM_BOOLEAN_PROPERTIES">
+                <map>
+                  <entry key="Show.Git.Branches" value="false" />
+                </map>
+              </option>
+            </State>
           </value>
         </entry>
       </map>
     </option>
     <option name="oldMeFiltersMigrated" value="true" />
+  </component>
+  <component name="VcsManagerConfiguration">
+    <option name="ADD_EXTERNAL_FILES_SILENTLY" value="true" />
   </component>
   <component name="VgoProject">
     <integration-enabled>true</integration-enabled>
@@ -122,50 +228,91 @@
     </environment>
   </component>
   <component name="WindowStateProjectService">
+    <state x="557" y="251" width="667" height="352" key="#com.intellij.codeInsight.template.impl.EditVariableDialog" timestamp="1603987291361">
+      <screen x="0" y="23" width="1440" height="827" />
+    </state>
+    <state x="557" y="251" width="667" height="352" key="#com.intellij.codeInsight.template.impl.EditVariableDialog/0.23.1440.827@0.23.1440.827" timestamp="1603987291361" />
+    <state x="184" y="112" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1601726018554">
+      <screen x="0" y="0" width="1440" height="900" />
+    </state>
+    <state x="184" y="112" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.0.1440.900@0.0.1440.900" timestamp="1601726018554" />
+    <state x="438" y="259" key="#com.intellij.fileTypes.FileTypeChooser" timestamp="1601822239112">
+      <screen x="0" y="0" width="1440" height="900" />
+    </state>
+    <state x="438" y="259" key="#com.intellij.fileTypes.FileTypeChooser/0.0.1440.900@0.0.1440.900" timestamp="1601822239112" />
     <state x="619" y="296" key="EnvironmentVariablesDialog" timestamp="1599328419735">
       <screen x="0" y="23" width="1440" height="825" />
     </state>
     <state x="619" y="296" key="EnvironmentVariablesDialog/0.23.1440.825@0.23.1440.825" timestamp="1599328419735" />
-    <state width="1398" height="330" key="GridCell.Tab.0.bottom" timestamp="1600494896648">
-      <screen x="0" y="23" width="1440" height="824" />
+    <state width="1398" height="229" key="GridCell.Tab.0.bottom" timestamp="1603986197997">
+      <screen x="0" y="23" width="1440" height="827" />
     </state>
-    <state width="1398" height="330" key="GridCell.Tab.0.bottom/0.0.1440.900@0.0.1440.900" timestamp="1599728403136" />
-    <state width="1398" height="330" key="GridCell.Tab.0.bottom/0.23.1440.824@0.23.1440.824" timestamp="1600494896648" />
-    <state width="1398" height="208" key="GridCell.Tab.0.bottom/0.23.1440.825@0.23.1440.825" timestamp="1599361389828" />
-    <state width="1398" height="208" key="GridCell.Tab.0.bottom/0.23.1440.826@0.23.1440.826" timestamp="1599337480196" />
-    <state width="1398" height="208" key="GridCell.Tab.0.bottom/0.23.1440.827@0.23.1440.827" timestamp="1599315905619" />
+    <state width="1398" height="263" key="GridCell.Tab.0.bottom/0.0.1440.900@0.0.1440.900" timestamp="1603943484363" />
+    <state width="1398" height="186" key="GridCell.Tab.0.bottom/0.23.1440.821@0.23.1440.821" timestamp="1601960794445" />
+    <state width="1398" height="161" key="GridCell.Tab.0.bottom/0.23.1440.822@0.23.1440.822" timestamp="1600922007270" />
+    <state width="1398" height="186" key="GridCell.Tab.0.bottom/0.23.1440.823@0.23.1440.823" timestamp="1601274742661" />
+    <state width="1398" height="186" key="GridCell.Tab.0.bottom/0.23.1440.824@0.23.1440.824" timestamp="1602146139152" />
+    <state width="1398" height="161" key="GridCell.Tab.0.bottom/0.23.1440.825@0.23.1440.825" timestamp="1600875011808" />
+    <state width="1398" height="186" key="GridCell.Tab.0.bottom/0.23.1440.826@0.23.1440.826" timestamp="1602768381766" />
+    <state width="1398" height="229" key="GridCell.Tab.0.bottom/0.23.1440.827@0.23.1440.827" timestamp="1603986197997" />
     <state width="1398" height="208" key="GridCell.Tab.0.bottom/0.23.1440.828@0.23.1440.828" timestamp="1599312648637" />
-    <state width="1398" height="330" key="GridCell.Tab.0.center" timestamp="1600494896647">
-      <screen x="0" y="23" width="1440" height="824" />
+    <state width="1398" height="229" key="GridCell.Tab.0.center" timestamp="1603986197995">
+      <screen x="0" y="23" width="1440" height="827" />
     </state>
-    <state width="1398" height="330" key="GridCell.Tab.0.center/0.0.1440.900@0.0.1440.900" timestamp="1599728403134" />
-    <state width="1398" height="330" key="GridCell.Tab.0.center/0.23.1440.824@0.23.1440.824" timestamp="1600494896647" />
-    <state width="1398" height="208" key="GridCell.Tab.0.center/0.23.1440.825@0.23.1440.825" timestamp="1599361389827" />
-    <state width="1398" height="208" key="GridCell.Tab.0.center/0.23.1440.826@0.23.1440.826" timestamp="1599337480195" />
-    <state width="1398" height="208" key="GridCell.Tab.0.center/0.23.1440.827@0.23.1440.827" timestamp="1599315905618" />
+    <state width="1398" height="263" key="GridCell.Tab.0.center/0.0.1440.900@0.0.1440.900" timestamp="1603943484362" />
+    <state width="1398" height="186" key="GridCell.Tab.0.center/0.23.1440.821@0.23.1440.821" timestamp="1601960794440" />
+    <state width="1398" height="161" key="GridCell.Tab.0.center/0.23.1440.822@0.23.1440.822" timestamp="1600922007268" />
+    <state width="1398" height="186" key="GridCell.Tab.0.center/0.23.1440.823@0.23.1440.823" timestamp="1601274742660" />
+    <state width="1398" height="186" key="GridCell.Tab.0.center/0.23.1440.824@0.23.1440.824" timestamp="1602146139150" />
+    <state width="1398" height="161" key="GridCell.Tab.0.center/0.23.1440.825@0.23.1440.825" timestamp="1600875011807" />
+    <state width="1398" height="186" key="GridCell.Tab.0.center/0.23.1440.826@0.23.1440.826" timestamp="1602768381764" />
+    <state width="1398" height="229" key="GridCell.Tab.0.center/0.23.1440.827@0.23.1440.827" timestamp="1603986197995" />
     <state width="1398" height="208" key="GridCell.Tab.0.center/0.23.1440.828@0.23.1440.828" timestamp="1599312648635" />
-    <state width="1398" height="330" key="GridCell.Tab.0.left" timestamp="1600494896646">
-      <screen x="0" y="23" width="1440" height="824" />
+    <state width="1398" height="229" key="GridCell.Tab.0.left" timestamp="1603986197995">
+      <screen x="0" y="23" width="1440" height="827" />
     </state>
-    <state width="1398" height="330" key="GridCell.Tab.0.left/0.0.1440.900@0.0.1440.900" timestamp="1599728403132" />
-    <state width="1398" height="330" key="GridCell.Tab.0.left/0.23.1440.824@0.23.1440.824" timestamp="1600494896646" />
-    <state width="1398" height="208" key="GridCell.Tab.0.left/0.23.1440.825@0.23.1440.825" timestamp="1599361389827" />
-    <state width="1398" height="208" key="GridCell.Tab.0.left/0.23.1440.826@0.23.1440.826" timestamp="1599337480195" />
-    <state width="1398" height="208" key="GridCell.Tab.0.left/0.23.1440.827@0.23.1440.827" timestamp="1599315905609" />
+    <state width="1398" height="263" key="GridCell.Tab.0.left/0.0.1440.900@0.0.1440.900" timestamp="1603943484361" />
+    <state width="1398" height="186" key="GridCell.Tab.0.left/0.23.1440.821@0.23.1440.821" timestamp="1601960794439" />
+    <state width="1398" height="161" key="GridCell.Tab.0.left/0.23.1440.822@0.23.1440.822" timestamp="1600922007267" />
+    <state width="1398" height="186" key="GridCell.Tab.0.left/0.23.1440.823@0.23.1440.823" timestamp="1601274742659" />
+    <state width="1398" height="186" key="GridCell.Tab.0.left/0.23.1440.824@0.23.1440.824" timestamp="1602146139150" />
+    <state width="1398" height="161" key="GridCell.Tab.0.left/0.23.1440.825@0.23.1440.825" timestamp="1600875011806" />
+    <state width="1398" height="186" key="GridCell.Tab.0.left/0.23.1440.826@0.23.1440.826" timestamp="1602768381763" />
+    <state width="1398" height="229" key="GridCell.Tab.0.left/0.23.1440.827@0.23.1440.827" timestamp="1603986197995" />
     <state width="1398" height="208" key="GridCell.Tab.0.left/0.23.1440.828@0.23.1440.828" timestamp="1599312648634" />
-    <state width="1398" height="330" key="GridCell.Tab.0.right" timestamp="1600494896647">
-      <screen x="0" y="23" width="1440" height="824" />
+    <state width="1398" height="229" key="GridCell.Tab.0.right" timestamp="1603986197996">
+      <screen x="0" y="23" width="1440" height="827" />
     </state>
-    <state width="1398" height="330" key="GridCell.Tab.0.right/0.0.1440.900@0.0.1440.900" timestamp="1599728403136" />
-    <state width="1398" height="330" key="GridCell.Tab.0.right/0.23.1440.824@0.23.1440.824" timestamp="1600494896647" />
-    <state width="1398" height="208" key="GridCell.Tab.0.right/0.23.1440.825@0.23.1440.825" timestamp="1599361389827" />
-    <state width="1398" height="208" key="GridCell.Tab.0.right/0.23.1440.826@0.23.1440.826" timestamp="1599337480196" />
-    <state width="1398" height="208" key="GridCell.Tab.0.right/0.23.1440.827@0.23.1440.827" timestamp="1599315905619" />
+    <state width="1398" height="263" key="GridCell.Tab.0.right/0.0.1440.900@0.0.1440.900" timestamp="1603943484362" />
+    <state width="1398" height="186" key="GridCell.Tab.0.right/0.23.1440.821@0.23.1440.821" timestamp="1601960794441" />
+    <state width="1398" height="161" key="GridCell.Tab.0.right/0.23.1440.822@0.23.1440.822" timestamp="1600922007269" />
+    <state width="1398" height="186" key="GridCell.Tab.0.right/0.23.1440.823@0.23.1440.823" timestamp="1601274742661" />
+    <state width="1398" height="186" key="GridCell.Tab.0.right/0.23.1440.824@0.23.1440.824" timestamp="1602146139151" />
+    <state width="1398" height="161" key="GridCell.Tab.0.right/0.23.1440.825@0.23.1440.825" timestamp="1600875011807" />
+    <state width="1398" height="186" key="GridCell.Tab.0.right/0.23.1440.826@0.23.1440.826" timestamp="1602768381765" />
+    <state width="1398" height="229" key="GridCell.Tab.0.right/0.23.1440.827@0.23.1440.827" timestamp="1603986197996" />
     <state width="1398" height="208" key="GridCell.Tab.0.right/0.23.1440.828@0.23.1440.828" timestamp="1599312648636" />
-    <state x="221" y="66" key="SettingsEditor" timestamp="1599328422837">
-      <screen x="0" y="23" width="1440" height="825" />
+    <state width="1398" height="304" key="GridCell.Tab.1.bottom" timestamp="1601825394542">
+      <screen x="0" y="0" width="1440" height="900" />
+    </state>
+    <state width="1398" height="304" key="GridCell.Tab.1.bottom/0.0.1440.900@0.0.1440.900" timestamp="1601825394542" />
+    <state width="1398" height="304" key="GridCell.Tab.1.center" timestamp="1601825394540">
+      <screen x="0" y="0" width="1440" height="900" />
+    </state>
+    <state width="1398" height="304" key="GridCell.Tab.1.center/0.0.1440.900@0.0.1440.900" timestamp="1601825394540" />
+    <state width="1398" height="304" key="GridCell.Tab.1.left" timestamp="1601825394540">
+      <screen x="0" y="0" width="1440" height="900" />
+    </state>
+    <state width="1398" height="304" key="GridCell.Tab.1.left/0.0.1440.900@0.0.1440.900" timestamp="1601825394540" />
+    <state width="1398" height="304" key="GridCell.Tab.1.right" timestamp="1601825394541">
+      <screen x="0" y="0" width="1440" height="900" />
+    </state>
+    <state width="1398" height="304" key="GridCell.Tab.1.right/0.0.1440.900@0.0.1440.900" timestamp="1601825394541" />
+    <state x="221" y="66" key="SettingsEditor" timestamp="1603987331309">
+      <screen x="0" y="23" width="1440" height="827" />
     </state>
     <state x="221" y="66" key="SettingsEditor/0.23.1440.825@0.23.1440.825" timestamp="1599328422837" />
+    <state x="221" y="66" key="SettingsEditor/0.23.1440.827@0.23.1440.827" timestamp="1603987331309" />
     <state x="100" y="123" width="1240" height="609" key="com.intellij.history.integration.ui.views.FileHistoryDialog" timestamp="1599441216589">
       <screen x="0" y="23" width="1440" height="824" />
     </state>
@@ -174,9 +321,14 @@
       <screen x="0" y="23" width="1440" height="825" />
     </state>
     <state x="518" y="348" key="com.intellij.openapi.vcs.update.UpdateOrStatusOptionsDialogupdate-v2/0.23.1440.825@0.23.1440.825" timestamp="1599353193586" />
-    <state x="385" y="196" width="670" height="676" key="search.everywhere.popup" timestamp="1599706053893">
+    <state x="418" y="205" width="604" height="490" key="find.popup" timestamp="1601465883167">
       <screen x="0" y="0" width="1440" height="900" />
     </state>
-    <state x="385" y="196" width="670" height="676" key="search.everywhere.popup/0.0.1440.900@0.0.1440.900" timestamp="1599706053893" />
+    <state x="418" y="205" width="604" height="490" key="find.popup/0.0.1440.900@0.0.1440.900" timestamp="1601465883167" />
+    <state x="385" y="203" width="670" height="622" key="search.everywhere.popup" timestamp="1603987631474">
+      <screen x="0" y="23" width="1440" height="827" />
+    </state>
+    <state x="385" y="196" width="670" height="676" key="search.everywhere.popup/0.0.1440.900@0.0.1440.900" timestamp="1603863199763" />
+    <state x="385" y="203" width="670" height="622" key="search.everywhere.popup/0.23.1440.827@0.23.1440.827" timestamp="1603987631474" />
   </component>
 </project>

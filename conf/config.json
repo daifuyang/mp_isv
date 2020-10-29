@@ -1,8 +1,9 @@
 {
     "app": {
-        "port": "8000",
+        "port": "4000",
         "appName": "",
-        "appDebug": true
+        "appDebug": true,
+        "domain": "http://localhost:4000"
     },
     "template":{
         "theme":"default",

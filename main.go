@@ -2,6 +2,7 @@ package main
 
 import (
 	"gincmf/app/migrate"
+	"gincmf/plugins"
 	"gincmf/router"
 	cmf "github.com/gincmf/cmf/bootstrap"
 )
@@ -14,6 +15,8 @@ func main() {
 	router.ApiListenRouter()
 	// 数据库迁移
 	migrate.AutoMigrate()
+	// 注册插件
+	plugins.AutoRegister()
 	//启动服务
 	cmf.Start()
 	//执行数据库迁移
