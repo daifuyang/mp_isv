@@ -41,7 +41,7 @@ func (rest *MpThemeController) Get(c *gin.Context) {
 
 	var total int64 = 0
 	cmf.Db.First(&mpTheme).Count(&total)
-	result := cmf.Db.Limit(intPageSize).Offset((intCurrent - 1) * intPageSize).Order("id desc").Find(&mpTheme)
+	result := cmf.Db.Debug().Limit(intPageSize).Offset((intCurrent - 1) * intPageSize).Order("id desc").Find(&mpTheme)
 
 	type tempStruct struct {
 		model.MpTheme

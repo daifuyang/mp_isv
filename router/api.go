@@ -29,7 +29,7 @@ func ApiListenRouter() {
 
 
 	// 租户注册
-	cmf.Post("api/tenant/register",middleware.MainDb,new(tenant.TenantController).Register)
+	cmf.Post("api/tenant/register",middleware.MainDb,new(tenant.UserController).Register)
 
 	tenantGroup := cmf.Group("api/tenant",middleware.ValidationBearerToken,middleware.TenantDb, middleware.ValidationAdmin, middleware.ApiBaseController, middleware.Rbac)
 	{
@@ -50,7 +50,7 @@ func ApiListenRouter() {
 	cmf.Get("/api/currentUser", middleware.ValidationBearerToken, middleware.ValidationAdmin, func(c *gin.Context) {
 		scope,_ := c.Get("scope")
 		if scope == "tenant" {
-			new(tenant.TenantController).CurrentUser(c)
+			new(tenant.UserController).CurrentUser(c)
 		}else{
 			new(admin.UserController).CurrentUser(c)
 		}

@@ -5,8 +5,31 @@
  */
 package migrate
 
-type Restaurant struct {}
+import (
+	"fmt"
+	"gincmf/plugins/restaurantPlugin/model"
+	"gorm.io/gorm"
+)
+
+type Restaurant struct {
+	Db *gorm.DB
+}
 
 func (migrate *Restaurant) AutoMigrate () {
+	fmt.Println("migrate",migrate.Db)
 
+	food := new(model.Food)
+	foodCategory := new(model.FoodCategory)
+	store := new(model.Store)
+
+	if migrate.Db != nil {
+		food.ManualMigrate(migrate.Db)
+		foodCategory.ManualMigrate(migrate.Db)
+		store.ManualMigrate(migrate.Db)
+		return
+	}
+
+	food.AutoMigrate()
+	foodCategory.AutoMigrate()
+	store.AutoMigrate()
 }

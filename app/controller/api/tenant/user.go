@@ -1,7 +1,7 @@
 /**
 ** @创建时间: 2020/9/30 3:18 下午
 ** @作者　　: return
-** @描述　　:
+** @描述　　: // 租户信息相关
  */
 package tenant
 
@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"gincmf/app/model"
 	"gincmf/app/util"
+	restaurantMigrate "gincmf/plugins/restaurantPlugin/migrate"
 	"github.com/gin-gonic/gin"
 	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
@@ -19,11 +20,18 @@ import (
 	"time"
 )
 
-type TenantController struct {
+type UserController struct {
 	rc controller.RestController
 }
 
-func (rest *TenantController) Register(c *gin.Context) {
+/**
+ * @Author return <1140444693@qq.com>
+ * @Description 租户注册用户
+ * @Date 2020/10/30 20:43:26
+ * @Param
+ * @return
+ **/
+func (rest *UserController) Register(c *gin.Context) {
 
 	mobile := c.PostForm("mobile")
 	if mobile == "" {
@@ -135,6 +143,11 @@ func (rest *TenantController) Register(c *gin.Context) {
 		db.AutoMigrate(&model.User{})
 		db.AutoMigrate(&model.MpTheme{})
 		db.AutoMigrate(&model.MpThemePage{})
+
+		// 餐厅插件
+		// 租户同步数据库迁移
+		rMigrate := restaurantMigrate.Restaurant{Db: db}
+		rMigrate.AutoMigrate()
 		rest.rc.Success(c, "注册成功！", nil)
 
 	}else{
@@ -143,7 +156,14 @@ func (rest *TenantController) Register(c *gin.Context) {
 
 }
 
-func (rest *TenantController) CurrentUser(c *gin.Context) {
+/**
+ * @Author return <1140444693@qq.com>
+ * @Description 获取当前租户个人信息
+ * @Date 2020/10/30 20:44:09
+ * @Param
+ * @return
+ **/
+func (rest *UserController) CurrentUser(c *gin.Context) {
 	// 获取当前用户
 	 currentTenant := util.CurrentTenant(c)
 

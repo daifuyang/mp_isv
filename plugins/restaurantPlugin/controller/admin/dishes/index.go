@@ -6,6 +6,7 @@
 package controller
 
 import (
+	"gincmf/plugins/restaurantPlugin/model"
 	"github.com/gin-gonic/gin"
 	"github.com/gincmf/cmf/controller"
 )
@@ -22,7 +23,19 @@ type IndexController struct {
  * @return 
  **/
 func (rest *IndexController) Get(c *gin.Context) {
-	rest.rc.Success(c, "操作成功Get", nil)
+
+	query := []string{"delete_at = ?"}
+	queryArgs := []interface{}{"0"}
+
+	// 菜品管理模型
+	food := model.Food{}
+	data, err := food.Index(c,query,queryArgs)
+	if err != nil {
+		rest.rc.Error(c,err.Error(),nil)
+		return
+	}
+
+	rest.rc.Success(c, "获取成功！", data)
 }
 
 /**
@@ -62,7 +75,7 @@ func (rest *IndexController) Edit(c *gin.Context) {
  * @return
  **/
 func (rest *IndexController) Store(c *gin.Context) {
-	rest.rc.Success(c, "操作成功Store", nil)
+	rest.rc.Success(c, "添加成功！", nil)
 }
 
 /**

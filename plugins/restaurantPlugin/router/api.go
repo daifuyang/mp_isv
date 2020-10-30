@@ -7,13 +7,13 @@ package router
 
 import (
 	"gincmf/app/middleware"
-	"gincmf/plugins/restaurantPlugin/controller/dishes"
+	"gincmf/plugins/restaurantPlugin/controller/admin/dishes"
 	cmf "github.com/gincmf/cmf/bootstrap"
 
 )
 
 func ApiListenRouter() {
-	adminGroup := cmf.Group("api/admin", middleware.ApiBaseController)
+	adminGroup := cmf.Group("api/admin", middleware.ValidationBearerToken, middleware.ValidationAdmin,middleware.TenantDb, middleware.ApiBaseController, middleware.Rbac)
 	{
 		// 注册后台菜单路由
 		adminGroup.Rest("/dishes/index",new(controller.IndexController))

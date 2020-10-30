@@ -7,9 +7,7 @@ package plugins
 
 import (
 	alipayRouter "gincmf/plugins/alipayPlugin/router"
-	demoMigrate "gincmf/plugins/demoPlugin/migrate"
 	demoRouter "gincmf/plugins/demoPlugin/router"
-	restaurantMigrate "gincmf/plugins/restaurantPlugin/migrate"
 	restaurantRouter "gincmf/plugins/restaurantPlugin/router"
 )
 
@@ -21,9 +19,7 @@ func AutoRegister()  {
 	restaurantRouter.ApiListenRouter()
 
 	// 注册数据库迁移
-	demoMigrate := demoMigrate.Demo{}
-	demoMigrate.AutoMigrate()
+	/*dMigrate := demoMigrate.Demo{}
+	dMigrate.AutoMigrate()*/
 
-	restaurantMigrate := restaurantMigrate.Restaurant{}
-	restaurantMigrate.AutoMigrate()
 }

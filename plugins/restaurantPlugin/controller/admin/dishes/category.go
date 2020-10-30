@@ -62,7 +62,28 @@ func (rest *CategoryController) Edit(c *gin.Context) {
  * @return 
  **/
 func (rest *CategoryController) Store(c *gin.Context) {
-	rest.rc.Success(c, "操作成功Store", nil)
+
+	// 获取菜品名称
+	name := c.PostForm("name")
+	if name == "" {
+		rest.rc.Error(c,"菜品分类名称不能为空！",nil)
+		return
+	}
+
+	//// 获取菜品图标
+	//icon := c.PostForm("icon")
+	//
+	//// 必选品
+	//isRequired := c.DefaultPostForm("is_required","0")
+	//
+	//
+	//// 场景（默认支持全部）
+	//isRequired := c.DefaultPostForm("is_required","0")
+	//
+	//store := c.PostFormArray("store")
+
+
+	rest.rc.Success(c, "添加成功！", nil)
 }
 
 /**
