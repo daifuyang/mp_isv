@@ -9,19 +9,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="5f28a1c0-e56b-430c-84c6-97f1a79a83a8" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/plugins/restaurantPlugin/model/food.go" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/plugins/restaurantPlugin/model/foodCategory.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/controller/api/tenant/mpTheme.go" beforeDir="false" afterPath="$PROJECT_DIR$/app/controller/api/tenant/mpTheme.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/controller/api/tenant/tenant.go" beforeDir="false" afterPath="$PROJECT_DIR$/app/controller/api/tenant/user.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/controller/api/tenant/tenant_test.go" beforeDir="false" afterPath="$PROJECT_DIR$/app/controller/api/tenant/user_test.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/migrate/merchant.go" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/migrate/migrate.go" beforeDir="false" afterPath="$PROJECT_DIR$/app/migrate/migrate.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/model/merchant.go" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/plugins/plugins.go" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/plugins.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/plugins/restaurantPlugin/controller/dishes/index.go" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/restaurantPlugin/controller/dishes/index.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/plugins/restaurantPlugin/migrate/migrate.go" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/restaurantPlugin/migrate/migrate.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/router/api.go" beforeDir="false" afterPath="$PROJECT_DIR$/router/api.go" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -37,7 +26,7 @@
   </component>
   <component name="GOROOT" path="/usr/local/go" />
   <component name="Git.Settings">
-    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/../mp_isv" />
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="GoLibraries">
     <option name="indexEntireGoPath" value="false" />
@@ -59,7 +48,7 @@
     <property name="go.sdk.automatically.set" value="true" />
     <property name="go.tried.to.enable.integration.vgo.integrator" value="true" />
     <property name="go.vendoring.notification.had.been.shown" value="true" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$/plugins/alipayPlugin" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
     <property name="node.js.detected.package.eslint" value="true" />
     <property name="node.js.detected.package.tslint" value="true" />
     <property name="node.js.path.for.package.eslint" value="project" />
@@ -70,7 +59,7 @@
   </component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
-      <recent name="$PROJECT_DIR$/../mp_isv/plugins/restaurantPlugin/controller/admin" />
+      <recent name="$PROJECT_DIR$/plugins/restaurantPlugin/controller/admin" />
       <recent name="$PROJECT_DIR$/plugins/restaurantPlugin/controller/dishes" />
       <recent name="$PROJECT_DIR$/plugins/alipayPlugin/controller" />
       <recent name="$PROJECT_DIR$/app/controller/api/common" />
@@ -97,7 +86,7 @@
     </configuration>
     <configuration name="go build gincmf" type="GoApplicationRunConfiguration" factoryName="Go Application" temporary="true" nameIsGenerated="true">
       <module name="mp_isv" />
-      <working_directory value="$PROJECT_DIR$/../mp_isv" />
+      <working_directory value="$PROJECT_DIR$" />
       <kind value="PACKAGE" />
       <filePath value="$PROJECT_DIR$/main.go" />
       <package value="gincmf" />
@@ -139,7 +128,7 @@
     </configuration>
     <configuration name="TestUserController_autoMigrate in gincmf/app/controller/api/tenant" type="GoTestRunConfiguration" factoryName="Go Test" temporary="true" nameIsGenerated="true">
       <module name="mp_isv" />
-      <working_directory value="$PROJECT_DIR$/../mp_isv/app/controller/api/tenant" />
+      <working_directory value="$PROJECT_DIR$/app/controller/api/tenant" />
       <framework value="gotest" />
       <kind value="PACKAGE" />
       <package value="gincmf/app/controller/api/tenant" />
