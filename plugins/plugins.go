@@ -6,20 +6,23 @@
 package plugins
 
 import (
-	alipayRouter "gincmf/plugins/alipayPlugin/router"
-	demoRouter "gincmf/plugins/demoPlugin/router"
-	restaurantRouter "gincmf/plugins/restaurantPlugin/router"
+	"gincmf/plugins/alipayPlugin"
+	"gincmf/plugins/demoPlugin"
+	"gincmf/plugins/queuePlugin"
+	"gincmf/plugins/restaurantPlugin"
+	"gincmf/plugins/saasPlugin"
 )
 
-func AutoRegister()  {
+func AutoRegister() {
+	// 注册阿里的插件
+	alipayPlugin.Init()
+	demoPlugin.Init()
+	restaurantPlugin.Init()
+	saasPlugin.Init()
+	queuePlugin.Init()
+	AutoMigrate()
+}
 
-	// 注册路由
-	demoRouter.ApiListenRouter()
-	alipayRouter.ApiListenRouter()
-	restaurantRouter.ApiListenRouter()
-
-	// 注册数据库迁移
-	/*dMigrate := demoMigrate.Demo{}
-	dMigrate.AutoMigrate()*/
-
+func AutoMigrate()  {
+	
 }

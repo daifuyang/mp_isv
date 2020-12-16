@@ -12,14 +12,16 @@ import (
 	"github.com/gincmf/cmf/controller"
 )
 
-type MenuController struct{}
+type MenuController struct {
+	rc controller.RestController
+}
 
 func (rest *MenuController) Get(c *gin.Context) {
 	var adminMenu []model.AdminMenu
-	result := cmf.Db.Where("path <> ?", "").Order("list_order").Find(&adminMenu)
+	result := cmf.Db().Where("path <> ?", "").Order("list_order,id").Find(&adminMenu)
 
 	if result.RowsAffected == 0 {
-		controller.RestController{}.Error(c, "暂无菜单,请联系管理员添加！", nil)
+		rest.rc.Error(c, "暂无菜单,请联系管理员添加！", nil)
 		return
 	}
 
@@ -28,9 +30,9 @@ func (rest *MenuController) Get(c *gin.Context) {
 	// 获取当前用户类型
 
 	var showMenu []model.AdminMenu
-	for _,v := range adminMenu{
-		if rest.inMap(v.UniqueName,authAccessRule){
-			showMenu = append(showMenu,v)
+	for _, v := range adminMenu {
+		if rest.inMap(v.UniqueName, authAccessRule) {
+			showMenu = append(showMenu, v)
 		}
 	}
 
@@ -38,7 +40,7 @@ func (rest *MenuController) Get(c *gin.Context) {
 		showMenu = adminMenu
 	}
 
-	results := rest.recursionMenu(c,showMenu, 0)
+	results := rest.recursionMenu(c, showMenu, 0)
 	controller.RestController{}.Success(c, "获取成功！", results)
 
 }
@@ -52,16 +54,16 @@ type resultStruct struct {
 	Routes     []interface{} `json:"routes"`
 }
 
-func (rest *MenuController) inMap(s string,target []model.AuthAccessRule) (result bool){
-	for _,v := range target{
+func (rest *MenuController) inMap(s string, target []model.AuthAccessRule) (result bool) {
+	for _, v := range target {
 		if s == v.Name {
 			return true
 		}
 	}
-	return  false
+	return false
 }
 
-func (rest *MenuController) recursionMenu(c *gin.Context,menus []model.AdminMenu, parentId int) []resultStruct {
+func (rest *MenuController) recursionMenu(c *gin.Context, menus []model.AdminMenu, parentId int) []resultStruct {
 
 	var results []resultStruct
 	for _, v := range menus {
@@ -73,8 +75,7 @@ func (rest *MenuController) recursionMenu(c *gin.Context,menus []model.AdminMenu
 				HideInMenu: v.HideInMenu,
 				ListOrder:  v.ListOrder,
 			}
-
-			routes := rest.recursionMenu(c,menus, v.Id)
+			routes := rest.recursionMenu(c, menus, v.Id)
 			childRoutes := make([]interface{}, len(routes))
 			for i, v := range routes {
 				childRoutes[i] = v

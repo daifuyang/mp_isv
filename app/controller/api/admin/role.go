@@ -25,21 +25,21 @@ func (rest *RoleController) Get(c *gin.Context) {
 	var queryArgs []interface{}
 
 	//  用户状态
-	status  := c.Query("status")
+	status := c.Query("status")
 	if status != "" {
-		query = append( query,"status = ?")
-		queryArgs = append(queryArgs,status)
+		query = append(query, "status = ?")
+		queryArgs = append(queryArgs, status)
 	}
 
 	// 名称模糊搜索
 	name := c.Query("name")
 	if name != "" {
-		query = append( query,"name LIKE ?")
-		queryArgs = append(queryArgs,"%"+name+"%")
+		query = append(query, "name LIKE ?")
+		queryArgs = append(queryArgs, "%"+name+"%")
 	}
 
 	var queryStr interface{}
-	queryStr = strings.Join(query," AND ")
+	queryStr = strings.Join(query, " AND ")
 
 	current := c.DefaultQuery("current", "1")
 	pageSize := c.DefaultQuery("pageSize", "10")
@@ -59,8 +59,8 @@ func (rest *RoleController) Get(c *gin.Context) {
 
 	var total int64 = 0
 
-	cmf.Db.Where(queryStr, queryArgs...).Find(&role).Count(&total)
-	result := cmf.Db.Limit(intPageSize).Where(queryStr, queryArgs...).Offset((intCurrent - 1) * intPageSize).Find(&role)
+	cmf.NewDb().Where(queryStr, queryArgs...).Find(&role).Count(&total)
+	result := cmf.NewDb().Limit(intPageSize).Where(queryStr, queryArgs...).Offset((intCurrent - 1) * intPageSize).Find(&role)
 
 	if result.RowsAffected == 0 {
 		rest.rc.Error(c, "该页码内容不存在！", role)

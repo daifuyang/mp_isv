@@ -6,30 +6,34 @@
 package migrate
 
 import (
-	"fmt"
 	"gincmf/plugins/restaurantPlugin/model"
-	"gorm.io/gorm"
 )
 
-type Restaurant struct {
-	Db *gorm.DB
-}
+func AutoMigrate () {
 
-func (migrate *Restaurant) AutoMigrate () {
-	fmt.Println("migrate",migrate.Db)
-
+	// 指定数据库
 	food := new(model.Food)
 	foodCategory := new(model.FoodCategory)
+	foodSku := new(model.FoodSku)
 	store := new(model.Store)
-
-	if migrate.Db != nil {
-		food.ManualMigrate(migrate.Db)
-		foodCategory.ManualMigrate(migrate.Db)
-		store.ManualMigrate(migrate.Db)
-		return
-	}
+	desk := new(model.Desk)
+	deskCategory:= new(model.DeskCategory)
 
 	food.AutoMigrate()
 	foodCategory.AutoMigrate()
 	store.AutoMigrate()
+	desk.AutoMigrate()
+	deskCategory.AutoMigrate()
+	foodSku.AutoMigrate()
+
+	new(model.FoodOrder).AutoMigrate()
+
+	new(model.Option).AutoMigrate()
+
+	new(model.Voucher).AutoMigrate()
+
+	new(model.CardTemplate).AutoMigrate()
+
+	new(model.MemberCard).AutoMigrate()
+
 }

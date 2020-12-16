@@ -13,7 +13,7 @@ type IndexController struct {
 
 //首页控制器
 func (this *IndexController) Index(c *gin.Context) {
-	fmt.Println("header",c.Request.Header)
-	fmt.Println("tls",c.Request.TLS)
+	fmt.Println("header", c.Request.Header)
+	fmt.Println("tls", c.Request.TLS)
 	view.Fetch("index.html")
 }

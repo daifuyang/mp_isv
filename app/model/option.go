@@ -4,7 +4,7 @@ type Option struct {
 	Id          int    `json:"id"`
 	AutoLoad    int    `gorm:"type:tinyint(3);default:1;not null" json:"autoload"`
 	OptionName  string `gorm:"type:varchar(64);not null" json:"option_name"`
-	OptionValue string `gorm:"type:text" json:"option_value"`
+	OptionValue string `gorm:"type:json" json:"option_value"`
 }
 
 //定义site_info类型

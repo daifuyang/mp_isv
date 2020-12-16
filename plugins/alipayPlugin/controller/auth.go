@@ -8,33 +8,68 @@ package controller
 import (
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"gincmf/app/model"
+	"gincmf/app/util"
 	"github.com/gin-gonic/gin"
 	"github.com/gincmf/alipayEasySdk"
 	"github.com/gincmf/alipayEasySdk/base"
+	easyUtil "github.com/gincmf/alipayEasySdk/util"
 	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
 	"github.com/skip2/go-qrcode"
+	"gorm.io/gorm"
 	"net/url"
 	"strconv"
 	"strings"
 )
 
-type AuthRedirectController struct {
+type Auth struct {
 	rc controller.RestController
 }
 
-func (rest *AuthRedirectController) OutAuthQrcode(c *gin.Context) {
+type responseData struct {
+	AlipaySystemOauthTokenResponse *response `json:"alipay_system_oauth_token_response"`
+}
 
-	appId := c.Query("app_id")
-	redirectUri := c.Query("redirect_uri")
+type response struct {
+	UserId       string `json:"user_id"`
+	AccessToken  string `json:"access_token"`
+	ExpiresIn    string `json:"expires_in"`
+	RefreshToken string `json:"refresh_token"`
+	ReExpiresIn  string `json:"re_expires_in"`
+}
+
+/**
+ * @Author return <1140444693@qq.com>
+ * @Description 生成支付宝授权二维码
+ * @Date 2020/11/23 10:03:11
+ * @Param
+ * @return
+ **/
+func (rest *Auth) OutAuthQrcode(c *gin.Context) {
+
+	appId := "2021001192664075"
 	baseUrl := "https://openauth.alipay.com/oauth2/appToAppAuth.htm"
+	redirectUri := "http://www.codecloud.ltd/alipay/auth_redirect"
+
+	mid, _ := c.Get("mid")
+	if mid == nil{
+		rest.rc.Error(c,"小程序不存在！",nil)
+	}
+
+	tenant := util.CurrentTenant(c)
 
 	stateMap := make(map[string]string,0)
-	stateMap["merchantId"] = "111222"
-	stateMap["mobile"] = "1762545859"
-	stateMap["invited"] = "3746521"
+	stateMap["tenant_id"] = strconv.Itoa(tenant.TenantId)
+	stateMap["mp_id"] = strconv.Itoa(mid.(int))
+	stateMap["type"] = "alipay"
+	sign ,bizContent := easyUtil.Sign(stateMap)
+
+	stateMap["biz_content"] = bizContent
+	stateMap["sign"] = sign
+
 
 	b,err :=  json.Marshal(stateMap)
 	if err != nil {
@@ -43,36 +78,36 @@ func (rest *AuthRedirectController) OutAuthQrcode(c *gin.Context) {
 
 	state := base64.StdEncoding.EncodeToString(b)
 
-	fmt.Println("state",state)
-
 	p := url.Values{}
 	p.Add("app_id",appId)
 	p.Add("redirect_uri",redirectUri)
 	p.Add("state",state)
+
 	e := p.Encode()
-	fmt.Println("e",e)
 
 	qrcodeUrl := baseUrl + "?" + e
-	fmt.Println("",qrcodeUrl)
 
-	q, err := qrcode.New(qrcodeUrl, qrcode.Medium)
+	png, err := qrcode.Encode(qrcodeUrl, qrcode.Highest,512)
 	if err != nil {
-		panic(err)
+		rest.rc.Error(c,"生成二维码出错！",nil)
 	}
 
-	q.DisableBorder = true//去掉边框
+	w := c.Writer
+	w.Header().Set("Content-Type", "image/jpg")
+	w.Header().Set("Content-Disposition",`inline; filename="oauth.jpg"; filename*=utf-8''oauth.jpg`)
 
-	//70*70一般手机最小能扫描的尺寸了  输出的文件名称:output.png
-	err = q.WriteFile(200, "output.png")
-	if err != nil {
-		panic(err)
-	}
+	w.Write(png)
 
-	// ?app_id=2021001192664075&redirect_uri=http%3A%2F%2Fwww.gincmf.com%2Falipay%2FauthRedirect&state=eyJhIjoxMjMsImIiOjQ1Nn0%3D
 }
 
-// 支付宝第三方授权扫码回调
-func (rest *AuthRedirectController) Get(c *gin.Context) {
+/**
+ * @Author return <1140444693@qq.com>
+ * @Description 支付宝授权回调，换取用户auth_token
+ * @Date 2020/11/23 10:03:47
+ * @Param
+ * @return
+ **/
+func (rest *Auth) Redirect(c *gin.Context) {
 
 	// 获取三方应用的appId
 	appId := c.Query("app_id")
@@ -89,28 +124,28 @@ func (rest *AuthRedirectController) Get(c *gin.Context) {
 
 	fmt.Println("state",decodeStr)
 
-	// 获取统一公共参数
-	op := alipayEasySdk.OptionsController{
-		Protocol:           "https",
-		GatewayHost:        "openapi.alipay.com/gateway.do",
-		SignType:           "RSA2",
-		AppId:              appId,
-		Charset:            "utf-8",
-		MerchantPrivateKey: "",
-		AlipayCertPath:     "",
-		AlipayRootCertPath: "",
-		MerchantCertPath:   "",
-		NotifyUrl:          "",
-		EncryptKey:         "",
+	inParams := make(map[string]string,0)
+	json.Unmarshal(decoded,&inParams)
+
+	sign := inParams["sign"]
+
+	bizContent := inParams["biz_content"]
+	fmt.Println("biz_content", bizContent)
+
+	// 验证签名
+	err := easyUtil.VerifySign(bizContent,sign)
+
+	if err != nil {
+		rest.rc.Error(c,"验证签名出错！不合法的参数！",nil)
+		return
 	}
-	op.SetOptions()
+
 	oauth := base.Oauth{}
 	data := oauth.GetOpenToken(appAuthCode)
 
 	var result map[string]interface{}
 	_ = json.Unmarshal(data, &result)
 
-	fmt.Println("result", result)
 	temp := result["alipay_open_auth_token_app_response"]
 	response := temp.(map[string]interface{})
 
@@ -118,19 +153,13 @@ func (rest *AuthRedirectController) Get(c *gin.Context) {
 
 	if codeStatus == "10000" {
 
-		fmt.Println("response", response)
 		token := response["tokens"]
-		fmt.Println("token", token)
 
 		tokenMap := token.([]interface{})
 
-		fmt.Println("tokenMap", tokenMap)
-
-		for k, v := range tokenMap {
+		for _, v := range tokenMap {
 
 			temp := v.(map[string]interface{})
-
-			fmt.Println(k, v)
 			userId := temp["user_id"].(string)
 			authAppId := temp["auth_app_id"].(string)
 			appAuthToken := temp["app_auth_token"].(string)
@@ -141,13 +170,20 @@ func (rest *AuthRedirectController) Get(c *gin.Context) {
 			reExpiresIn := temp["re_expires_in"].(float64)
 			reExpiresInStr := strconv.FormatFloat(reExpiresIn, 'f', -1, 64)
 
+			tenantId,_ := strconv.Atoi(inParams["tenant_id"])
+			mpId,_ := strconv.Atoi(inParams["mp_id"])
+			t := inParams["type"]
 
-			auth := model.AlipayAuth{}
+			auth := model.MpIsvAuth{
+				TenantId:tenantId,
+				MpId: mpId,
+				Type: t,
+			}
 
 			query := []string{"user_id","auth_app_id"}
 			queryArgs := []interface{}{userId,authAppId}
 			queryStr := strings.Join(query,"AND ")
-			result := cmf.Db.Where(queryStr,queryArgs...).First(&auth)
+			result := cmf.NewDb().Where(queryStr,queryArgs...).First(&auth)
 
 			auth.UserId = userId
 			auth.AuthAppId = authAppId
@@ -157,9 +193,9 @@ func (rest *AuthRedirectController) Get(c *gin.Context) {
 			auth.ReExpiresIn = reExpiresInStr
 
 			if result.RowsAffected == 0 {
-				cmf.Db.Create(&auth)
+				cmf.Db().Create(&auth)
 			}else{
-				cmf.Db.Save(&auth)
+				cmf.Db().Save(&auth)
 			}
 
 			rest.rc.Success(c, "授权成功！", auth)
@@ -168,4 +204,69 @@ func (rest *AuthRedirectController) Get(c *gin.Context) {
 	}
 
 	rest.rc.Error(c, "授权失败！", result)
+}
+
+/**
+ * @Author return <1140444693@qq.com>
+ * @Description 获取支付宝小程序授权用户信息
+ * @Date 2020/11/23 10:04:29
+ * @Param
+ * @return
+ **/
+
+func (rest *Auth) Token (c *gin.Context) {
+
+	appId,_ := c.Get("app_id")
+
+	isvAuth :=	model.MpIsvAuth{}
+	rowResult := cmf.Db().Where("auth_app_id = ?",appId).First(&isvAuth)
+	if rowResult.RowsAffected == 0 {
+		rest.rc.Error(c,"小程序不存在，请联系管理员！",nil)
+		return
+	}
+
+	code := c.Query("code")
+	if code == "" {
+		rest.rc.Error(c,"授权码不能为空！",nil)
+		return
+	}
+
+	alipayEasySdk.SetOption("AppAuthToken",isvAuth.AppAuthToken)
+
+	base := base.Oauth{}
+	data := base.GetSystemToken(code)
+	var result *responseData
+	json.Unmarshal(data, &result)
+
+	if result.AlipaySystemOauthTokenResponse == nil {
+		var errResult map[string]interface{}
+		json.Unmarshal(data, &errResult)
+		rest.rc.Error(c,"获取失败！",errResult)
+		return
+	}
+
+	response := result.AlipaySystemOauthTokenResponse
+	openId := response.UserId
+
+	query := []string{"open_id = ?"}
+	queryArgs :=[]interface{}{openId}
+
+	// 查询当前用户是否存在
+	userPart := model.UserPart{}
+	partData, err := userPart.Show(query,queryArgs)
+	if err != nil && !errors.Is(err,gorm.ErrRecordNotFound){
+		rest.rc.Error(c,err.Error(),nil)
+		return
+	}
+
+	// 当前三方关系不存在 新建第三方用户
+	if partData  == nil {
+		cmf.NewDb().Create(&model.ThirdPart{
+			Type: "alipay-mp",
+			UserId: 0,
+			OpenId:openId,
+		})
+	}
+
+	rest.rc.Success(c,"获取成功！",result)
 }

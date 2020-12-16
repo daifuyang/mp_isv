@@ -21,25 +21,25 @@ func (rest *SmsCodeController) Post(c *gin.Context) {
 	// 获取验证码
 	mobile := c.PostForm("mobile")
 	if mobile == "" {
-		rest.rc.Error(c,"手机号不能为空！",nil)
+		rest.rc.Error(c, "手机号不能为空！", nil)
 		return
 	}
 
-	mobileInt,err := strconv.Atoi(mobile)
+	mobileInt, err := strconv.Atoi(mobile)
 
 	if err != nil {
-		rest.rc.Error(c,"手机号不能为空！",nil)
+		rest.rc.Error(c, "手机号不能为空！", nil)
 		return
 	}
 
-	result,err := util.SmsCode(mobileInt)
+	result, err := util.SmsCode(mobileInt)
 	if err != nil {
-		rest.rc.Error(c,err.Error(),nil)
+		rest.rc.Error(c, err.Error(), nil)
 		return
 	}
 
 	// 获取验证码
-	fmt.Println("result",result)
+	fmt.Println("result", result)
 
 	rest.rc.Success(c, "获取成功！", result)
 }

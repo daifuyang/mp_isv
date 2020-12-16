@@ -5,5 +5,4 @@ type ControllerInterface interface {
 }
 
 type ControllerStruct struct {
-
 }

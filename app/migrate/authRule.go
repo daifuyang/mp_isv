@@ -13,10 +13,7 @@ type authRule struct {
 	Migrate
 }
 
-
-
 func (_ *authRule) AutoMigrate() {
-	cmf.Db.Migrator().DropTable(&model.AuthRule{})
-	cmf.Db.AutoMigrate(model.AuthRule{})
+	cmf.NewDb().Migrator().DropTable(&model.AuthRule{})
+	cmf.NewDb().AutoMigrate(model.AuthRule{})
 }
-

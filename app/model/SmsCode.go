@@ -6,7 +6,7 @@
 package model
 
 type SmsCode struct {
-	Phone int
-	Code string
+	Phone  int
+	Code   string
 	Expire int64
 }

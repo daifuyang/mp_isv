@@ -1,6 +1,5 @@
-
 //jQuery to collapse the navbar on scroll
-$(window).scroll(function() {
+$(window).scroll(function () {
     if ($(".navbar").offset().top > 50) {
         $(".navbar-fixed-top").addClass("top-nav-collapse");
     } else {
@@ -9,7 +8,7 @@ $(window).scroll(function() {
 });
 
 //jQuery for page scrolling feature - requires jQuery Easing plugin
-$(function() {
+$(function () {
 
     $('a.page-scroll[href*="#"]:not([href="#"])').on('click', function () {
         if (location.pathname.replace(/^\//, '') == this.pathname.replace(/^\//, '') && location.hostname == this.hostname) {
@@ -17,7 +16,7 @@ $(function() {
             target = target.length ? target : $('[name=' + this.hash.slice(1) + ']');
             if (target.length) {
                 $('html, body').animate({
-                    scrollTop: (target.offset().top -85)
+                    scrollTop: (target.offset().top - 85)
                 }, 1200, "easeInOutExpo");
                 return false;
             }

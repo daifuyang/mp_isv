@@ -4,13 +4,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"gincmf/app/model"
+	model2 "gincmf/plugins/saasPlugin/model"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	cmf "github.com/gincmf/cmf/bootstrap"
-	cmfModel "github.com/gincmf/cmf/model"
 	"github.com/pjebs/optimus-go"
 	"log"
 	"os"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -23,39 +24,55 @@ func CurrentAdminId(c *gin.Context) string {
 }
 
 //获取当前用户信息
-func CurrentUser(c *gin.Context) *model.User {
-	u := &model.User{}
+func CurrentUser(c *gin.Context) model.User {
+	u := model.User{}
+
+	session := sessions.Default(c)
+
+	user := session.Get("user")
 	userId, _ := c.Get("user_id")
-	cmf.Db.First(u, "id = ?", userId)
+	userIdInt, _ := strconv.Atoi(userId.(string))
+
+	if user == nil {
+		cmf.Db().First(&u, "id = ?", userId)
+		jsonBytes, _ := json.Marshal(u)
+		session.Set("user", string(jsonBytes))
+		session.Save()
+	} else {
+		jsonBytes := user.(string)
+		json.Unmarshal([]byte(jsonBytes), &u)
+		if u.Id == 0 || u.Id != userIdInt {
+			u = model.User{}
+			cmf.Db().Where("id = ?", userId).First(&u)
+			jsonBytes, _ := json.Marshal(u)
+			session.Set("user", string(jsonBytes))
+			session.Save()
+			return u
+		}
+	}
 	return u
 }
 
 // 获取当前租户信息
-func CurrentTenant(c *gin.Context) model.Tenant {
-	t := model.Tenant{}
+func CurrentTenant(c *gin.Context) model2.Tenant {
+	t := model2.Tenant{}
 	session := sessions.Default(c)
 	tenant := session.Get("tenant")
 	userId, _ := c.Get("user_id")
-	userIdInt,_ := strconv.Atoi(userId.(string))
-
-	conf := cmf.Conf()
-	dsn := cmfModel.NewDsn(conf.Database.Name,conf)
-	cmf.Db = cmfModel.NewDb(dsn,conf.Database.Prefix)
+	userIdInt, _ := strconv.Atoi(userId.(string))
 
 	if tenant == nil {
-		cmf.Db.First(&t, "id = ?", userId)
-		jsonBytes,_ := json.Marshal(t)
-		session.Set("tenant",string(jsonBytes))
+		cmf.Db().First(&t, "id = ?", userId)
+		jsonBytes, _ := json.Marshal(t)
+		session.Set("tenant", string(jsonBytes))
 		session.Save()
-	}else{
+	} else {
 		jsonBytes := tenant.(string)
-		json.Unmarshal([]byte(jsonBytes),&t)
+		json.Unmarshal([]byte(jsonBytes), &t)
 		if t.Id == 0 || t.Id != userIdInt {
-			t = model.Tenant{}
-			cmf.Db.Debug().Where("id = ?",userId).First(&t)
-			jsonBytes,_ := json.Marshal(t)
-			fmt.Println("string(jsonBytes)",string(jsonBytes))
-			session.Set("tenant",string(jsonBytes))
+			cmf.Db().Where("id = ?", userId).First(&t)
+			jsonBytes, _ := json.Marshal(t)
+			session.Set("tenant", string(jsonBytes))
 			session.Save()
 			return t
 		}
@@ -63,25 +80,16 @@ func CurrentTenant(c *gin.Context) model.Tenant {
 	return t
 }
 
-/*func CurrentUser(c *gin.Context) *model.User {
-	session := sessions.Default(c)
-	u := &model.User{}
-	gob.Register(u)
-	currentUser := session.Get("current_user")
-	//根据userId获取当前用户信息，不存在写入session
-	if currentUser == nil {
-		userId, _ := c.Get("user_id")
-		notFound := cmf.Db.First(u, "id = ?", userId).RecordNotFound()
-		if !notFound {
-			session.Set("current_user", u)
-			session.Save()
-
-			fmt.Println("c","存入完成")
-		}
-		currentUser = u
+// 获取系统配置项
+func Options(key string) string {
+	option := &model.Option{}
+	var optionJson string
+	uploadResult := cmf.NewDb().First(option, "option_name = ?", key) // 查询
+	if uploadResult.RowsAffected > 0 {
+		optionJson = option.OptionValue
 	}
-	return currentUser.(*model.User)
-}*/
+	return optionJson
+}
 
 type role struct {
 	Id   int    `json:"id"`
@@ -99,7 +107,7 @@ func CurrentRole(c *gin.Context) []role {
 func GetRoleById(userId int) []role {
 	var result []role
 	prefix := cmf.Conf().Database.Prefix
-	cmf.Db.Table(prefix+"role_user ru").Select("r.id,r.name").
+	cmf.NewDb().Table(prefix+"role_user ru").Select("r.id,r.name").
 		Joins("INNER JOIN "+prefix+"role r ON ru.role_id = r.id").
 		Where("user_id = ?", userId).
 		Scan(&result)
@@ -121,7 +129,7 @@ func SuperRole(c *gin.Context, t int) bool {
 	}
 
 	prefix := cmf.Conf().Database.Prefix
-	cmf.Db.Table(prefix+"role_user ru").Select("r.id,r.name").
+	cmf.NewDb().Table(prefix+"role_user ru").Select("r.id,r.name").
 		Joins("INNER JOIN "+prefix+"role r ON ru.role_id = r.id").
 		Where("ru.user_id = ?", userId).
 		Scan(&result)
@@ -140,10 +148,10 @@ func UploadSetting(c *gin.Context) *model.UploadSetting {
 	option := &model.Option{}
 	uploadSetting := &model.UploadSetting{}
 	if uploadSettingStr == nil {
-		uploadResult := cmf.Db.Debug().First(option, "option_name = ?", "upload_setting") // 查询
+		uploadResult := cmf.Db().First(option, "option_name = ?", "upload_setting") // 查询
 		if uploadResult.RowsAffected > 0 {
 			uploadSettingStr = option.OptionValue
-			fmt.Println("uploadSettingStr",uploadSettingStr)
+			fmt.Println("uploadSettingStr", uploadSettingStr)
 			//存入session
 			session.Set("uploadSetting", uploadSettingStr)
 		}
@@ -157,7 +165,7 @@ func UploadSetting(c *gin.Context) *model.UploadSetting {
 //添加用户操作日志
 func SetLog(c *gin.Context, module string, controller string, action string, message string) {
 	currentUser := CurrentUser(c)
-	cmf.Db.Create(&model.Log{
+	cmf.NewDb().Create(&model.Log{
 		ModuleName:     module,
 		ControllerName: controller,
 		ActionName:     action,
@@ -177,6 +185,20 @@ func CurrentPath() string {
 		log.Fatal(err)
 	}
 	return strings.Replace(dir, "\\", "/", -1)
+}
+
+// 获取文件是否存在
+func ExistPath(path string) (bool,error) {
+	_, err := os.Stat(path)
+	if err == nil {
+		return true, nil
+	}
+	if os.IsNotExist(err) {
+		fmt.Println(err.Error())
+		return false, nil
+	}
+	fmt.Println(err.Error())
+	return false, err
 }
 
 // 获取真实url
@@ -202,7 +224,7 @@ func TrimAll(s string) string {
 // 获取数据库配置信息
 func SiteSettings() map[string]interface{} {
 	option := &model.Option{}
-	cmf.Db.First(option, "option_name = ?", "site_info") // 查询
+	cmf.NewDb().First(option, "option_name = ?", "site_info") // 查询
 
 	m := make(map[string]interface{}, 5)
 	err := json.Unmarshal([]byte([]byte(option.OptionValue)), &m) //第二个参数要地址传递
@@ -249,7 +271,7 @@ func AuthAccess(c *gin.Context) []model.AuthAccessRule {
 
 		var authAccessRule []model.AuthAccessRule
 		prefix := cmf.Conf().Database.Prefix
-		cmf.Db.Table(prefix+"auth_access access").Select("access.*,r.name").
+		cmf.NewDb().Table(prefix+"auth_access access").Select("access.*,r.name").
 			Joins("INNER JOIN "+prefix+"auth_rule r ON access.rule_id = r.id").Where(queryStr, queryArgs...).Scan(&authAccessRule)
 		session.Set("authAccessRule", authAccessRule)
 		session.Save()
@@ -263,17 +285,47 @@ func AuthAccess(c *gin.Context) []model.AuthAccessRule {
 }
 
 // 加密id 纯数字
-func EncodeId (id  uint64) int{
+func EncodeId(id uint64) int {
 	o := optimus.New(561604931, 848718699, 1452111999)
 	number := o.Encode(id)
 	return int(number)
 }
 
 // 解密id 纯数字
-func DecodeId (id  uint64) int{
+func DecodeId(id uint64) int {
 	o := optimus.New(561604931, 848718699, 1452111999)
 	origId := o.Decode(id) // Returns 15 back
 	return int(origId)
 }
 
+/**
+ * @Author return <1140444693@qq.com>
+ * @Description 获取唯一redis生成的编号
+ * @Date 2020/11/2 12:27:02
+ * @Param
+ * @return
+ **/
 
+func CurrentDate() (string, string, string) {
+	year, month, day := time.Now().Date()
+	yearStr := strconv.Itoa(year)
+	monthStr := strconv.Itoa(int(month))
+	if month < 10 {
+		monthStr = "0" + monthStr
+	}
+	dayStr := strconv.Itoa(day)
+	if day < 10 {
+		dayStr = "0" + dayStr
+	}
+
+	return yearStr, monthStr, dayStr
+}
+
+func SetIncr(key string) int64 {
+	val, err := cmf.NewRedisDb().Incr(key).Result()
+	if err != nil {
+		_, _, line, _ := runtime.Caller(0)
+		fmt.Println("redis err"+strconv.Itoa(line), err.Error())
+	}
+	return val
+}

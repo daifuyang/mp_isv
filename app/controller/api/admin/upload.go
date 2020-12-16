@@ -52,34 +52,34 @@ func (rest *UploadController) Store(c *gin.Context) {
 	fileMaxFileSize := c.PostForm("file_types[file][upload_max_file_size]")
 	fileExtensions := c.PostForm("file_types[file][extensions]")
 
-	maxFilesInt ,err := strconv.Atoi(maxFiles)
+	maxFilesInt, err := strconv.Atoi(maxFiles)
 	if err != nil {
-		rest.rc.Error(c,"最大同时上传文件数必须为数字",nil)
+		rest.rc.Error(c, "最大同时上传文件数必须为数字", nil)
 		return
 	}
 	chunkSizeInt, err := strconv.Atoi(chunkSize)
 	if err != nil {
-		rest.rc.Error(c,"文件分块上传分块大小必须为数字",nil)
+		rest.rc.Error(c, "文件分块上传分块大小必须为数字", nil)
 		return
 	}
-	imageMaxFileSizeInt ,err := strconv.Atoi(imageMaxFileSize)
+	imageMaxFileSizeInt, err := strconv.Atoi(imageMaxFileSize)
 	if err != nil {
-		rest.rc.Error(c,"允许图片上传大小必须为数字",nil)
+		rest.rc.Error(c, "允许图片上传大小必须为数字", nil)
 		return
 	}
-	videoMaxFileSizeInt ,err := strconv.Atoi(videoMaxFileSize)
+	videoMaxFileSizeInt, err := strconv.Atoi(videoMaxFileSize)
 	if err != nil {
-		rest.rc.Error(c,"允许视频上传大小必须为数字",nil)
+		rest.rc.Error(c, "允许视频上传大小必须为数字", nil)
 		return
 	}
-	audioMaxFileSizeInt ,err := strconv.Atoi(audioMaxFileSize)
+	audioMaxFileSizeInt, err := strconv.Atoi(audioMaxFileSize)
 	if err != nil {
-		rest.rc.Error(c,"允许音频上传大小必须为数字",nil)
+		rest.rc.Error(c, "允许音频上传大小必须为数字", nil)
 		return
 	}
-	fileMaxFileSizeInt ,err := strconv.Atoi(fileMaxFileSize)
+	fileMaxFileSizeInt, err := strconv.Atoi(fileMaxFileSize)
 	if err != nil {
-		rest.rc.Error(c,"允许音频上传大小必须为数字",nil)
+		rest.rc.Error(c, "允许音频上传大小必须为数字", nil)
 		return
 	}
 
@@ -108,9 +108,9 @@ func (rest *UploadController) Store(c *gin.Context) {
 	uploadSettingValue, _ := json.Marshal(uploadSetting)
 	fmt.Println("uploadSettingValue", string(uploadSettingValue))
 
-	cmf.Db.Model(&model.Option{}).Where("option_name = ?","upload_setting").Update("option_value", string(uploadSettingValue))
+	cmf.NewDb().Model(&model.Option{}).Where("option_name = ?", "upload_setting").Update("option_value", string(uploadSettingValue))
 
-	rest.rc.Success(c, "修改成功",uploadSetting)
+	rest.rc.Success(c, "修改成功", uploadSetting)
 }
 
 func (rest *UploadController) Delete(c *gin.Context) {

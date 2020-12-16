@@ -1,0 +1,46 @@
+{
+  "app": {
+    "port": "4002",
+    "appName": "",
+    "appDebug": true,
+    "domain": "http://localhost:4002"
+  },
+  "template": {
+    "theme": "default",
+    "themePath": "public/themes",
+    "glob": "**/**/*.html",
+    "Static": "*/public/assets"
+  },
+  "database": {
+    "default": "mysql",
+    "mysql": {
+      "type": "mysql",
+      "host": "127.0.0.1",
+      "database": "mp_isv",
+      "username": "root",
+      "password": "123456",
+      "port": "3306",
+      "charset": "utf8mb4",
+      "prefix": "cmf_",
+      "authcode": "KFHlk2ubIlMr5ltqaD"
+    },
+    "redis": {
+      "enabled": true,
+      "type": "redis",
+      "host": "127.0.0.1",
+      "password": "",
+      "port": "6379",
+      "database": 0
+    }
+  },
+  "qiniu": {
+    "enabled": true,
+    "accessKey": "RUJBQZ7AnKFbt1PJi2-HStPJUBrUc3JYWKHH6HmY",
+    "secretKey": "HYG1t6wxGOggKyNrmroKEcFnQyAqxANqPTXFGcTq",
+    "isHttps": false,
+    "domain": "v.hji5.com",
+    "bucket": "vlog",
+    "zone": "huadong",
+    "isCdn": false
+  }
+}

@@ -1,0 +1,1047 @@
+basePath: /api/v1
+definitions:
+  desk.deskCateDel:
+    properties:
+      code:
+        example: 1
+        type: integer
+      data:
+        $ref: '#/definitions/model.DeskCategory'
+      msg:
+        example: 删除成功！
+        type: string
+    type: object
+  desk.deskCateEdit:
+    properties:
+      code:
+        example: 1
+        type: integer
+      data:
+        $ref: '#/definitions/model.DeskCategory'
+      msg:
+        example: 修改成功！
+        type: string
+    type: object
+  desk.deskCateGet:
+    properties:
+      code:
+        example: 1
+        type: integer
+      data:
+        $ref: '#/definitions/desk.deskCatePaginate'
+      msg:
+        example: 获取成功！
+        type: string
+    type: object
+  desk.deskCatePaginate:
+    properties:
+      current:
+        example: "1"
+        type: string
+      data:
+        items:
+          $ref: '#/definitions/model.DeskCategory'
+        type: array
+      page_size:
+        example: "10"
+        type: string
+      total:
+        example: 10
+        type: integer
+    type: object
+  desk.deskCateShow:
+    properties:
+      code:
+        example: 1
+        type: integer
+      data:
+        $ref: '#/definitions/model.DeskCategory'
+      msg:
+        example: 获取成功！
+        type: string
+    type: object
+  desk.deskCateStore:
+    properties:
+      code:
+        example: 1
+        type: integer
+      data:
+        $ref: '#/definitions/model.DeskCategory'
+      msg:
+        example: 添加成功！
+        type: string
+    type: object
+  desk.deskGoodsDel:
+    properties:
+      code:
+        example: 1
+        type: integer
+      data:
+        $ref: '#/definitions/model.Desk'
+      msg:
+        example: 删除成功！
+        type: string
+    type: object
+  desk.deskGoodsEdit:
+    properties:
+      code:
+        example: 1
+        type: integer
+      data:
+        $ref: '#/definitions/model.Desk'
+      msg:
+        example: 修改成功！
+        type: string
+    type: object
+  desk.deskGoodsGet:
+    properties:
+      code:
+        example: 1
+        type: integer
+      data:
+        $ref: '#/definitions/desk.deskGoodsPaginate'
+      msg:
+        example: 获取成功！
+        type: string
+    type: object
+  desk.deskGoodsPaginate:
+    properties:
+      current:
+        example: "1"
+        type: string
+      data:
+        items:
+          $ref: '#/definitions/model.Desk'
+        type: array
+      page_size:
+        example: "10"
+        type: string
+      total:
+        example: 10
+        type: integer
+    type: object
+  desk.deskGoodsShow:
+    properties:
+      code:
+        example: 1
+        type: integer
+      data:
+        $ref: '#/definitions/model.Desk'
+      msg:
+        example: 获取成功！
+        type: string
+    type: object
+  desk.deskGoodsStore:
+    properties:
+      code:
+        example: 1
+        type: integer
+      data:
+        $ref: '#/definitions/model.Desk'
+      msg:
+        example: 添加成功！
+        type: string
+    type: object
+  dishes.dishesCateDel:
+    properties:
+      code:
+        example: 1
+        type: integer
+      data:
+        $ref: '#/definitions/model.FoodCategory'
+      msg:
+        example: 删除成功！
+        type: string
+    type: object
+  dishes.dishesCateEdit:
+    properties:
+      code:
+        example: 1
+        type: integer
+      data:
+        $ref: '#/definitions/model.FoodCategory'
+      msg:
+        example: 修改成功！
+        type: string
+    type: object
+  dishes.dishesCateGet:
+    properties:
+      code:
+        example: 1
+        type: integer
+      data:
+        $ref: '#/definitions/dishes.dishesCatePaginate'
+      msg:
+        example: 获取成功！
+        type: string
+    type: object
+  dishes.dishesCatePaginate:
+    properties:
+      current:
+        example: "1"
+        type: string
+      data:
+        items:
+          $ref: '#/definitions/model.FoodCategory'
+        type: array
+      page_size:
+        example: "10"
+        type: string
+      total:
+        example: 10
+        type: integer
+    type: object
+  dishes.dishesCateShow:
+    properties:
+      code:
+        example: 1
+        type: integer
+      data:
+        $ref: '#/definitions/model.FoodCategory'
+      msg:
+        example: 获取成功！
+        type: string
+    type: object
+  dishes.dishesCateStore:
+    properties:
+      code:
+        example: 1
+        type: integer
+      data:
+        $ref: '#/definitions/model.FoodCategory'
+      msg:
+        example: 添加成功！
+        type: string
+    type: object
+  dishes.dishesGoodsDel:
+    properties:
+      code:
+        example: 1
+        type: integer
+      data:
+        $ref: '#/definitions/model.Food'
+      msg:
+        example: 删除成功！
+        type: string
+    type: object
+  dishes.dishesGoodsEdit:
+    properties:
+      code:
+        example: 1
+        type: integer
+      data:
+        $ref: '#/definitions/model.Food'
+      msg:
+        example: 修改成功！
+        type: string
+    type: object
+  dishes.dishesGoodsGet:
+    properties:
+      code:
+        example: 1
+        type: integer
+      data:
+        $ref: '#/definitions/dishes.dishesGoodsPaginate'
+      msg:
+        example: 获取成功！
+        type: string
+    type: object
+  dishes.dishesGoodsPaginate:
+    properties:
+      current:
+        example: "1"
+        type: string
+      data:
+        items:
+          $ref: '#/definitions/model.Food'
+        type: array
+      page_size:
+        example: "10"
+        type: string
+      total:
+        example: 10
+        type: integer
+    type: object
+  dishes.dishesGoodsShow:
+    properties:
+      code:
+        example: 1
+        type: integer
+      data:
+        $ref: '#/definitions/model.Food'
+      msg:
+        example: 获取成功！
+        type: string
+    type: object
+  dishes.dishesGoodsStore:
+    properties:
+      code:
+        example: 1
+        type: integer
+      data:
+        $ref: '#/definitions/model.Food'
+      msg:
+        example: 添加成功！
+        type: string
+    type: object
+  model.Desk:
+    type: object
+  model.DeskCategory:
+    type: object
+  model.Food:
+    properties:
+      create_at:
+        type: integer
+      delete_at:
+        type: integer
+      food_number:
+        type: string
+      id:
+        type: integer
+      is_recommend:
+        type: integer
+      is_take_out:
+        type: integer
+      mid:
+        type: integer
+      name:
+        type: string
+      original_price:
+        type: number
+      price:
+        type: number
+      status:
+        type: integer
+      thumbnail:
+        type: string
+      update_at:
+        type: integer
+    type: object
+  model.FoodCategory:
+    properties:
+      create_at:
+        type: integer
+      delete_at:
+        type: integer
+      icon:
+        type: string
+      id:
+        type: integer
+      is_required:
+        type: integer
+      mid:
+        type: integer
+      name:
+        type: string
+      status:
+        type: integer
+      type:
+        type: integer
+      update_at:
+        type: integer
+    type: object
+  model.ReturnData:
+    properties:
+      code:
+        example: 1
+        type: integer
+      data:
+        type: object
+      msg:
+        type: string
+    type: object
+  model.Store:
+    properties:
+      address:
+        type: string
+      city:
+        type: integer
+      city_name:
+        type: string
+      contact_person:
+        type: string
+      create_at:
+        type: integer
+      delete_at:
+        type: integer
+      district:
+        type: integer
+      district_name:
+        type: string
+      id:
+        type: integer
+      is_closure:
+        type: integer
+      latitude:
+        type: number
+      longitude:
+        type: number
+      mid:
+        type: integer
+      notice:
+        type: string
+      phone:
+        type: string
+      province:
+        type: integer
+      province_name:
+        type: string
+      store_name:
+        type: string
+      store_number:
+        type: integer
+      store_thumbnail:
+        type: string
+      update_at:
+        type: integer
+    type: object
+  store.storeIndexDel:
+    properties:
+      code:
+        example: 1
+        type: integer
+      data:
+        $ref: '#/definitions/model.Store'
+      msg:
+        example: 删除成功！
+        type: string
+    type: object
+  store.storeIndexEdit:
+    properties:
+      code:
+        example: 1
+        type: integer
+      data:
+        $ref: '#/definitions/model.Store'
+      msg:
+        example: 修改成功！
+        type: string
+    type: object
+  store.storeIndexGet:
+    properties:
+      code:
+        example: 1
+        type: integer
+      data:
+        $ref: '#/definitions/store.storeIndexPaginate'
+      msg:
+        example: 获取成功！
+        type: string
+    type: object
+  store.storeIndexPaginate:
+    properties:
+      current:
+        example: "1"
+        type: string
+      data:
+        items:
+          $ref: '#/definitions/model.Store'
+        type: array
+      page_size:
+        example: "10"
+        type: string
+      total:
+        example: 10
+        type: integer
+    type: object
+  store.storeIndexShow:
+    properties:
+      code:
+        example: 1
+        type: integer
+      data:
+        $ref: '#/definitions/model.Store'
+      msg:
+        example: 获取成功！
+        type: string
+    type: object
+  store.storeIndexStore:
+    properties:
+      code:
+        example: 1
+        type: integer
+      data:
+        $ref: '#/definitions/model.Store'
+      msg:
+        example: 添加成功！
+        type: string
+    type: object
+host: 127.0.0.1:4000
+info:
+  contact:
+    email: codeCloud2020@163.com
+    name: codeCloud
+    url: https://codecloud.ltd
+  description: 智慧餐厅saas服务.
+  license:
+    name: MIT
+  title: MP-ISV API
+  version: "1.0"
+paths:
+  /:
+    get:
+      consumes:
+        - multipart/form-data
+      description: 预览接口可访问
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: code:1 => 获取成功，code:0 => 获取异常
+          schema:
+            $ref: '#/definitions/model.ReturnData'
+        "404":
+          description: 接口异常！
+          schema:
+            $ref: '#/definitions/model.ReturnData'
+      summary: 入口文件
+      tags:
+        - index
+  /admin/desk/category:
+    get:
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: code:1 => 获取成功，code:0 => 获取异常
+          schema:
+            $ref: '#/definitions/desk.deskCateGet'
+    post:
+      consumes:
+        - multipart/form-data
+      description: 提交新增单个菜单类型
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: code:1 => 获取成功，code:0 => 获取异常
+          schema:
+            $ref: '#/definitions/desk.deskCateStore'
+      summary: 提交新增单个菜单类型
+      tags:
+        - restaurant 菜单类型
+  /admin/desk/category/{id}:
+    delete:
+      consumes:
+        - multipart/form-data
+      description: 提交删除单个菜单类型
+      parameters:
+        - description: 单个菜单类型id
+          in: path
+          name: id
+          required: true
+          type: string
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: code:1 => 删除成功，code:0 => 删除失败
+          schema:
+            $ref: '#/definitions/desk.deskCateDel'
+      summary: 提交删除菜单类型
+      tags:
+        - restaurant 菜单类型
+    get:
+      consumes:
+        - multipart/form-data
+      description: 查看单个菜单类型
+      parameters:
+        - description: 单个菜单类型id
+          in: path
+          name: id
+          required: true
+          type: string
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: code:1 => 获取成功，code:0 => 获取异常
+          schema:
+            $ref: '#/definitions/desk.deskCateShow'
+      summary: 查看单个菜单类型
+      tags:
+        - restaurant 菜单类型
+    post:
+      consumes:
+        - multipart/form-data
+      description: 提交修改单个菜单类型
+      parameters:
+        - description: 单个菜单类型id
+          in: formData
+          name: id
+          required: true
+          type: string
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: code:1 => 获取成功，code:0 => 获取异常
+          schema:
+            $ref: '#/definitions/desk.deskCateEdit'
+      summary: 提交修改单个菜单类型
+      tags:
+        - restaurant 菜单类型
+  /admin/desk/goods:
+    get:
+      consumes:
+        - multipart/form-data
+      description: 查看全部桌位列表
+      parameters:
+        - description: 桌位名称
+          in: formData
+          name: name
+          required: true
+          type: string
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: 'code:1 => 获取成功，code:0 => 获取异常" '
+          schema:
+            $ref: '#/definitions/desk.deskGoodsGet'
+      summary: 桌位管理
+      tags:
+        - restaurant 桌位管理
+    post:
+      consumes:
+        - multipart/form-data
+      description: 提交添加单个桌位
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: 'code:1 => 获取成功，code:0 => 获取异常" '
+          schema:
+            $ref: '#/definitions/desk.deskGoodsStore'
+      summary: 提交添加单个桌位
+      tags:
+        - restaurant 桌位管理
+  /admin/desk/goods/{id}:
+    get:
+      consumes:
+        - multipart/form-data
+      description: 查看单个桌位
+      parameters:
+        - description: 单个桌位id
+          in: path
+          name: id
+          required: true
+          type: string
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: 'code:1 => 获取成功，code:0 => 获取异常" '
+          schema:
+            $ref: '#/definitions/desk.deskGoodsShow'
+      summary: 单个桌位管理
+      tags:
+        - restaurant 桌位管理
+    post:
+      consumes:
+        - multipart/form-data
+      description: 提交修改单个桌位
+      parameters:
+        - description: 单个桌位id
+          in: path
+          name: id
+          required: true
+          type: string
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: 'code:1 => 获取成功，code:0 => 获取异常" '
+          schema:
+            $ref: '#/definitions/desk.deskGoodsEdit'
+      summary: 提交修改单个桌位
+      tags:
+        - restaurant 桌位管理
+  /admin/desk/index/{id}:
+    delete:
+      consumes:
+        - multipart/form-data
+      description: 提交删除桌位
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: 'code:1 => 获取成功，code:0 => 获取异常" '
+          schema:
+            $ref: '#/definitions/desk.deskGoodsDel'
+      summary: 提交删除桌位
+      tags:
+        - restaurant 菜品管理
+  /admin/dishes/category:
+    get:
+      consumes:
+        - multipart/form-data
+      description: 查看全部菜品分类列表
+      parameters:
+        - description: 菜单名称
+          in: formData
+          name: name
+          required: true
+          type: string
+        - description: 菜单类型（0=>全部，1=>到店，2=>外卖）
+          enum:
+            - 0
+            - 1
+            - 2
+          in: formData
+          name: type
+          type: integer
+        - description: 是否必选（0=>否，1=>是）
+          enum:
+            - 0
+            - 1
+          in: formData
+          name: is_required
+          type: integer
+        - description: 状态（0=>停用，1=>启用）
+          enum:
+            - 0
+            - 1
+          in: formData
+          name: status
+          type: integer
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: code:1 => 获取成功，code:0 => 获取异常
+          schema:
+            $ref: '#/definitions/dishes.dishesCateGet'
+      summary: 菜单分类管理
+      tags:
+        - restaurant 菜单分类
+    post:
+      consumes:
+        - multipart/form-data
+      description: 提交新增单个菜品分类
+      parameters:
+        - description: 小程序id
+          in: formData
+          name: mid
+          required: true
+          type: string
+        - description: 菜品名称
+          in: formData
+          name: name
+          required: true
+          type: string
+        - description: 菜品图片
+          in: formData
+          name: name
+          required: true
+          type: string
+        - description: 菜单类型（0=>全部，1=>到店，2=>外卖）
+          enum:
+            - 0
+            - 1
+            - 2
+          in: formData
+          name: type
+          type: integer
+        - description: 是否必选（0=>否，1=>是）
+          enum:
+            - 0
+            - 1
+          in: formData
+          name: is_required
+          type: integer
+        - description: 状态（0=>停用，1=>启用）
+          enum:
+            - 0
+            - 1
+          in: formData
+          name: status
+          type: integer
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: code:1 => 获取成功，code:0 => 获取异常
+          schema:
+            $ref: '#/definitions/dishes.dishesCateStore'
+      summary: 提交新增单个菜品分类
+      tags:
+        - restaurant 菜单分类
+  /admin/dishes/category/{id}:
+    delete:
+      consumes:
+        - multipart/form-data
+      description: 提交删除单个菜品分类
+      parameters:
+        - description: 单个菜单分类id
+          in: path
+          name: id
+          required: true
+          type: string
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: code:1 => 删除成功，code:0 => 删除失败
+          schema:
+            $ref: '#/definitions/dishes.dishesCateDel'
+      summary: 提交删除菜品分类
+      tags:
+        - restaurant 菜单分类
+    get:
+      consumes:
+        - multipart/form-data
+      description: 查看单个菜品分类
+      parameters:
+        - description: 单个菜单分类id
+          in: path
+          name: id
+          required: true
+          type: string
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: code:1 => 获取成功，code:0 => 获取异常
+          schema:
+            $ref: '#/definitions/dishes.dishesCateShow'
+      summary: 查看单个菜品分类
+      tags:
+        - restaurant 菜单分类
+    post:
+      consumes:
+        - multipart/form-data
+      description: 提交修改单个菜品分类
+      parameters:
+        - description: 单个菜单分类id
+          in: formData
+          name: id
+          required: true
+          type: string
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: code:1 => 获取成功，code:0 => 获取异常
+          schema:
+            $ref: '#/definitions/dishes.dishesCateEdit'
+      summary: 提交修改单个菜品分类
+      tags:
+        - restaurant 菜单分类
+  /admin/dishes/goods:
+    get:
+      consumes:
+        - multipart/form-data
+      description: 查看全部菜品列表
+      parameters:
+        - description: 菜单名称
+          in: formData
+          name: name
+          required: true
+          type: string
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: 'code:1 => 获取成功，code:0 => 获取异常" '
+          schema:
+            $ref: '#/definitions/dishes.dishesGoodsGet'
+      summary: 菜品管理
+      tags:
+        - restaurant 菜品管理
+    post:
+      consumes:
+        - multipart/form-data
+      description: 提交添加单个菜品
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: 'code:1 => 获取成功，code:0 => 获取异常" '
+          schema:
+            $ref: '#/definitions/dishes.dishesGoodsStore'
+      summary: 提交添加单个菜品
+      tags:
+        - restaurant 菜品管理
+  /admin/dishes/goods/{id}:
+    delete:
+      consumes:
+        - multipart/form-data
+      description: 提交删除菜品
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: 'code:1 => 获取成功，code:0 => 获取异常" '
+          schema:
+            $ref: '#/definitions/dishes.dishesGoodsDel'
+      summary: 提交删除菜品
+      tags:
+        - restaurant 菜品管理
+    get:
+      consumes:
+        - multipart/form-data
+      description: 查看单个菜品
+      parameters:
+        - description: 单个菜单分类id
+          in: path
+          name: id
+          required: true
+          type: string
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: 'code:1 => 获取成功，code:0 => 获取异常" '
+          schema:
+            $ref: '#/definitions/dishes.dishesGoodsShow'
+      summary: 单个菜品管理
+      tags:
+        - restaurant 菜品管理
+    post:
+      consumes:
+        - multipart/form-data
+      description: 提交修改单个菜品
+      parameters:
+        - description: 单个菜品id
+          in: path
+          name: id
+          required: true
+          type: string
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: 'code:1 => 获取成功，code:0 => 获取异常" '
+          schema:
+            $ref: '#/definitions/dishes.dishesGoodsEdit'
+      summary: 提交修改单个菜品
+      tags:
+        - restaurant 菜品管理
+  /admin/store/index:
+    get:
+      consumes:
+        - multipart/form-data
+      description: 查看全部门店列表
+      parameters:
+        - description: 门店名称
+          in: formData
+          name: store_name
+          required: true
+          type: string
+        - description: 起始时间
+          in: formData
+          name: start_time
+          required: true
+          type: string
+        - description: 结束时间
+          in: formData
+          name: end_time
+          required: true
+          type: string
+        - description: 结束时间
+          in: formData
+          name: status
+          required: true
+          type: string
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: code:1 => 获取成功，code:0 => 获取异常
+          schema:
+            $ref: '#/definitions/store.storeIndexGet'
+      summary: 门店列表
+      tags:
+        - restaurant 门店管理
+    post:
+      consumes:
+        - multipart/form-data
+      description: 新增单个门店
+      parameters:
+        - description: 商户id
+          in: formData
+          name: mid
+          required: true
+          type: string
+        - description: 商户名称
+          in: formData
+          name: store_name
+          required: true
+          type: string
+        - description: 联系电话
+          in: formData
+          name: phone
+          required: true
+          type: string
+        - description: 联系人
+          in: formData
+          name: contact_person
+          required: true
+          type: string
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: 'code:1 => 获取成功，code:0 => 获取异常" '
+          schema:
+            $ref: '#/definitions/store.storeIndexStore'
+      summary: 新增单个门店
+      tags:
+        - restaurant 门店管理
+  /admin/store/index/{id}:
+    delete:
+      consumes:
+        - multipart/form-data
+      description: 删除单个门店
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: 'code:1 => 获取成功，code:0 => 获取异常" '
+          schema:
+            $ref: '#/definitions/store.storeIndexDel'
+      summary: 删除单个门店
+      tags:
+        - restaurant 门店管理
+    get:
+      consumes:
+        - multipart/form-data
+      description: 查看单个门店信息
+      parameters:
+        - description: 单个门店id
+          in: path
+          name: id
+          required: true
+          type: string
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: 'code:1 => 获取成功，code:0 => 获取异常" '
+          schema:
+            $ref: '#/definitions/store.storeIndexShow'
+      summary: 查看单个门店信息
+      tags:
+        - restaurant 门店管理
+    post:
+      consumes:
+        - multipart/form-data
+      description: 提交修改单个门店
+      parameters:
+        - description: 单个门店id
+          in: path
+          name: id
+          required: true
+          type: string
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: 'code:1 => 获取成功，code:0 => 获取异常" '
+          schema:
+            $ref: '#/definitions/store.storeIndexEdit'
+      summary: 提交修改单个门店
+      tags:
+        - restaurant 门店管理
+swagger: "2.0"

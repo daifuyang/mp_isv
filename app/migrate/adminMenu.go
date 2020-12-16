@@ -14,9 +14,7 @@ type AdminMenu struct {
 }
 
 func (_ *AdminMenu) AutoMigrate() {
-
-	cmf.Db.Migrator().DropTable(&model.AdminMenu{})
-	cmf.Db.AutoMigrate(&model.AdminMenu{})
+	cmf.Db().Migrator().DropTable(&model.AdminMenu{})
+	cmf.Db().AutoMigrate(&model.AdminMenu{})
 	model.AutoAdminMenu()
 }
-

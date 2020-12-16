@@ -27,7 +27,7 @@ type SettingsController struct {
  */
 func (rest *SettingsController) Get(c *gin.Context) {
 	option := &model.Option{}
-	siteResult := cmf.Db.First(option, "option_name = ?", "site_info") // 查询
+	siteResult := cmf.NewDb().First(option, "option_name = ?", "site_info") // 查询
 	if siteResult.RowsAffected > 0 {
 		rest.rc.Success(c, "获取成功", option)
 	} else {
@@ -75,17 +75,16 @@ func (rest *SettingsController) Store(c *gin.Context) {
 	//	OpenRegistration:   c.PostForm("open_registration"),
 	//}
 
-
 	c.Request.ParseForm()
-	var params = make(map[string]interface{},len(c.Request.Form))
-	for k,v := range c.Request.Form{
+	var params = make(map[string]interface{}, len(c.Request.Form))
+	for k, v := range c.Request.Form {
 		if len(v) > 0 {
-			params[k] = strings.Join(v,"")
+			params[k] = strings.Join(v, "")
 		}
 	}
 	siteInfoValue, _ := json.Marshal(params)
 	fmt.Println("siteInfoValue", string(siteInfoValue))
-	cmf.Db.Model(&model.Option{}).Where("option_name = ?", "site_info").Update("option_value", string(siteInfoValue))
+	cmf.NewDb().Model(&model.Option{}).Where("option_name = ?", "site_info").Update("option_value", string(siteInfoValue))
 	rest.rc.Success(c, "修改成功", params)
 }
 

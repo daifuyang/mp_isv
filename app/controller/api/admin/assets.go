@@ -45,9 +45,11 @@ type AssetsController struct {
 
 func (rest *AssetsController) Get(c *gin.Context) {
 
+	userId := util.CurrentAdminId(c)
+
 	var assets []model.Asset
-	query := "status = ?"
-	queryArgs := []interface{}{"1"}
+	query := "user_id = ? AND status = ?"
+	queryArgs := []interface{}{userId, "1"}
 
 	paramType := c.DefaultQuery("type", "0")
 
@@ -71,8 +73,8 @@ func (rest *AssetsController) Get(c *gin.Context) {
 	}
 
 	var total int64 = 0
-	cmf.Db.Where(query, queryArgs...).Find(&assets).Count(&total)
-	result := cmf.Db.Where(query, queryArgs...).Limit(intPageSize).Offset((intCurrent - 1) * intPageSize).Order("id desc").Find(&assets)
+	cmf.NewDb().Where(query, queryArgs...).Find(&assets).Count(&total)
+	result := cmf.NewDb().Where(query, queryArgs...).Limit(intPageSize).Offset((intCurrent - 1) * intPageSize).Order("id desc").Find(&assets)
 
 	if result.RowsAffected == 0 {
 		rest.rc.Error(c, "该页码内容不存在！", nil)
@@ -143,8 +145,6 @@ func (rest *AssetsController) Store(c *gin.Context) {
 		return
 	}
 
-
-
 	var fileList map[string]string
 	var err error
 
@@ -161,7 +161,7 @@ func (rest *AssetsController) Store(c *gin.Context) {
 			rest.rc.Error(c, err.Error(), nil)
 			return
 		}
-		result = append(result,tempAssets{FileName: fileList["fileName"],FilePath: fileList["filePath"],PrevPath: fileList["prevPath"]})
+		result = append(result, tempAssets{FileName: fileList["fileName"], FilePath: fileList["filePath"], PrevPath: fileList["prevPath"]})
 	}
 
 	rest.rc.Success(c, "上传成功", result)
@@ -201,7 +201,7 @@ func (rest *AssetsController) Delete(c *gin.Context) {
 
 		fmt.Println("Id", rewrite.Id)
 
-		result := cmf.Db.First(&asset, rewrite.Id)
+		result := cmf.NewDb().First(&asset, rewrite.Id)
 		if result.RowsAffected == 0 {
 			rest.rc.Error(c, "该内容不存在！", nil)
 			return
@@ -210,13 +210,13 @@ func (rest *AssetsController) Delete(c *gin.Context) {
 		asset.Id = rewrite.Id
 		asset.Status = 0
 
-		if err := cmf.Db.Save(asset).Error; err != nil {
+		if err := cmf.NewDb().Save(asset).Error; err != nil {
 			rest.rc.Error(c, "删除失败！", nil)
 			return
 		}
 	} else {
 		fmt.Println("ids", ids)
-		if err := cmf.Db.Model(&asset).Where("id IN (?)", ids).Updates(map[string]interface{}{"status": 0}).Error; err != nil {
+		if err := cmf.NewDb().Model(&asset).Where("id IN (?)", ids).Updates(map[string]interface{}{"status": 0}).Error; err != nil {
 			rest.rc.Error(c, "删除失败！", nil)
 			return
 		}
@@ -227,7 +227,7 @@ func (rest *AssetsController) Delete(c *gin.Context) {
 
 // 根据文件处理上传逻辑
 // 1.判断上传类型，验证后缀合理性 type [0 => "图片" 1 => "视频" 2 => "文件"]
-func handleUpload(c *gin.Context, file *multipart.FileHeader, fileType string)  (map[string]string,error) {
+func handleUpload(c *gin.Context, file *multipart.FileHeader, fileType string) (map[string]string, error) {
 	tempFile, tempErr := file.Open()
 	defer tempFile.Close()
 
@@ -264,26 +264,26 @@ func handleUpload(c *gin.Context, file *multipart.FileHeader, fileType string)  
 		iResult := util.ToLowerInArray(suffix, iExtensionArr)
 		fmt.Println("iResult", iResult)
 		if !iResult {
-			return nil,errors.New("【" + suffix + "】不是合法的图片后缀！")
+			return nil, errors.New("【" + suffix + "】不是合法的图片后缀！")
 		}
 	case "1":
 		aExtensionArr := strings.Split(uploadSetting.Audio.Extensions, ",")
 		if !util.ToLowerInArray(suffix, aExtensionArr) {
-			return nil,errors.New("【" + suffix + "】不是合法的音频后缀！")
+			return nil, errors.New("【" + suffix + "】不是合法的音频后缀！")
 		}
 	case "2":
 		vExtensionArr := strings.Split(uploadSetting.Video.Extensions, ",")
 		if !util.ToLowerInArray(suffix, vExtensionArr) {
-			return nil,errors.New("【" + suffix + "】不是合法的音频后缀！")
+			return nil, errors.New("【" + suffix + "】不是合法的音频后缀！")
 		}
 	case "3":
 		fExtensionArr := strings.Split(uploadSetting.File.Extensions, ",")
 		if !util.ToLowerInArray(suffix, fExtensionArr) {
-			return nil,errors.New("【" + suffix + "】不是合法的附件后缀！")
+			return nil, errors.New("【" + suffix + "】不是合法的附件后缀！")
 		}
 
 	default:
-		return nil,errors.New("非法访问")
+		return nil, errors.New("非法访问")
 		c.Abort()
 	}
 
@@ -311,7 +311,6 @@ func handleUpload(c *gin.Context, file *multipart.FileHeader, fileType string)  
 	remarkName := file.Filename
 	fileName := cmfUtil.GetMd5(fileUuid.String() + suffixArr[0])
 	fileNameSuffix := fileName + "." + suffix
-
 
 	uploadPath := temPath + "/" + timeDir + "/"
 	filePath := uploadPath + fileNameSuffix
@@ -352,7 +351,7 @@ func handleUpload(c *gin.Context, file *multipart.FileHeader, fileType string)  
 
 	fileTypeInt, _ := strconv.Atoi(fileType)
 	//保存到数据库
-	cmf.Db.Create(&model.Asset{
+	cmf.NewDb().Create(&model.Asset{
 		UserId:     userIdInt,
 		FileSize:   fileSize,
 		CreateAt:   time.Now().Unix(),
@@ -364,10 +363,10 @@ func handleUpload(c *gin.Context, file *multipart.FileHeader, fileType string)  
 		AssetType:  fileTypeInt,
 	})
 
-	tempMap := make(map[string]string,0)
+	tempMap := make(map[string]string, 0)
 	tempMap["fileName"] = fileNameSuffix
 	tempMap["filePath"] = filePath
 	tempMap["prevPath"] = util.GetFileUrl(filePath)
 
-	return tempMap,nil
+	return tempMap, nil
 }

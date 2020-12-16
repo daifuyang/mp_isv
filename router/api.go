@@ -3,8 +3,10 @@ package router
 import (
 	"gincmf/app/controller/api/admin"
 	"gincmf/app/controller/api/common"
-	"gincmf/app/controller/api/tenant"
 	"gincmf/app/middleware"
+	"gincmf/app/model"
+	"gincmf/plugins/saasPlugin/controller/api/tenant"
+	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	cmf "github.com/gincmf/cmf/bootstrap"
 )
@@ -12,7 +14,7 @@ import (
 //web路由初始化
 func ApiListenRouter() {
 
-	adminGroup := cmf.Group("api/admin",middleware.ValidationBearerToken, middleware.ValidationAdmin, middleware.ApiBaseController, middleware.Rbac)
+	adminGroup := cmf.Group("api/admin", middleware.ValidationBearerToken, middleware.ValidationAdmin, middleware.ApiBaseController, middleware.Rbac)
 	{
 		adminGroup.Rest("/settings", new(admin.SettingsController))
 		adminGroup.Rest("/assets", new(admin.AssetsController))
@@ -27,35 +29,39 @@ func ApiListenRouter() {
 		adminGroup.Post("/auth_access", new(admin.AuthAccessController).Store)
 	}
 
-
-	// 租户注册
-	cmf.Post("api/tenant/register",middleware.MainDb,new(tenant.UserController).Register)
-
-	tenantGroup := cmf.Group("api/tenant",middleware.ValidationBearerToken,middleware.TenantDb, middleware.ValidationAdmin, middleware.ApiBaseController, middleware.Rbac)
-	{
-		tenantGroup.Get("/mp/apps",new(tenant.MpThemeController).Get)
-		tenantGroup.Post("/mp/create",new(tenant.MpThemeController).Store)
-		// 小程序页面管理
-		tenantGroup.Rest("/mp/page",new(tenant.MpThemePageController))
-		// 资源管理
-		tenantGroup.Rest("/assets", new(tenant.AssetsController))
-	}
-
-
-
 	// 获取短信验证码
-	cmf.Post("api/sms_code",new(common.SmsCodeController).Post)
+	cmf.Post("api/sms_code", new(common.SmsCodeController).Post)
 
 	// 获取当前用户信息
 	cmf.Get("/api/currentUser", middleware.ValidationBearerToken, middleware.ValidationAdmin, func(c *gin.Context) {
-		scope,_ := c.Get("scope")
+		scope, _ := c.Get("scope")
 		if scope == "tenant" {
-			new(tenant.UserController).CurrentUser(c)
-		}else{
+			new(tenant.User).CurrentUser(c)
+		} else {
 			new(admin.UserController).CurrentUser(c)
 		}
 	})
 
-	common.RegisterOauthRouter(middleware.MainDb)
-	common.RegisterTenantRouter(middleware.MainDb)
+	v1 := cmf.Group("/api/v1")
+	{
+		// 获取省市区
+		v1.Get("/region", new(common.RegionController).Get)
+		v1.Get("/region/list/:id", new(common.RegionController).List)
+		v1.Get("/region/detail/:id", new(common.RegionController).One)
+	}
+
+	// 清除缓存
+	cmf.Get("/api/clear", func(c *gin.Context) {
+		session := sessions.Default(c)
+		session.Clear()
+		session.Options(sessions.Options{MaxAge: -1})
+		session.Save()
+		c.JSON(200, model.ReturnData{
+			Code: 1,
+			Data: nil,
+			Msg:  "清除成功！",
+		})
+	})
+
+	common.RegisterOauthRouter()
 }

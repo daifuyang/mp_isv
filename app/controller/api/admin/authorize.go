@@ -29,14 +29,14 @@ type tempAuthorize struct {
 
 func (rest *AuthorizeController) Get(c *gin.Context) {
 	var adminMenu []tempAuthorize
-	result := cmf.Db.Find(&adminMenu)
+	result := cmf.NewDb().Find(&adminMenu)
 
 	if result.RowsAffected == 0 {
 		controller.RestController{}.Error(c, "暂无菜单,请联系管理员添加！", nil)
 		return
 	}
 
-	results := rest.recursionMenu(adminMenu, 0,[]string{})
+	results := rest.recursionMenu(adminMenu, 0, []string{})
 	rest.rc.Success(c, "获取成功！", results)
 }
 
@@ -51,7 +51,7 @@ func (rest *AuthorizeController) Show(c *gin.Context) {
 
 	var adminMenu []tempAuthorize
 	prefix := cmf.Conf().Database.Prefix
-	result := cmf.Db.Debug().Table(prefix + "admin_menu m").
+	result := cmf.NewDb().Debug().Table(prefix + "admin_menu m").
 		Select("r.id as rule_id,m.id,m.unique_name,m.parent_id,m.name,m.path,m.icon,m.hide_in_menu,m.list_order").
 		Joins("INNER JOIN  " + prefix + "auth_rule r ON m.unique_name = r.name").Scan(&adminMenu)
 
@@ -60,7 +60,7 @@ func (rest *AuthorizeController) Show(c *gin.Context) {
 		return
 	}
 
-	results := rest.recursionMenu(adminMenu, 0,[]string{})
+	results := rest.recursionMenu(adminMenu, 0, []string{})
 	rest.rc.Success(c, "获取成功！", results)
 }
 
@@ -85,13 +85,11 @@ type aResultStruct struct {
 	Children []interface{} `json:"children"`
 }
 
-
-
-func (rest *AuthorizeController) recursionMenu(menus []tempAuthorize, parentId int,tree []string) []aResultStruct {
+func (rest *AuthorizeController) recursionMenu(menus []tempAuthorize, parentId int, tree []string) []aResultStruct {
 
 	var results []aResultStruct
 
-	tree = append(tree,strconv.Itoa(parentId))
+	tree = append(tree, strconv.Itoa(parentId))
 
 	//key := strings.Join(tree,"-")
 
@@ -99,13 +97,13 @@ func (rest *AuthorizeController) recursionMenu(menus []tempAuthorize, parentId i
 		if parentId == v.ParentId {
 			result := aResultStruct{
 				Id:       v.Id,
-				RuleId: v.RuleId,
+				RuleId:   v.RuleId,
 				ParentId: v.ParentId,
 				Title:    v.Name,
 				Key:      v.RuleId,
 			}
 
-			routes := rest.recursionMenu(menus, v.Id,tree)
+			routes := rest.recursionMenu(menus, v.Id, tree)
 			itfRoutes := make([]interface{}, len(routes))
 			for i, v := range routes {
 				itfRoutes[i] = v
