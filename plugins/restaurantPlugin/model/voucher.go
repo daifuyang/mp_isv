@@ -8,13 +8,16 @@ package model
 import (
 	"errors"
 	"github.com/gin-gonic/gin"
+	"github.com/gincmf/alipayEasySdk/marketing"
 	cmf "github.com/gincmf/cmf/bootstrap"
 	cmfModel "github.com/gincmf/cmf/model"
 	"gorm.io/gorm"
+	"strconv"
 	"strings"
 	"time"
 )
 
+// 优惠券
 type Voucher struct {
 	Id                   int     `json:"id"`
 	VoucherName          string  `gorm:"type:varchar(30);comment:优惠券名称，仅供商家可查看;not null" json:"voucher_name"`
@@ -40,6 +43,42 @@ type Voucher struct {
 	paginate             cmfModel.Paginate
 }
 
+// 优惠券发放表
+type VoucherPost struct {
+	Id              int    `json:"id"`
+	VoucherId       int    `gorm:"type:int(11);comment:所属优惠券模板id;not null" json:"voucher_id"`
+	TemplateId      string `gorm:"-" json:"template_id"`
+	VoucherName     string `gorm:"-" json:"voucher_name"`
+	ValidStartAt    int64  `gorm:"type:int(11);comment:发放开始时间;not null" json:"valid_start_at"`
+	ValidEndAt      int64  `gorm:"type:int(11);comment:有效截止时间;not null" json:"valid_end_at"`
+	ValidStartTime  string `gorm:"-" json:"valid_start_time"`
+	ValidEndTime    string `gorm:"-" json:"valid_end_time"`
+	UserId          int    `gorm:"type:int(11);comment:所属人信息" json:"user_id"`
+	AlipayVoucherId string `gorm:"type:varchar(28);comment:支付宝券id" json:"alipay_voucher_id"`
+	CreateAt        int64  `gorm:"type:int(11)" json:"create_at"`
+	UpdateAt        int64  `gorm:"type:int(11)" json:"update_at"`
+	CreateTime      string `gorm:"-" json:"create_time"`
+	UpdateTime      string `gorm:"-" json:"update_time"`
+	Status          int    `gorm:"type:tinyint(2);default:1;comment:状态;not null" json:"status"`
+	paginate        cmfModel.Paginate
+}
+
+type VoucherResult struct {
+	VoucherPost
+	VoucherName          string  `gorm:"type:varchar(30);comment:优惠券名称，仅供商家可查看;not null" json:"voucher_name"`
+	Type                 int     `gorm:"type:tinyint(2);default:0;comment:0.全场优惠券，1.单品优惠券;not null" json:"type"`
+	VoucherType          string  `gorm:"type:varchar(64);comment:券类型，详见支付宝微信;not null" json:"voucher_type"`
+	VoucherValidPeriod   string  `gorm:"type:json;comment:券有效期;not null" json:"voucher_valid_period"`
+	VoucherAvailableTime string  `gorm:"type:json;comment:券可用时段;not null" json:"voucher_available_time"`
+	VoucherDescription   string  `gorm:"type:json;comment:券使用说明;not null" json:"voucher_description"`
+	VoucherQuantity      int     `gorm:"type:int(10);comment:拟发行券的数量。单位为张" json:"voucher_quantity"`
+	Amount               float64 `gorm:"type:decimal(10,2);comment:面额。每张代金券可以抵扣的金额。币种为人民币，单位为元。" json:"amount"`
+	TotalAmount          float64 `gorm:"type:decimal(12,2);comment:券总金额（仅用于不定额券）" json:"total_amount"`
+	FloorAmount          float64 `gorm:"type:decimal(12,2);comment:最低额度。设置券使用门槛，只有订单金额大于等于最低额度时券才能使用。" json:"floor_amount"`
+	TemplateId           string  `gorm:"type:varchar(28);comment:模板ID;" json:"template_id"`
+	SyncToAlipay         int     `gorm:"type:tinyint(2);default:0;comment:同步到支付宝卡包;not null" json:"sync_to_alipay"`
+}
+
 /**
  * @Author return <1140444693@qq.com>
  * @Description 自动数据库迁移
@@ -49,6 +88,7 @@ type Voucher struct {
  **/
 func (model *Voucher) AutoMigrate() {
 	cmf.NewDb().AutoMigrate(&model)
+	cmf.NewDb().AutoMigrate(&VoucherPost{})
 }
 
 /**
@@ -140,4 +180,66 @@ func (model *Voucher) Show(query []string, queryArgs []interface{}) (Voucher, er
 
 	return v, nil
 
+}
+
+// app用户优惠券列表
+func (model *VoucherPost) Index(c *gin.Context, query []string, queryArgs []interface{}) (cmfModel.Paginate, error) {
+
+	// 获取默认的系统分页
+	current, pageSize, err := model.paginate.Default(c)
+
+	if err != nil {
+		return cmfModel.Paginate{}, err
+	}
+
+	// 合并参数合计
+	queryStr := strings.Join(query, " AND ")
+	var total int64 = 0
+
+	var vp []VoucherPost
+	cmf.NewDb().Where(queryStr, queryArgs...).Find(&vp).Count(&total)
+	tx := cmf.NewDb().Where(queryStr, queryArgs...).Limit(pageSize).Offset((current - 1) * pageSize).Find(&vp)
+
+	if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
+		return cmfModel.Paginate{}, tx.Error
+	}
+
+	paginate := cmfModel.Paginate{Data: vp, Current: current, PageSize: pageSize, Total: total}
+	if len(vp) == 0 {
+		paginate.Data = make([]string, 0)
+	}
+
+	return paginate, nil
+
+}
+
+// 获取个人优惠券详情
+func (model *VoucherPost) Show(query []string, queryArgs []interface{}) (VoucherResult, error) {
+
+	queryStr := strings.Join(query, " AND ")
+
+	var voucherResult VoucherResult
+	prefix := cmf.Conf().Database.Prefix
+	tx := cmf.NewDb().Table(prefix+"voucher_post p").Select("p.*,v.voucher_name,v.type,v.amount,v.total_amount,v.floor_amount,v.sync_to_alipay").
+		Joins("INNER JOIN "+prefix+"voucher v ON v.id = p.voucher_id").
+		Where(queryStr, queryArgs...).Scan(&voucherResult)
+
+	if tx.Error != nil {
+		return voucherResult,tx.Error
+	}
+
+	return voucherResult,nil
+
+}
+
+func (model *Voucher) Send(templateId string, openId string, voucherName string) marketing.VoucherSendResponse {
+	nowUnix := time.Now().Unix()
+	outNo := strconv.FormatInt(nowUnix, 10)
+	bizContent := make(map[string]interface{}, 0)
+	bizContent["template_id"] = templateId
+	bizContent["user_id"] = openId
+	bizContent["out_biz_no"] = outNo
+	bizContent["memo"] = voucherName
+	result := new(marketing.CashlessVoucher).Send(bizContent)
+	return result
 }

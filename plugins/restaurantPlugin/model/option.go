@@ -36,7 +36,7 @@ type EatIn struct {
 	Day                int     `json:"day"`
 }
 
-type takeOut struct {
+type TakeOut struct {
 	Status             int `json:"status"`
 	BusinessHours      int `json:"business_hours"`
 	PickUpTime         int `json:"pick_up_time"`        // 自提时间
@@ -45,4 +45,14 @@ type takeOut struct {
 	Appointment        int `json:"appointment"`
 	AutoTakingOrder    int `json:"auto_taking_order"`
 	Day                int `json:"day"`
+}
+
+type Recharge struct {
+	Gear           float64     `json:"gear"` // 储值金额档位
+	MoneyEnabled   int         `json:"money_enabled"`
+	Money          float64     `json:"money"`
+	PointEnabled   int         `json:"point_enabled"`
+	Point          int         `json:"point"`
+	VoucherEnabled int         `json:"voucher_enabled"`
+	Voucher        []voucherItem `json:"voucher"`
 }

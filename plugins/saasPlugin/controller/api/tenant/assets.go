@@ -34,53 +34,26 @@ type AssetsController struct {
 
 func (rest *AssetsController) Get(c *gin.Context) {
 
-	var assets []model.Asset
-	query := "status = ?"
-	queryArgs := []interface{}{"1"}
+	userId := util.CurrentAdminId(c)
+
+	query := []string{"user_id = ?","status = ?"}
+	queryArgs := []interface{}{userId, "1"}
 
 	paramType := c.DefaultQuery("type", "0")
 
-	query += " AND type = ?"
+	query = append(query,"type = ?")
 	queryArgs = append(queryArgs, paramType)
 
-	current := c.DefaultQuery("current", "1")
-	pageSize := c.DefaultQuery("pageSize", "10")
-
-	intCurrent, _ := strconv.Atoi(current)
-	intPageSize, _ := strconv.Atoi(pageSize)
-
-	if intCurrent <= 0 {
-		rest.rc.Error(c, "当前页码需大于0！", nil)
+	assets := model.Asset{
+		GetFileUrl: util.GetFileUrl,
+	}
+	data,err := assets.Get(c,query,queryArgs)
+	if err != nil {
+		rest.rc.Error(c,err.Error(),nil)
 		return
 	}
 
-	if intPageSize <= 0 {
-		rest.rc.Error(c, "每页数需大于0！", nil)
-		return
-	}
-
-	var total int64 = 0
-	cmf.NewDb().Where(query, queryArgs...).Find(&assets).Count(&total)
-	result := cmf.NewDb().Where(query, queryArgs...).Limit(intPageSize).Offset((intCurrent - 1) * intPageSize).Order("id desc").Find(&assets)
-
-	if result.Error != nil {
-		rest.rc.Error(c, result.Error.Error(), nil)
-		return
-	}
-
-	var tempAssets []model.TempAsset
-
-	for _, v := range assets {
-		prevPath := util.GetFileUrl(v.FilePath)
-		tempAssets = append(tempAssets, model.TempAsset{Asset: v, PrevPath: prevPath})
-	}
-
-	paginationData := &model.Paginate{Data: tempAssets, Current: current, PageSize: pageSize, Total: total}
-	if len(tempAssets) == 0 {
-		paginationData.Data = make([]string, 0)
-	}
-
-	rest.rc.Success(c, "获取成功！", paginationData)
+	rest.rc.Success(c, "获取成功！", data)
 }
 
 /*
@@ -99,7 +72,7 @@ func (rest *AssetsController) Show(c *gin.Context) {
 		id int `uri:"id"`
 	}
 	if err := c.ShouldBindUri(&rewrite); err != nil {
-		c.JSON(400, gin.H{"msg": err})
+		c.JSON(400, gin.H{"msg": err.Error()})
 		return
 	}
 	rest.rc.Success(c, "操作成功show", nil)
@@ -172,7 +145,7 @@ func (rest *AssetsController) Delete(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindUri(&rewrite); err != nil {
-		c.JSON(400, gin.H{"msg": err})
+		c.JSON(400, gin.H{"msg": err.Error()})
 		return
 	}
 
@@ -183,7 +156,7 @@ func (rest *AssetsController) Delete(c *gin.Context) {
 
 	if len(ids) == 0 {
 		if err := c.ShouldBindUri(&rewrite); err != nil {
-			c.JSON(400, gin.H{"msg": err})
+			c.JSON(400, gin.H{"msg": err.Error()})
 			return
 		}
 
@@ -243,7 +216,7 @@ func handleUpload(c *gin.Context, file *multipart.FileHeader, fileType string) (
 
 	//获取后缀列表
 	middleware.MainDb(c)
-	uploadSetting := util.UploadSetting(c)
+	uploadSetting := model.GetUploadSetting(c)
 	middleware.TenantDb(c)
 
 	switch fileType {

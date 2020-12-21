@@ -7,14 +7,20 @@ package card
 
 import (
 	"encoding/json"
+	"errors"
+	appModel "gincmf/app/model"
 	"gincmf/app/util"
+	"gincmf/plugins/restaurantPlugin/controller/admin/settings"
 	"gincmf/plugins/restaurantPlugin/model"
 	"github.com/gin-gonic/gin"
 	"github.com/gincmf/alipayEasySdk/marketing"
+	"github.com/gincmf/alipayEasySdk/payment"
 	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
+	"gorm.io/gorm"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -69,7 +75,7 @@ func (rest *Card) VipDetail(c *gin.Context) {
 	}
 
 	// 获取当前配置会员卡开卡信息
-	vipInfo := util.Options("vip_info")
+	vipInfo := appModel.Options("vip_info")
 
 	var viMap model.VipInfo
 	json.Unmarshal([]byte(vipInfo), &viMap)
@@ -119,13 +125,16 @@ func (rest *Card) VipDetail(c *gin.Context) {
  **/
 func (rest *Card) Send(c *gin.Context) {
 
+	appId, _ := c.Get("app_id")
+	mpUserId, _ := c.Get("mp_user_id")
+	mpType, _ := c.Get("mp_type")
+	Openid, _ := c.Get("open_id")
 	// 获取当前用户信息
 	mid, _ := c.Get("mid")
 
 	userId, _ := c.Get("mp_user_id")
 
 	u := model.User{}
-
 	userData, err := u.Show([]string{"u.id = ?"}, []interface{}{userId})
 
 	if err != nil {
@@ -141,7 +150,7 @@ func (rest *Card) Send(c *gin.Context) {
 		return
 	}
 
-	vipInfo := util.Options("vip_info")
+	vipInfo := appModel.Options("vip_info")
 
 	var viMap model.VipInfo
 	json.Unmarshal([]byte(vipInfo), &viMap)
@@ -156,10 +165,130 @@ func (rest *Card) Send(c *gin.Context) {
 	vip.CreateAt = nowUnix
 	vip.UpdateAt = nowUnix
 
+	levelId, _ := strconv.Atoi(strings.Replace(vip.VipLevel, "VIP", "", -1))
+
+	/*
+	 ** 唯一uid编号生成逻辑
+	 ** 日期 + 当天排号数量
+	 */
+	yearStr, monthStr, dayStr := util.CurrentDate()
+	insertKey := "mp_isv" + strconv.Itoa(mid.(int)) + ":member_card:" + yearStr + monthStr + dayStr
+	date := yearStr + monthStr + dayStr
+	vipNum := util.DateUuid("",insertKey,date)
 	// 新建会员卡
-	switch viMap.Level[0].GetType {
+	switch viMap.Level[levelId].GetType {
 	case "pay":
+
+		co := model.MemberCardOrder{}
 		// 返回付费订单号
+		fee := viMap.Level[levelId].Num
+		if fee <= 0 {
+			rest.rc.Error(c, "商家会员卡配置出错！", nil)
+			return
+		}
+
+		tx := cmf.NewDb().Where("user_id = ? AND vip_level = ? AND fee = ? AND pay_type = ? AND order_status = ?",mpUserId,vip.VipLevel,fee,"alipay","WAIT_BUYER_PAY").First(&co)
+
+		if tx.Error != nil && !errors.Is(tx.Error,gorm.ErrRecordNotFound) {
+			rest.rc.Error(c,tx.Error.Error(),nil)
+			return
+		}
+
+		if tx.RowsAffected > 0 {
+			rest.rc.Success(c,"获取历史订单成功！",co)
+			return
+		}
+
+		appIdInt, _ := appId.(int)
+		appIdStr := strconv.Itoa(appIdInt)
+
+		yearStr, monthStr, dayStr := util.CurrentDate()
+		date := yearStr + monthStr + dayStr
+		insertKey := "mp_isv" + appIdStr + ":card:" + date
+
+		orderId := util.DateUuid("vip", insertKey, date)
+
+		if orderId == "" {
+			rest.rc.Error(c, "订单号生成出错！", nil)
+			return
+		}
+
+		// 判断用户是否已经开过会员卡
+		vipData ,err := vip.Show([]string{"user_id = ?"},[]interface{}{userId})
+		if err != nil && !errors.Is(err,gorm.ErrRecordNotFound) {
+			rest.rc.Error(c,err.Error(),nil)
+			return
+		}
+
+		// 未开过卡
+		if vipData.Id == 0 {
+			vip.VipLevel = viMap.Level[0].LevelId
+			vip.VipName = viMap.Level[0].LevelName
+			vip.EndAt = int64(card.ValidPeriod) + nowUnix
+			vip.EndAt = time.Now().Unix()
+			vip.VipNum = vipNum
+			vip.Status = 0
+			cmf.NewDb().Create(&vip)
+		}
+
+		// 支付宝小程序下单
+		businessJson := appModel.Options("business_info")
+		bi := settings.BusinessInfo{}
+		json.Unmarshal([]byte(businessJson), &bi)
+
+		co.VipNum = vipNum
+		co.VipLevel = viMap.Level[0].LevelId
+		co.OrderId = orderId
+		co.PayType = "alipay"
+		co.UserId = mpUserId.(int)
+		co.Fee = fee
+		co.CreateAt = nowUnix
+		co.OrderStatus = "WAIT_BUYER_PAY"
+
+		// 支付宝小程序下单
+		if mpType == "alipay" {
+
+			var aliDetail []payment.GoodsDetail
+
+			aliDetail = append(aliDetail, payment.GoodsDetail{
+				GoodsId:   "memberCard",
+				GoodsName: "付费会员卡",
+				Quantity:  "1",
+				Price:     fee,
+				Body:      viMap.Level[levelId].LevelName,
+			})
+
+			common := payment.Common{}
+			bizContent := make(map[string]interface{}, 0)
+			bizContent["out_trade_no"] = orderId
+			bizContent["total_amount"] = fee
+			// bizContent["discountable_amount"] = 0
+			bizContent["subject"] = bi.BrandName
+			bizContent["body"] = bi.BrandName + "开通会员卡"
+			bizContent["buyer_id"] = Openid
+			bizContent["goods_detail"] = aliDetail
+			extendParams := map[string]string{
+				"food_order_type": "direct_payment",
+			}
+			bizContent["extend_params"] = extendParams
+			result := common.Create(bizContent)
+
+			if result.Response.Code == "10000" {
+				co.TradeNo = result.Response.TradeNo
+			} else {
+				rest.rc.Error(c, "创建失败！", result.Response)
+				return
+			}
+		}
+
+		tx = cmf.NewDb().Create(&co)
+		if tx.Error != nil {
+			rest.rc.Error(c, tx.Error.Error(), nil)
+			return
+		}
+
+		rest.rc.Success(c, "创建订单成功！", co)
+
 	case "storage":
 		// 不达标提交提示不达标
 		// 达标后直接开卡
@@ -172,25 +301,8 @@ func (rest *Card) Send(c *gin.Context) {
 			vip.VipName = viMap.Level[0].LevelName
 			vip.EndAt = int64(card.ValidPeriod) + nowUnix
 			vip.EndAt = -1
-
-			/*
-			 ** 唯一uid编号生成逻辑
-			 ** 日期 + 当天排号数量
-			 */
-			yearStr, monthStr, dayStr := util.CurrentDate()
-			insertKey := "mp_isv"+strconv.Itoa(mid.(int))+":member_card:" + yearStr + monthStr + dayStr
-
-			// 设置当天失效时间
-			year, month, day := time.Now().Date()
-			today := time.Date(year, month, day, 23, 59, 59, 59, time.Local)
-			cmf.NewRedisDb().ExpireAt(insertKey, today)
-			val := util.SetIncr(insertKey)
-
-			nStr := yearStr + monthStr + dayStr + strconv.FormatInt(val, 10)
-			n, _ := strconv.Atoi(nStr)
-			vipNum := util.EncodeId(uint64(n))
-			vip.VipNum = strconv.Itoa(vipNum)
-
+			vip.VipNum = vipNum
+			vip.Status = 1
 			cmf.NewDb().Create(&vip)
 			rest.rc.Success(c, "开卡成功！", nil)
 		} else {

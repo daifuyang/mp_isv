@@ -3,7 +3,7 @@ package middleware
 import (
 	"fmt"
 	"gincmf/app/controller/api/common"
-	"gincmf/app/util"
+	"gincmf/app/model"
 	"github.com/gin-gonic/gin"
 	"github.com/gincmf/cmf/controller"
 	"gopkg.in/oauth2.v3"
@@ -20,20 +20,17 @@ func ValidationBearerToken(c *gin.Context) {
 	t, err := s.ValidationBearerToken(c.Request)
 	Token = t
 	if err != nil {
-
-
-
 		c.JSON(http.StatusOK, gin.H{"code": 400, "msg": err.Error()})
 		fmt.Println("err", err.Error())
 		c.Abort()
 	}
 
 	// 增加时间
-	s.SetAccessTokenExpHandler(func(w http.ResponseWriter, r *http.Request) (td time.Duration, err error){
+	s.SetAccessTokenExpHandler(func(w http.ResponseWriter, r *http.Request) (td time.Duration, err error) {
 		tokenExp := "24"
 		exp, _ := strconv.Atoi(tokenExp)
 		duration := time.Duration(exp) * time.Hour
-		return duration,nil
+		return duration, nil
 	})
 
 	fmt.Println("scope", t.GetScope())
@@ -45,7 +42,7 @@ func ValidationBearerToken(c *gin.Context) {
 
 //验证是否为管理员
 func ValidationAdmin(c *gin.Context) {
-	currentUser := util.CurrentUser(c)
+	currentUser := model.CurrentUser(c)
 	userType := currentUser.UserType
 	c.Set("userType", userType)
 	scope, _ := c.Get("scope")

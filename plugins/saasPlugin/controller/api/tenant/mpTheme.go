@@ -43,7 +43,7 @@ func (rest *MpThemeController) Get(c *gin.Context) {
 
 	var total int64 = 0
 	cmf.NewDb().First(&mpTheme).Count(&total)
-	result := cmf.NewDb().Debug().Limit(intPageSize).Offset((intCurrent - 1) * intPageSize).Order("id desc").Find(&mpTheme)
+	result := cmf.NewDb().Limit(intPageSize).Offset((intCurrent - 1) * intPageSize).Order("id desc").Find(&mpTheme)
 
 	type tempStruct struct {
 		model.MpTheme
@@ -83,7 +83,7 @@ func (rest *MpThemeController) Get(c *gin.Context) {
 		return
 	}
 
-	paginationData := &model.Paginate{Data: temp, Current: current, PageSize: pageSize, Total: total}
+	paginationData := &model.Paginate{Data: temp, Current: intCurrent, PageSize: intPageSize, Total: total}
 	if len(temp) == 0 {
 		paginationData.Data = make([]string, 0)
 	}

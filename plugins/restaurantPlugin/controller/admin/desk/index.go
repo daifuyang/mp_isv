@@ -19,52 +19,15 @@ type IndexController struct {
 	rc controller.RestController
 }
 
-// 文档所需
-type deskGoodsPaginate struct {
-	Data     []model.Desk `json:"data"`
-	Current  string       `json:"current" example:"1"`
-	PageSize string       `json:"page_size" example:"10"`
-	Total    int64        `json:"total" example:"10"`
-}
-
-type deskGoodsGet struct {
-	Code int                `json:"code" example:"1"`
-	Msg  string             `json:"msg" example:"获取成功！"`
-	Data deskGoodsPaginate `json:"data"`
-}
-
-type deskGoodsStore struct {
-	Code int        `json:"code" example:"1"`
-	Msg  string     `json:"msg" example:"添加成功！"`
-	Data model.Desk `json:"data"`
-}
-
-type deskGoodsShow struct {
-	Code int        `json:"code" example:"1"`
-	Msg  string     `json:"msg" example:"获取成功！"`
-	Data model.Desk `json:"data"`
-}
-
-type deskGoodsEdit struct {
-	Code int        `json:"code" example:"1"`
-	Msg  string     `json:"msg" example:"修改成功！"`
-	Data model.Desk `json:"data"`
-}
-
-type deskGoodsDel struct {
-	Code int        `json:"code" example:"1"`
-	Msg  string     `json:"msg" example:"删除成功！"`
-	Data model.Desk `json:"data"`
-}
-
 // @Summary 桌位管理
 // @Description 查看全部桌位列表
 // @Tags restaurant 桌位管理
 // @Accept mpfd
 // @Param name formData string true "桌位名称"
-// @Produce json
-// @Success 200 {object} deskGoodsGet "code:1 => 获取成功，code:0 => 获取异常" "
-// @Router /admin/desk/goods [get]
+// @Produce mpfd
+// @Success 200 {object} model.Paginate{data=[]model.Desk} "code:1 => 获取成功，code:0 => 获取失败"
+// @Failure 400 {object} model.ReturnData "{"code":400,"msg":"登录状态已失效！"}"
+// @Router /admin/desk [get]
 func (rest *IndexController) Get(c *gin.Context) {
 
 	var query []string
@@ -106,26 +69,27 @@ func (rest *IndexController) Get(c *gin.Context) {
 
 /**
  * @Author return <1140444693@qq.com>
- * @Description 预览单个桌位
+ * @Description 单个桌位管理
  * @Date 2020/11/01 13:25:35
  * @Param
  * @return
  **/
 
-// @Summary 单个桌位管理
+// @Summary 单个桌位详情
 // @Description 查看单个桌位
 // @Tags restaurant 桌位管理
 // @Accept mpfd
 // @Param id path string true "单个桌位id"
-// @Produce json
-// @Success 200 {object} deskGoodsShow "code:1 => 获取成功，code:0 => 获取异常" "
-// @Router /admin/desk/goods/{id} [get]
+// @Produce mpfd
+// @Success 200 {object} model.ReturnData{data=model.Desk} "code:1 => 获取成功，code:0 => 获取失败"
+// @Failure 400 {object} model.ReturnData "{"code":400,"msg":"登录状态已失效！"}"
+// @Router /admin/desk/{id} [get]
 func (rest *IndexController) Show(c *gin.Context) {
 	var rewrite struct {
 		Id int `uri:"id"`
 	}
 	if err := c.ShouldBindUri(&rewrite); err != nil {
-		c.JSON(400, gin.H{"msg": err})
+		c.JSON(400, gin.H{"msg": err.Error()})
 		return
 	}
 
@@ -165,15 +129,21 @@ func (rest *IndexController) Show(c *gin.Context) {
 // @Tags restaurant 桌位管理
 // @Accept mpfd
 // @Param id path string true "单个桌位id"
-// @Produce json
-// @Success 200 {object} deskGoodsEdit "code:1 => 获取成功，code:0 => 获取异常" "
-// @Router /admin/desk/goods/{id} [post]
+// @Produce mpfd
+// @Param id path string true "单个桌位id"
+// @Param mid query string true "小程序唯一编号"
+// @Param name formData string true "桌位名称"
+// @Param store_id formData string true "所属门店"
+// @Param category_id formData string true "所属分类"
+// @Success 200 {object} model.ReturnData{data=model.Desk} "code:1 => 获取成功，code:0 => 获取失败"
+// @Failure 400 {object} model.ReturnData "{"code":400,"msg":"登录状态已失效！"}"
+// @Router /admin/desk/{id} [post]
 func (rest *IndexController) Edit(c *gin.Context) {
 	var rewrite struct {
 		Id int `uri:"id"`
 	}
 	if err := c.ShouldBindUri(&rewrite); err != nil {
-		c.JSON(400, gin.H{"msg": err})
+		c.JSON(400, gin.H{"msg": err.Error()})
 		return
 	}
 
@@ -235,13 +205,15 @@ func (rest *IndexController) Edit(c *gin.Context) {
  * @return
  **/
 
-// @Summary 提交添加单个桌位
-// @Description 提交添加单个桌位
+// @Summary 提交删除桌位
+// @Description 提交删除单个桌位
 // @Tags restaurant 桌位管理
 // @Accept mpfd
-// @Produce json
-// @Success 200 {object} deskGoodsStore "code:1 => 获取成功，code:0 => 获取异常" "
-// @Router /admin/desk/goods [post]
+// @Param id path string true "单个菜单类型id"
+// @Produce mpfd
+// @Success 200 {object} model.ReturnData{data=model.Desk} "code:1 => 删除成功，code:0 => 删除失败"
+// @Failure 400 {object} model.ReturnData "{"code":400,"msg":"登录状态已失效！"}"
+// @Router /admin/desk [post]
 func (rest *IndexController) Store(c *gin.Context) {
 
 	mid, _ := c.Get("mid")
@@ -272,7 +244,7 @@ func (rest *IndexController) Store(c *gin.Context) {
 
 	categoryIdInt ,err := strconv.Atoi(categoryId)
 	if err != nil {
-		rest.rc.Error(c,"门店id不能为空！",nil)
+		rest.rc.Error(c,"门店id参数非法！",nil)
 		return
 	}
 
@@ -303,24 +275,27 @@ func (rest *IndexController) Store(c *gin.Context) {
 
 // @Summary 提交删除桌位
 // @Description 提交删除桌位
-// @Tags restaurant 菜品管理
+// @Tags restaurant 桌位管理
 // @Accept mpfd
-// @Produce json
-// @Success 200 {object} deskGoodsDel "code:1 => 获取成功，code:0 => 获取异常" "
-// @Router /admin/desk/index/{id} [delete]
+// @Produce mpfd
+// @Param id path string true "单个桌位id"
+// @Success 200 {string} nil "code:1 => 删除成功，code:0 => 删除失败"
+// @Failure 400 {object} model.ReturnData "{"code":400,"msg":"登录状态已失效！"}"
+// @Router /admin/desk/{id} [delete]
 func (rest *IndexController) Delete(c *gin.Context) {
 
 	var rewrite struct {
 		Id int `uri:"id"`
 	}
 	if err := c.ShouldBindUri(&rewrite); err != nil {
-		c.JSON(400, gin.H{"msg": err})
+		c.JSON(400, gin.H{"msg": err.Error()})
 		return
 	}
 
 	mid, _ := c.Get("mid")
 	midInt := mid.(int)
 	desk := model.Desk{}
+
 	result := cmf.NewDb().Where("mid = ? AND id = ?",midInt,rewrite.Id).Delete(&desk)
 
 	if result.Error != nil {

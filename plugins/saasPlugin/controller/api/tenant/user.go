@@ -8,7 +8,7 @@ package tenant
 import (
 	"gincmf/app/util"
 	"gincmf/plugins/saasPlugin/migrate"
-	model2 "gincmf/plugins/saasPlugin/model"
+	saasModel "gincmf/plugins/saasPlugin/model"
 	"github.com/gin-gonic/gin"
 	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
@@ -37,7 +37,7 @@ func (rest *User) Register(c *gin.Context) {
 		return
 	}
 
-	uRes := cmf.NewDb().Where("mobile", mobile).First(&model2.Tenant{})
+	uRes := cmf.NewDb().Where("mobile", mobile).First(&saasModel.Tenant{})
 	if uRes.RowsAffected > 0 {
 		rest.rc.Error(c, "该手机号已经被绑定注册！", nil)
 		return
@@ -50,25 +50,15 @@ func (rest *User) Register(c *gin.Context) {
 		return
 	}
 
-	smsArr := util.SmsCodeArr[mobileInt]
-	if smsArr == nil {
-		rest.rc.Error(c, "请先获取短信验证码！", nil)
-		return
-	}
-
-	if smsArr.Expire < time.Now().Unix() {
-		rest.rc.Error(c, "该短信验证码已经失效！请重新获取", nil)
-		return
-	}
-
 	smsCode := c.PostForm("sms_code")
 	if smsCode == "" {
 		rest.rc.Error(c, "短信验证码不能为空！", nil)
 		return
 	}
 
-	if smsArr.Code != smsCode {
-		rest.rc.Error(c, "短信验证码验证出错！请检查您的验证码是否正确", nil)
+	err = util.ValidateSms(mobileInt,smsCode)
+	if err != nil {
+		rest.rc.Error(c,err.Error(),nil)
 		return
 	}
 
@@ -109,7 +99,7 @@ func (rest *User) Register(c *gin.Context) {
 	tenantId := util.EncodeId(uint64(n))
 
 	// 存入当前租户
-	tenant := model2.Tenant{
+	tenant := saasModel.Tenant{
 		TenantId:  tenantId,
 		UserLogin: mobile,
 		Mobile:    mobile,
@@ -120,15 +110,12 @@ func (rest *User) Register(c *gin.Context) {
 	result := cmf.NewDb().Create(&tenant)
 
 	if result.RowsAffected > 0 {
-		smsArr.Expire = time.Now().Unix()
-
 		go func() {
 			dbName := "tenant_" + strconv.Itoa(tenantId)
 
 			cmfModel.CreateTable(dbName, cmf.Conf())
 
 			cmf.ManualDb(dbName)
-
 			// 调用saas初始化
 			migrate.AutoMigrate()
 
@@ -151,7 +138,6 @@ func (rest *User) Register(c *gin.Context) {
  **/
 func (rest *User) CurrentUser(c *gin.Context) {
 	// 获取当前用户
-	currentTenant := util.CurrentTenant(c)
-
+	currentTenant := saasModel.CurrentTenant(c)
 	rest.rc.Success(c, "获取成功", currentTenant)
 }

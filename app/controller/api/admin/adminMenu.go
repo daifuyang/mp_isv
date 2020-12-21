@@ -6,7 +6,6 @@ package admin
 
 import (
 	"gincmf/app/model"
-	"gincmf/app/util"
 	"github.com/gin-gonic/gin"
 	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
@@ -25,7 +24,7 @@ func (rest *MenuController) Get(c *gin.Context) {
 		return
 	}
 
-	authAccessRule := util.AuthAccess(c)
+	authAccessRule := model.GetAuthAccess(c)
 
 	// 获取当前用户类型
 

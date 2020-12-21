@@ -27,6 +27,7 @@ func StartMigrate() {
 	new(tenant).AutoMigrate()
 	new(AdminMenu).AutoMigrate()
 	new(Region).AutoMigrate()
+	new(ShopCategory).AutoMigrate()
 }
 
 // 租户表迁移

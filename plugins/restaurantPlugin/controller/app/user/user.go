@@ -7,7 +7,7 @@ package user
 
 import (
 	"encoding/json"
-	"gincmf/app/util"
+	appModel "gincmf/app/model"
 	"gincmf/plugins/restaurantPlugin/model"
 	"github.com/gin-gonic/gin"
 	"github.com/gincmf/cmf/controller"
@@ -33,7 +33,7 @@ func (rest *User) Show(c *gin.Context) {
 		ExpRangeEnd   int `json:"exp_range_end"`
 	}
 
-	vipInfo := util.Options("vip_info")
+	vipInfo := appModel.Options("vip_info")
 
 	var viMap model.VipInfo
 	json.Unmarshal([]byte(vipInfo), &viMap)

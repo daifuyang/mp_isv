@@ -11,7 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"gincmf/app/model"
-	"gincmf/app/util"
+	saasModel "gincmf/plugins/saasPlugin/model"
 	"github.com/gin-gonic/gin"
 	"github.com/gincmf/alipayEasySdk"
 	"github.com/gincmf/alipayEasySdk/base"
@@ -59,7 +59,7 @@ func (rest *Auth) OutAuthQrcode(c *gin.Context) {
 		rest.rc.Error(c,"小程序不存在！",nil)
 	}
 
-	tenant := util.CurrentTenant(c)
+	tenant := saasModel.CurrentTenant(c)
 
 	stateMap := make(map[string]string,0)
 	stateMap["tenant_id"] = strconv.Itoa(tenant.TenantId)

@@ -31,7 +31,7 @@ func (rest *Level) Edit(c *gin.Context) {
 
 	err := c.ShouldBindJSON(&form)
 	if err != nil {
-		c.JSON(400, gin.H{"msg": err})
+		c.JSON(400, gin.H{"msg": err.Error()})
 		return
 	}
 

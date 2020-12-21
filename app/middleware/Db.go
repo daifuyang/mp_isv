@@ -6,7 +6,7 @@
 package middleware
 
 import (
-	"gincmf/app/util"
+	saasModel "gincmf/plugins/saasPlugin/model"
 	"github.com/gin-gonic/gin"
 	cmf "github.com/gincmf/cmf/bootstrap"
 	"strconv"
@@ -20,7 +20,7 @@ func MainDb(c *gin.Context) {
 
 // 设置租户id
 func TenantDb(c *gin.Context) {
-	currentTenant := util.CurrentTenant(c)
+	currentTenant := saasModel.CurrentTenant(c)
 	db := "tenant_" + strconv.Itoa(currentTenant.TenantId)
 	cmf.ManualDb(db)
 	c.Next()

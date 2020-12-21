@@ -8,20 +8,26 @@ package util
 import (
 	"errors"
 	"fmt"
-	"gincmf/app/model"
 	"math/rand"
 	"time"
 )
 
-var SmsCodeArr map[int]*model.SmsCode
+type smsCode struct {
+	Phone  int
+	Code   string
+	Expire int64
+}
 
-func SmsCode(mobile int) (*model.SmsCode, error) {
+
+var SmsCodeArr map[int]*smsCode
+
+func SmsCode(mobile int) (*smsCode, error) {
 
 	rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
-	smsCode := fmt.Sprintf("%04v", rnd.Int31n(10000))
+	code := fmt.Sprintf("%04v", rnd.Int31n(10000))
 
 	if SmsCodeArr == nil {
-		SmsCodeArr = make(map[int]*model.SmsCode, 0)
+		SmsCodeArr = make(map[int]*smsCode, 0)
 	}
 
 	if SmsCodeArr[mobile] != nil && SmsCodeArr[mobile].Expire > time.Now().Unix() {
@@ -42,11 +48,34 @@ func SmsCode(mobile int) (*model.SmsCode, error) {
 	//}
 	//fmt.Println("response",response)
 
-	SmsCodeArr[mobile] = &model.SmsCode{
+	SmsCodeArr[mobile] = &smsCode{
 		Phone:  mobile,
-		Code:   smsCode,
+		Code:   code,
 		Expire: time.Now().Unix() + 60*2,
 	}
 
 	return SmsCodeArr[mobile], nil
+}
+
+func ValidateSms(mobile int,code string) error {
+	smsArr := SmsCodeArr[mobile]
+	if smsArr == nil {
+		return errors.New( "请先获取短信验证码！")
+	}
+
+	if smsArr.Expire < time.Now().Unix() {
+		return errors.New(  "该短信验证码已经失效！请重新获取")
+	}
+
+	if code == "" {
+		return errors.New("短信验证码不能为空！")
+	}
+
+	if smsArr.Code != code {
+		return errors.New("短信验证码验证出错！请检查您的验证码是否正确")
+	}
+
+	delete(SmsCodeArr,mobile)
+
+	return nil
 }

@@ -7,7 +7,6 @@ package util
 
 import (
 	"fmt"
-	"gincmf/app/model"
 	"math/rand"
 	"testing"
 	"time"
@@ -21,10 +20,10 @@ func TestSmsCode(t *testing.T) {
 	return
 
 	if SmsCodeArr == nil {
-		SmsCodeArr = make(map[int]*model.SmsCode, 0)
+		SmsCodeArr = make(map[int]*smsCode, 0)
 	}
 
-	SmsCodeArr[15161178722] = &model.SmsCode{
+	SmsCodeArr[15161178722] = &smsCode{
 		Phone:  15161178722,
 		Code:   smsCode,
 		Expire: time.Now().Unix() + 60*5,

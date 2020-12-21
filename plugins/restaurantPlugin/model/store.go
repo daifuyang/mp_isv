@@ -20,9 +20,13 @@ import (
 // 门店信息表
 type Store struct {
 	Id             int               `json:"id"`
+	OrderId        string            `gorm:"type:varchar(64);comment:申请单id;not null" json:"order_id"`
 	Mid            int               `gorm:"type:bigint(20);comment:对应小程序id;not null" json:"mid"`
 	StoreNumber    int               `gorm:"type:int(11);comment:门店唯一编号;not null" json:"store_number"`
 	StoreName      string            `gorm:"type:varchar(32);comment:门店名称;not null" json:"store_name"`
+	StoreType      string            `gorm:"type:tinyint(3);comment:门店类型（1：直营，2：加盟）;not null" json:"store_type"`
+	TopCategory    string            `gorm:"type:varchar(10);comment:所属门店顶级id;not null" json:"top_category"`
+	ShopCategory   string            `gorm:"type:varchar(10);comment:所属门店id;not null" json:"shop_category"`
 	Phone          string            `gorm:"type:varchar(20);comment:联系电话;not null" json:"phone"`
 	ContactPerson  string            `gorm:"type:varchar(20);comment:联系人名称;not null" json:"contact_person"`
 	Province       int               `gorm:"type:int(11);comment:省份id;not null" json:"province"`
@@ -179,8 +183,8 @@ func (model *Store) IndexWithFoodCount(c *gin.Context, query []string, queryArgs
 		cmf.NewDb().Model(&Food{}).Where("store_id = ?", v.Id).Count(&count)
 		cmf.NewDb().Model(&Food{}).Where("store_id = ? AND status = 1", v.Id).Count(&salesCount)
 		tempStruct = append(tempStruct, tempResult{
-			Store: v,
-			Count: count,
+			Store:      v,
+			Count:      count,
 			SalesCount: salesCount,
 		})
 	}
@@ -601,7 +605,7 @@ func (model *StoreHours) AddHours(hours []StoreHours) ([]StoreHours, error) {
 	}
 
 	// 新增营业时间
-	result = cmf.NewDb().Debug().Create(&hours)
+	result = cmf.NewDb().Create(&hours)
 	if result.Error != nil {
 		return []StoreHours{}, nil
 	}

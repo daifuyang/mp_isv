@@ -38,6 +38,14 @@ type BusinessInfo struct {
 	BusinessPhoto   string `json:"business_photo"`
 }
 
+// @Summary 系统基础设置
+// @Description 查看系统基础设置
+// @Tags restaurant 系统设置
+// @Accept mpfd
+// @Produce mpfd
+// @Success 200 {object} model.ReturnData{data=BusinessInfo} "code:1 => 获取成功，code:0 => 获取失败"
+// @Failure 400 {object} model.ReturnData "{"code":400,"msg":"登录状态已失效！"}"
+// @Router /admin/settings/business_info [get]
 func (rest *Common) Show(c *gin.Context) {
 	op := model.Option{}
 	result := cmf.NewDb().Where("option_name = ?", "business_info").First(&op)
@@ -46,13 +54,41 @@ func (rest *Common) Show(c *gin.Context) {
 		return
 	}
 	bi := BusinessInfo{}
+	json.Unmarshal([]byte(op.OptionValue), &bi)
 
-	json.Unmarshal([]byte(op.OptionValue),&bi)
+	var res struct {
+		BusinessInfo
+		BrandLogoPrev     string `json:"brand_logo_prev"`
+		BusinessPhotoPrev string `json:"business_photo_prev"`
+	}
 
-	rest.rc.Success(c,"获取成功！",bi)
+	res.BusinessInfo = bi
+	res.BrandLogoPrev = util.GetFileUrl(bi.BrandLogo)
+	res.BusinessPhotoPrev = util.GetFileUrl(bi.BusinessPhoto)
+
+	rest.rc.Success(c, "获取成功！", res)
 
 }
 
+// @Summary 系统基础设置
+// @Description 提交系统基础设置
+// @Tags restaurant 系统设置
+// @Accept mpfd
+// @Produce mpfd
+// @Param brand_name formData string true "品牌名称"
+// @Param brand_logo formData string true "品牌LOGO"
+// @Param company formData string false "公司"
+// @Param address formData string false "公司地址"
+// @Param contact formData string false "联系人"
+// @Param mobile formData string false "手机号"
+// @Param email formData string false "邮箱"
+// @Param business_license formData string false "营业执照许可证"
+// @Param business_scope formData string false "经营范围"
+// @Param business_expired formData string false "营业执照有效期"
+// @Param business_photo formData string false "营业执照照片"
+// @Success 200 {object} model.ReturnData{data=BusinessInfo} "code:1 => 获取成功，code:0 => 获取失败"
+// @Failure 400 {object} model.ReturnData "{"code":400,"msg":"登录状态已失效！"}"
+// @Router /admin/settings/business_info [post]
 func (rest *Common) Edit(c *gin.Context) {
 
 	// 品牌名
@@ -69,7 +105,7 @@ func (rest *Common) Edit(c *gin.Context) {
 		return
 	}
 
-	absPath := util.CurrentPath() + "/public/" + brandLogo
+	absPath := util.CurrentPath() + "/public/uploads/" + brandLogo
 	b, err := util.ExistPath(absPath)
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)

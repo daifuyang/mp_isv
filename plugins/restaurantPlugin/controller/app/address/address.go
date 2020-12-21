@@ -54,7 +54,7 @@ func (rest *Address) Show(c *gin.Context) {
 		Id string `uri:"id"`
 	}
 	if err := c.ShouldBindUri(&rewrite); err != nil {
-		c.JSON(400, gin.H{"msg": err})
+		c.JSON(400, gin.H{"msg": err.Error()})
 		return
 	}
 
@@ -188,7 +188,7 @@ func (rest *Address) Edit(c *gin.Context) {
 		Id int `uri:"id"`
 	}
 	if err := c.ShouldBindUri(&rewrite); err != nil {
-		c.JSON(400, gin.H{"msg": err})
+		c.JSON(400, gin.H{"msg": err.Error()})
 		return
 	}
 
@@ -301,7 +301,7 @@ func (rest *Address) Delete(c *gin.Context) {
 		Id int `uri:"id"`
 	}
 	if err := c.ShouldBindUri(&rewrite); err != nil {
-		c.JSON(400, gin.H{"msg": err})
+		c.JSON(400, gin.H{"msg": err.Error()})
 		return
 	}
 

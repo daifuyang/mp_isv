@@ -26,8 +26,8 @@ type SettingsController struct {
  * )
  */
 func (rest *SettingsController) Get(c *gin.Context) {
-	option := &model.Option{}
-	siteResult := cmf.NewDb().First(option, "option_name = ?", "site_info") // 查询
+	option := model.Option{}
+	siteResult := cmf.NewDb().First(&option, "option_name = ?", "site_info") // 查询
 	if siteResult.RowsAffected > 0 {
 		rest.rc.Success(c, "获取成功", option)
 	} else {
@@ -40,7 +40,7 @@ func (rest *SettingsController) Show(c *gin.Context) {
 		id int `uri:"id"`
 	}
 	if err := c.ShouldBindUri(&rewrite); err != nil {
-		c.JSON(400, gin.H{"msg": err})
+		c.JSON(400, gin.H{"msg": err.Error()})
 		return
 	}
 	rest.rc.Success(c, "操作成功show", nil)

@@ -77,6 +77,9 @@ type FoodStoreHouse struct {
 	CreateTime       string                   `gorm:"-" json:"create_time"`
 	UpdateTime       string                   `gorm:"-" json:"update_time"`
 	Category         []FoodCategory           `gorm:"-" json:"category"`
+	DishType         string                   `gorm:"type:varchar(40);comment:菜品类型;" json:"dish_type"`
+	Flavor           string                   `gorm:"type:varchar(40);comment:菜品口味;" json:"flavor"`
+	CookingMethod    string                   `gorm:"type:varchar(40);comment:菜品做法;" json:"cooking_method"`
 	Status           int                      `gorm:"type:tinyint(3);comment:菜品状态;" json:"status"`
 	paginate         cmfModel.Paginate        `gorm:"-"`
 	Db               *gorm.DB                 `gorm:"-" json:"-"`

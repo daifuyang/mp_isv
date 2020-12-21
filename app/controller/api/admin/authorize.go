@@ -45,7 +45,7 @@ func (rest *AuthorizeController) Show(c *gin.Context) {
 		Id int `uri:"id"`
 	}
 	if err := c.ShouldBindUri(&rewrite); err != nil {
-		c.JSON(400, gin.H{"msg": err})
+		c.JSON(400, gin.H{"msg": err.Error()})
 		return
 	}
 

@@ -21,44 +21,6 @@ type CategoryController struct {
 	rc controller.RestController
 }
 
-// 文档所需
-type dishesCatePaginate struct {
-	Data     []model.FoodCategory `json:"data"`
-	Current  string               `json:"current" example:"1"`
-	PageSize string               `json:"page_size" example:"10"`
-	Total    int64                `json:"total" example:"10"`
-}
-
-type dishesCateGet struct {
-	Code int                `json:"code" example:"1"`
-	Msg  string             `json:"msg" example:"获取成功！"`
-	Data dishesCatePaginate `json:"data"`
-}
-
-type dishesCateStore struct {
-	Code int                `json:"code" example:"1"`
-	Msg  string             `json:"msg" example:"添加成功！"`
-	Data model.FoodCategory `json:"data"`
-}
-
-type dishesCateShow struct {
-	Code int                `json:"code" example:"1"`
-	Msg  string             `json:"msg" example:"获取成功！"`
-	Data model.FoodCategory `json:"data"`
-}
-
-type dishesCateEdit struct {
-	Code int                `json:"code" example:"1"`
-	Msg  string             `json:"msg" example:"修改成功！"`
-	Data model.FoodCategory `json:"data"`
-}
-
-type dishesCateDel struct {
-	Code int                `json:"code" example:"1"`
-	Msg  string             `json:"msg" example:"删除成功！"`
-	Data model.FoodCategory `json:"data"`
-}
-
 /**
  * @Author return <1140444693@qq.com>
  * @Description 查看全部菜品分类列表
@@ -71,12 +33,15 @@ type dishesCateDel struct {
 // @Description 查看全部菜品分类列表
 // @Tags restaurant 菜单分类
 // @Accept mpfd
+// @Param store_id query string true "门店id"
+// @Param mid query string true "小程序唯一编号"
 // @Param name formData string true "菜单名称"
 // @Param type formData int false "菜单类型（0=>全部，1=>到店，2=>外卖）" Enums(0, 1, 2)
 // @Param is_required formData int false "是否必选（0=>否，1=>是）" Enums(0, 1)
 // @Param status formData int false "状态（0=>停用，1=>启用）" Enums(0, 1)
-// @Produce json
-// @Success 200 {object} dishesCateGet "code:1 => 获取成功，code:0 => 获取异常"
+// @Produce mpfd
+// @Success 200 {object} model.Paginate{data=[]model.FoodCategory} "code:1 => 获取成功，code:0 => 获取异常"
+// @Failure 400 {object} model.ReturnData "{"code":400,"msg":"登录状态已失效！"}"
 // @Router /admin/dishes/category [get]
 func (rest *CategoryController) Get(c *gin.Context) {
 
@@ -115,8 +80,10 @@ func (rest *CategoryController) Get(c *gin.Context) {
 // @Tags restaurant 菜单分类
 // @Accept mpfd
 // @Param id path string true "单个菜单分类id"
-// @Produce json
-// @Success 200 {object} dishesCateShow "code:1 => 获取成功，code:0 => 获取异常"
+// @Param mid query string true "小程序唯一编号"
+// @Produce mpfd
+// @Success 200 {object} model.ReturnData{data=model.FoodCategory} "code:1 => 获取成功，code:0 => 获取异常"
+// @Failure 400 {object} model.ReturnData "{"code":400,"msg":"登录状态已失效！"}"
 // @Router /admin/dishes/category/{id} [get]
 func (rest *CategoryController) Show(c *gin.Context) {
 
@@ -124,7 +91,7 @@ func (rest *CategoryController) Show(c *gin.Context) {
 		Id int `uri:"id"`
 	}
 	if err := c.ShouldBindUri(&rewrite); err != nil {
-		c.JSON(400, gin.H{"msg": err})
+		c.JSON(400, gin.H{"msg": err.Error()})
 		return
 	}
 
@@ -162,8 +129,15 @@ func (rest *CategoryController) Show(c *gin.Context) {
 // @Tags restaurant 菜单分类
 // @Accept mpfd
 // @Param id formData string true "单个菜单分类id"
-// @Produce json
-// @Success 200 {object} dishesCateEdit "code:1 => 获取成功，code:0 => 获取异常"
+// @Param mid query string true "小程序唯一编号"
+// @Param name formData string true "菜品名称"
+// @Param name formData string true "菜品图片"
+// @Param type formData int false "菜单类型（0=>全部，1=>到店，2=>外卖）" Enums(0, 1, 2)
+// @Param is_required formData int false "是否必选（0=>否，1=>是）" Enums(0, 1)
+// @Param status formData int false "状态（0=>停用，1=>启用）" Enums(0, 1)
+// @Produce mpfd
+// @Success 200 {object} model.ReturnData "code:1 => 获取成功，code:0 => 获取异常"
+// @Failure 400 {object} model.ReturnData "{"code":400,"msg":"登录状态已失效！"}"
 // @Router /admin/dishes/category/{id} [post]
 func (rest CategoryController) Edit(c *gin.Context) {
 
@@ -171,7 +145,7 @@ func (rest CategoryController) Edit(c *gin.Context) {
 		Id int `uri:"id"`
 	}
 	if err := c.ShouldBindUri(&rewrite); err != nil {
-		c.JSON(400, gin.H{"msg": err})
+		c.JSON(400, gin.H{"msg": err.Error()})
 		return
 	}
 
@@ -288,7 +262,8 @@ func (rest CategoryController) Edit(c *gin.Context) {
 // @Param is_required formData int false "是否必选（0=>否，1=>是）" Enums(0, 1)
 // @Param status formData int false "状态（0=>停用，1=>启用）" Enums(0, 1)
 // @Produce json
-// @Success 200 {object} dishesCateStore "code:1 => 获取成功，code:0 => 获取异常"
+// @Success 200 {object} model.ReturnData{data=model.FoodCategory} "code:1 => 获取成功，code:0 => 获取异常"
+// @Failure 400 {object} model.ReturnData "{"code":400,"msg":"登录状态已失效！"}"
 // @Router /admin/dishes/category [post]
 func (rest CategoryController) Store(c *gin.Context) {
 
@@ -395,8 +370,9 @@ func (rest CategoryController) Store(c *gin.Context) {
 // @Tags restaurant 菜单分类
 // @Accept mpfd
 // @Param id path string true "单个菜单分类id"
-// @Produce json
-// @Success 200 {object} dishesCateDel "code:1 => 删除成功，code:0 => 删除失败"
+// @Produce mpfd
+// @Success 200 {object} model.ReturnData "code:1 => 删除成功，code:0 => 删除失败"
+// @Failure 400 {object} model.ReturnData "{"code":400,"msg":"登录状态已失效！"}"
 // @Router /admin/dishes/category/{id} [delete]
 func (rest CategoryController) Delete(c *gin.Context) {
 
@@ -404,7 +380,7 @@ func (rest CategoryController) Delete(c *gin.Context) {
 		Id int `uri:"id"`
 	}
 	if err := c.ShouldBindUri(&rewrite); err != nil {
-		c.JSON(400, gin.H{"msg": err})
+		c.JSON(400, gin.H{"msg": err.Error()})
 		return
 	}
 

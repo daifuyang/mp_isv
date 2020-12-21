@@ -7,6 +7,7 @@ package card
 
 import (
 	"encoding/json"
+	appModel "gincmf/app/model"
 	"gincmf/app/util"
 	"gincmf/plugins/restaurantPlugin/controller/admin/settings"
 	"gincmf/plugins/restaurantPlugin/model"
@@ -30,6 +31,7 @@ type Index struct {
  * @Param
  * @return
  **/
+
 func (rest *Index) Edit(c *gin.Context) {
 
 	appId, _ := c.Get("app_id")
@@ -54,7 +56,7 @@ func (rest *Index) Edit(c *gin.Context) {
 		syncToAlipayInt = 1
 	}
 
-	businessJson := util.Options("business_info")
+	businessJson := appModel.Options("business_info")
 
 	bi := settings.BusinessInfo{}
 
@@ -104,7 +106,7 @@ func (rest *Index) Edit(c *gin.Context) {
 
 	if syncToAlipayInt == 1 {
 
-		absPath := util.CurrentPath() + "/public/" + cardBackground
+		absPath := util.CurrentPath() + "/public/uploads/" + cardBackground
 		b, err := util.ExistPath(absPath)
 		if err != nil {
 			rest.rc.Error(c, err.Error(), nil)

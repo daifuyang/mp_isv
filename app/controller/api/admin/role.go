@@ -7,10 +7,7 @@ package admin
 import (
 	"gincmf/app/model"
 	"github.com/gin-gonic/gin"
-	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
-	"strconv"
-	"strings"
 )
 
 type RoleController struct {
@@ -18,8 +15,6 @@ type RoleController struct {
 }
 
 func (rest *RoleController) Get(c *gin.Context) {
-
-	var role []model.Role
 
 	var query []string
 	var queryArgs []interface{}
@@ -37,42 +32,15 @@ func (rest *RoleController) Get(c *gin.Context) {
 		query = append(query, "name LIKE ?")
 		queryArgs = append(queryArgs, "%"+name+"%")
 	}
+	role := model.Role{}
 
-	var queryStr interface{}
-	queryStr = strings.Join(query, " AND ")
-
-	current := c.DefaultQuery("current", "1")
-	pageSize := c.DefaultQuery("pageSize", "10")
-
-	intCurrent, _ := strconv.Atoi(current)
-	intPageSize, _ := strconv.Atoi(pageSize)
-
-	if intCurrent <= 0 {
-		rest.rc.Error(c, "当前页码需大于0！", nil)
+	data,err := role.Get(c,query,queryArgs)
+	if err != nil {
+		rest.rc.Error(c,err.Error(),nil)
 		return
 	}
 
-	if intPageSize <= 0 {
-		rest.rc.Error(c, "每页数需大于0！", nil)
-		return
-	}
-
-	var total int64 = 0
-
-	cmf.NewDb().Where(queryStr, queryArgs...).Find(&role).Count(&total)
-	result := cmf.NewDb().Limit(intPageSize).Where(queryStr, queryArgs...).Offset((intCurrent - 1) * intPageSize).Find(&role)
-
-	if result.RowsAffected == 0 {
-		rest.rc.Error(c, "该页码内容不存在！", role)
-		return
-	}
-
-	paginationData := &model.Paginate{Data: role, Current: current, PageSize: pageSize, Total: total}
-	if len(role) == 0 {
-		paginationData.Data = make([]string, 0)
-	}
-
-	rest.rc.Success(c, "获取成功", paginationData)
+	rest.rc.Success(c, "获取成功", data)
 }
 
 func (rest *RoleController) Show(c *gin.Context) {
@@ -80,7 +48,7 @@ func (rest *RoleController) Show(c *gin.Context) {
 		Id int `uri:"id"`
 	}
 	if err := c.ShouldBindUri(&rewrite); err != nil {
-		c.JSON(400, gin.H{"msg": err})
+		c.JSON(400, gin.H{"msg": err.Error()})
 		return
 	}
 	rest.rc.Success(c, "操作成功show", nil)

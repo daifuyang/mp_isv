@@ -9,10 +9,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	ginModel "gincmf/app/model"
+	appModel "gincmf/app/model"
 	"gincmf/app/util"
 	"gincmf/plugins/restaurantPlugin/model"
 	"github.com/gin-gonic/gin"
+	"github.com/gincmf/alipayEasySdk/merchant"
 	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
 	"gorm.io/gorm"
@@ -22,44 +23,6 @@ import (
 
 type IndexController struct {
 	rc controller.RestController
-}
-
-// 文档所需
-type storeIndexPaginate struct {
-	Data     []model.Store `json:"data"`
-	Current  string        `json:"current" example:"1"`
-	PageSize string        `json:"page_size" example:"10"`
-	Total    int64         `json:"total" example:"10"`
-}
-
-type storeIndexGet struct {
-	Code int                `json:"code" example:"1"`
-	Msg  string             `json:"msg" example:"获取成功！"`
-	Data storeIndexPaginate `json:"data"`
-}
-
-type storeIndexStore struct {
-	Code int         `json:"code" example:"1"`
-	Msg  string      `json:"msg" example:"添加成功！"`
-	Data model.Store `json:"data"`
-}
-
-type storeIndexShow struct {
-	Code int         `json:"code" example:"1"`
-	Msg  string      `json:"msg" example:"获取成功！"`
-	Data model.Store `json:"data"`
-}
-
-type storeIndexEdit struct {
-	Code int         `json:"code" example:"1"`
-	Msg  string      `json:"msg" example:"修改成功！"`
-	Data model.Store `json:"data"`
-}
-
-type storeIndexDel struct {
-	Code int         `json:"code" example:"1"`
-	Msg  string      `json:"msg" example:"删除成功！"`
-	Data model.Store `json:"data"`
 }
 
 /**
@@ -78,8 +41,9 @@ type storeIndexDel struct {
 // @Param start_time formData string true "起始时间"
 // @Param end_time formData string true "结束时间"
 // @Param status formData string true "结束时间"
-// @Produce json
-// @Success 200 {object} storeIndexGet "code:1 => 获取成功，code:0 => 获取异常"
+// @Produce mpfd
+// @Success 200 {object} model.Paginate{data=[]model.Store} "code:1 => 获取成功，code:0 => 获取失败"
+// @Failure 400 {object} model.ReturnData "{"code":400,"msg":"登录状态已失效！"}"
 // @Router /admin/store/index [get]
 func (rest *IndexController) Get(c *gin.Context) {
 
@@ -198,8 +162,9 @@ func (rest *IndexController) List(c *gin.Context) {
 // @Tags restaurant 门店管理
 // @Accept mpfd
 // @Param id path string true "单个门店id"
-// @Produce json
-// @Success 200 {object} storeIndexShow "code:1 => 获取成功，code:0 => 获取异常" "
+// @Produce mpfd
+// @Success 200 {object} model.ReturnData{data=model.Store} "code:1 => 获取成功，code:0 => 获取失败"
+// @Failure 400 {object} model.ReturnData "{"code":400,"msg":"登录状态已失效！"}"
 // @Router /admin/store/index/{id} [get]
 func (rest IndexController) Show(c *gin.Context) {
 
@@ -207,7 +172,7 @@ func (rest IndexController) Show(c *gin.Context) {
 		Id int `uri:"id"`
 	}
 	if err := c.ShouldBindUri(&rewrite); err != nil {
-		c.JSON(400, gin.H{"msg": err})
+		c.JSON(400, gin.H{"msg": err.Error()})
 		return
 	}
 
@@ -272,20 +237,24 @@ func (rest IndexController) Show(c *gin.Context) {
 // @Tags restaurant 门店管理
 // @Accept mpfd
 // @Param id path string true "单个门店id"
-// @Produce json
-// @Success 200 {object} storeIndexEdit "code:1 => 获取成功，code:0 => 获取异常" "
+// @Produce mpfd
+// @Success 200 {object} model.ReturnData{data=model.Store} "code:1 => 获取成功，code:0 => 获取失败"
+// @Failure 400 {object} model.ReturnData "{"code":400,"msg":"登录状态已失效！"}"
 // @Router /admin/store/index/{id} [post]
 func (rest IndexController) Edit(c *gin.Context) {
+
 	var rewrite struct {
 		Id int `uri:"id"`
 	}
 	if err := c.ShouldBindUri(&rewrite); err != nil {
-		c.JSON(400, gin.H{"msg": err})
+		c.JSON(400, gin.H{"msg": err.Error()})
 		return
 	}
 
 	mid, _ := c.Get("mid")
 	midInt := mid.(int)
+
+	alipayUserId, _ := c.Get("alipay_user_id")
 
 	// 门店名称
 	storeName := c.PostForm("store_name")
@@ -294,26 +263,21 @@ func (rest IndexController) Edit(c *gin.Context) {
 		return
 	}
 
-	// 门店编号
-	yearStr, monthStr, dayStr := util.CurrentDate()
-	insertKey := "mp_isv:store:" + yearStr + monthStr + dayStr
+	query := []string{"mid = ?", "store_name = ?"}
+	queryArgs := []interface{}{mid, storeName}
 
-	year, month, day := time.Now().Date()
-	today := time.Date(year, month, day, 23, 59, 59, 59, time.Local)
+	storeData, err := new(model.Store).Show(query, queryArgs)
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		rest.rc.Error(c, err.Error(), nil)
+	}
 
-	cmf.NewRedisDb().ExpireAt(insertKey, today)
-
-	val := util.SetIncr(insertKey)
-	numIdStr := strconv.FormatInt(val, 10)
-	nStr := "10" + yearStr + monthStr + dayStr + numIdStr
-
-	n, err := strconv.Atoi(nStr)
-	if err != nil {
-		rest.rc.Error(c, "门店编号生成出错，请联系管理员！", err.Error())
+	if storeData.Id == 0 {
+		rest.rc.Error(c, "该门店不存在！", nil)
 		return
 	}
 
-	storeNumber := util.EncodeId(uint64(n))
+	storeNumber := storeData.StoreNumber
+	fmt.Println(storeNumber)
 
 	// 联系电话
 	phone := c.PostForm("phone")
@@ -332,7 +296,7 @@ func (rest IndexController) Edit(c *gin.Context) {
 		return
 	}
 
-	region := ginModel.Region{}
+	region := appModel.Region{}
 	modelResult := region.GetOneById(provinceInt)
 	if modelResult.AreaId == 0 {
 		rest.rc.Error(c, "省份不存在！", nil)
@@ -388,6 +352,34 @@ func (rest IndexController) Edit(c *gin.Context) {
 		return
 	}
 
+	// shop_category 门店类目
+	inCategory := c.PostFormMap("shop_category")
+
+	fmt.Println("inCategory",inCategory)
+
+	if len(inCategory) < 1 {
+		rest.rc.Error(c, "门店类目不能为空！", nil)
+		return
+	}
+
+	topCategory := inCategory["0"]
+	shopCategory := inCategory["1"]
+
+	tx := cmf.Db().Where("category_id = ? AND category_type = ?", shopCategory, 2).First(&appModel.ShopCategory{})
+
+	if tx.RowsAffected == 0 {
+		rest.rc.Error(c, "门店类目不存在！", nil)
+		return
+	}
+
+	// 门店类型
+	storeType := c.PostForm("shop_type")
+	if storeType == "2" {
+		storeType = "02"
+	} else {
+		storeType = "01"
+	}
+
 	// 门头照片
 	storeThumbnail := c.PostForm("store_thumbnail")
 
@@ -407,7 +399,7 @@ func (rest IndexController) Edit(c *gin.Context) {
 	}
 
 	// 支持场景
-	scene := c.PostForm("scene")
+	scene := c.DefaultPostForm("scene", "0")
 	sceneInt, err := strconv.Atoi(scene)
 	if err != nil {
 		rest.rc.Error(c, "场景参数非法！", nil)
@@ -462,6 +454,9 @@ func (rest IndexController) Edit(c *gin.Context) {
 		Mid:            midInt,
 		StoreNumber:    storeNumber,
 		StoreName:      storeName,
+		TopCategory:    topCategory,
+		StoreType:      storeType,
+		ShopCategory:   shopCategory,
 		Phone:          phone,
 		ContactPerson:  contactPerson,
 		Province:       provinceInt,
@@ -482,6 +477,119 @@ func (rest IndexController) Edit(c *gin.Context) {
 		CreateAt:       time.Now().Unix(),
 		UpdateAt:       time.Now().Unix(),
 	}
+
+	var bt = make([]merchant.BusinessTime, 0)
+	for _, v := range storeHours {
+
+		openTime := v.StartTime
+		endTime := v.EndTime
+
+		if v.AllTime == 1 {
+			openTime = "00:00"
+			endTime = "23.59"
+		}
+
+		if v.Mon == 1 {
+			bt = append(bt, merchant.BusinessTime{
+				WeekDay:   1,
+				OpenTime:  openTime,
+				CloseTime: endTime,
+			})
+		}
+		if v.Sat == 1 {
+			bt = append(bt, merchant.BusinessTime{
+				WeekDay:   2,
+				OpenTime:  openTime,
+				CloseTime: endTime,
+			})
+		}
+		if v.Wed == 1 {
+			bt = append(bt, merchant.BusinessTime{
+				WeekDay:   3,
+				OpenTime:  openTime,
+				CloseTime: endTime,
+			})
+		}
+		if v.Thur == 1 {
+			bt = append(bt, merchant.BusinessTime{
+				WeekDay:   4,
+				OpenTime:  openTime,
+				CloseTime: endTime,
+			})
+		}
+		if v.Fri == 1 {
+			bt = append(bt, merchant.BusinessTime{
+				WeekDay:   5,
+				OpenTime:  openTime,
+				CloseTime: endTime,
+			})
+		}
+		if v.Sat == 1 {
+			bt = append(bt, merchant.BusinessTime{
+				WeekDay:   6,
+				OpenTime:  openTime,
+				CloseTime: endTime,
+			})
+		}
+		if v.Sun == 1 {
+			bt = append(bt, merchant.BusinessTime{
+				WeekDay:   7,
+				OpenTime:  openTime,
+				CloseTime: endTime,
+			})
+		}
+	}
+
+	// 换取门头照片
+	bizC := make(map[string]string, 0)
+	file := util.GetAbsPath(storeThumbnail)
+	resultImage, err := new(merchant.Image).Upload(bizC, file)
+
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
+	if resultImage.Response.Code != "10000" {
+		rest.rc.Error(c, "上传失败！"+resultImage.Response.SubMsg, nil)
+		return
+	}
+
+	outDoorImages := []string{resultImage.Response.ImageId}
+
+	// 同步到支付宝蚂蚁门店
+	bizContent := make(map[string]interface{}, 0)
+	bizContent["business_address"] = merchant.BusinessAddress{
+		ProvinceCode: province,
+		CityCode:     city,
+		DistrictCode: district,
+		Longitude:    longitude,
+		Latitude:     latitude,
+		Address:      address,
+	}
+
+	bizContent["shop_category"] = shopCategory
+	bizContent["store_id"] = storeNumber
+	bizContent["shop_type"] = storeType
+	bizContent["ip_role_id"] = alipayUserId
+	bizContent["shop_name"] = storeName
+	bizContent["out_door_images"] = outDoorImages
+	bizContent["business_time"] = bt
+	bizContent["contact_mobile"] = phone
+	/*bizContent["contact_infos"] = []merchant.ContactInfo{
+		{
+			Name:   contactPerson,
+			Mobile: phone,
+		},
+	}*/
+
+	result := new(merchant.Shop).Modify(bizContent)
+	if result.Response.Code != "10000" {
+		rest.rc.Error(c, "同步失败！"+result.Response.SubMsg, nil)
+		return
+	}
+
+	store.OrderId = result.Response.OrderId
 
 	store, err = store.Update()
 	if err != nil {
@@ -523,14 +631,17 @@ func (rest IndexController) Edit(c *gin.Context) {
 // @Param store_name formData string true "商户名称"
 // @Param phone formData string true "联系电话"
 // @Param contact_person formData string true "联系人"
-// @Produce json
-// @Success 200 {object} storeIndexStore "code:1 => 获取成功，code:0 => 获取异常" "
+// @Produce mpfd
+// @Success 200 {object} model.ReturnData{data=model.Store} "code:1 => 获取成功，code:0 => 获取失败"
+// @Failure 400 {object} model.ReturnData "{"code":400,"msg":"登录状态已失效！"}"
 // @Router /admin/store/index [post]
 func (rest IndexController) Store(c *gin.Context) {
 
 	// 获取小程序mid
 	mid, _ := c.Get("mid")
 	midInt := mid.(int)
+
+	alipayUserId, _ := c.Get("alipay_user_id")
 
 	// 门店名称
 	storeName := c.PostForm("store_name")
@@ -576,7 +687,7 @@ func (rest IndexController) Store(c *gin.Context) {
 		return
 	}
 
-	region := ginModel.Region{}
+	region := appModel.Region{}
 	modelResult := region.GetOneById(provinceInt)
 	if modelResult.AreaId == 0 {
 		rest.rc.Error(c, "省份不存在！", nil)
@@ -632,6 +743,31 @@ func (rest IndexController) Store(c *gin.Context) {
 		return
 	}
 
+	// shop_category 门店类目
+	inCategory := c.PostFormMap("shop_category")
+	if len(inCategory) < 1 {
+		rest.rc.Error(c, "门店类目不能为空！", nil)
+		return
+	}
+
+	topCategory := inCategory["0"]
+	shopCategory := inCategory["1"]
+
+	tx := cmf.Db().Where("category_id = ? AND category_type = ?", shopCategory, 2).First(&appModel.ShopCategory{})
+
+	if tx.RowsAffected == 0 {
+		rest.rc.Error(c, "门店类目不存在！", nil)
+		return
+	}
+
+	// 门店类型
+	storeType := c.PostForm("shop_type")
+	if storeType == "02" {
+		storeType = "02"
+	} else {
+		storeType = "01"
+	}
+
 	// 门头照片
 	storeThumbnail := c.PostForm("store_thumbnail")
 
@@ -651,7 +787,7 @@ func (rest IndexController) Store(c *gin.Context) {
 	}
 
 	// 支持场景
-	scene := c.PostForm("scene")
+	scene := c.DefaultPostForm("scene", "0")
 	sceneInt, err := strconv.Atoi(scene)
 	if err != nil {
 		rest.rc.Error(c, "场景参数非法！", nil)
@@ -691,7 +827,6 @@ func (rest IndexController) Store(c *gin.Context) {
 
 	var storeHours []model.StoreHours
 	json.Unmarshal([]byte(hours), &storeHours)
-	fmt.Println("storeHours", storeHours)
 
 	if len(storeHours) == 0 && len(storeHours) > 2 {
 		rest.rc.Error(c, "营业时间长度非法！", nil)
@@ -701,10 +836,26 @@ func (rest IndexController) Store(c *gin.Context) {
 	// 公告通知
 	notice := c.PostForm("notice")
 
+	query := []string{"mid = ?", "store_name = ?"}
+	queryArgs := []interface{}{mid, storeName}
+
+	storeData, err := new(model.Store).Show(query, queryArgs)
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		rest.rc.Error(c, err.Error(), nil)
+	}
+
+	if storeData.Id > 0 {
+		rest.rc.Error(c, "该门店已存在，无需重复创建！", nil)
+		return
+	}
+
 	store := model.Store{
 		Mid:            midInt,
 		StoreNumber:    storeNumber,
 		StoreName:      storeName,
+		StoreType:      storeType,
+		TopCategory:    topCategory,
+		ShopCategory:   shopCategory,
 		Phone:          phone,
 		ContactPerson:  contactPerson,
 		Province:       provinceInt,
@@ -725,6 +876,123 @@ func (rest IndexController) Store(c *gin.Context) {
 		CreateAt:       time.Now().Unix(),
 		UpdateAt:       time.Now().Unix(),
 	}
+
+	// 同步到支付宝蚂蚁门店
+
+	// 换取门头照片
+	bizC := make(map[string]string, 0)
+	file := util.GetAbsPath(storeThumbnail)
+	resultImage, err := new(merchant.Image).Upload(bizC, file)
+
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
+	if resultImage.Response.Code != "10000" {
+		rest.rc.Error(c, "上传失败！"+resultImage.Response.SubMsg, nil)
+		return
+	}
+
+	outDoorImages := []string{resultImage.Response.ImageId}
+
+	bizContent := make(map[string]interface{}, 0)
+
+	var bt = make([]merchant.BusinessTime, 0)
+	for _, v := range storeHours {
+
+		openTime := v.StartTime
+		endTime := v.EndTime
+
+		if v.AllTime == 1 {
+			openTime = "00:00"
+			endTime = "23.59"
+		}
+
+		if v.Mon == 1 {
+			bt = append(bt, merchant.BusinessTime{
+				WeekDay:   1,
+				OpenTime:  openTime,
+				CloseTime: endTime,
+			})
+		}
+		if v.Sat == 1 {
+			bt = append(bt, merchant.BusinessTime{
+				WeekDay:   2,
+				OpenTime:  openTime,
+				CloseTime: endTime,
+			})
+		}
+		if v.Wed == 1 {
+			bt = append(bt, merchant.BusinessTime{
+				WeekDay:   3,
+				OpenTime:  openTime,
+				CloseTime: endTime,
+			})
+		}
+		if v.Thur == 1 {
+			bt = append(bt, merchant.BusinessTime{
+				WeekDay:   4,
+				OpenTime:  openTime,
+				CloseTime: endTime,
+			})
+		}
+		if v.Fri == 1 {
+			bt = append(bt, merchant.BusinessTime{
+				WeekDay:   5,
+				OpenTime:  openTime,
+				CloseTime: endTime,
+			})
+		}
+		if v.Sat == 1 {
+			bt = append(bt, merchant.BusinessTime{
+				WeekDay:   6,
+				OpenTime:  openTime,
+				CloseTime: endTime,
+			})
+		}
+		if v.Sun == 1 {
+			bt = append(bt, merchant.BusinessTime{
+				WeekDay:   7,
+				OpenTime:  openTime,
+				CloseTime: endTime,
+			})
+		}
+	}
+
+	bizContent["business_address"] = merchant.BusinessAddress{
+		ProvinceCode: province,
+		CityCode:     city,
+		DistrictCode: district,
+		Longitude:    longitude,
+		Latitude:     latitude,
+		Address:      address,
+	}
+
+	fmt.Println("storeType", storeType)
+
+	bizContent["shop_category"] = shopCategory
+	bizContent["store_id"] = storeNumber
+	bizContent["shop_type"] = storeType
+	bizContent["ip_role_id"] = alipayUserId
+	bizContent["shop_name"] = storeName
+	bizContent["out_door_images"] = outDoorImages
+	bizContent["business_time"] = bt
+	bizContent["contact_mobile"] = phone
+	/*bizContent["contact_infos"] = []merchant.ContactInfo{
+		{
+			Name:   contactPerson,
+			Mobile: phone,
+		},
+	}*/
+
+	result := new(merchant.Shop).Create(bizContent)
+	if result.Response.Code != "10000" {
+		rest.rc.Error(c, "同步失败！"+result.Response.SubMsg, nil)
+		return
+	}
+
+	store.OrderId = result.Response.OrderId
 
 	store, err = store.Store()
 	if err != nil {
@@ -762,8 +1030,9 @@ func (rest IndexController) Store(c *gin.Context) {
 // @Description 删除单个门店
 // @Tags restaurant 门店管理
 // @Accept mpfd
-// @Produce json
-// @Success 200 {object} storeIndexDel "code:1 => 获取成功，code:0 => 获取异常" "
+// @Produce mpfd
+// @Success 200 {object} model.ReturnData{data=model.Store} "code:1 => 删除成功，code:0 => 删除失败"
+// @Failure 400 {object} model.ReturnData "{"code":400,"msg":"登录状态已失效！"}"
 // @Router /admin/store/index/{id} [delete]
 func (rest IndexController) Delete(c *gin.Context) {
 
@@ -771,7 +1040,7 @@ func (rest IndexController) Delete(c *gin.Context) {
 		Id int `uri:"id"`
 	}
 	if err := c.ShouldBindUri(&rewrite); err != nil {
-		c.JSON(400, gin.H{"msg": err})
+		c.JSON(400, gin.H{"msg": err.Error()})
 		return
 	}
 

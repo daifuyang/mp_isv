@@ -25,7 +25,7 @@ func (rest *AuthAccessController) Show(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindUri(&rewrite); err != nil {
-		c.JSON(400, gin.H{"msg": err})
+		c.JSON(400, gin.H{"msg": err.Error()})
 		return
 	}
 
@@ -70,7 +70,7 @@ func (rest *AuthAccessController) Edit(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindUri(&rewrite); err != nil {
-		c.JSON(400, gin.H{"msg": err})
+		c.JSON(400, gin.H{"msg": err.Error()})
 		return
 	}
 

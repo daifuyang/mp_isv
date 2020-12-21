@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"gincmf/app/model"
 	"github.com/gin-gonic/gin"
 	"github.com/gincmf/cmf/controller"
 )
@@ -13,12 +14,11 @@ type IndexController struct {
 // @Description 预览接口可访问
 // @Tags index
 // @Accept mpfd
-// @Produce json
-// @Success 200 {object} model.ReturnData "code:1 => 获取成功，code:0 => 获取异常"
-// @Failure 404 {object} model.ReturnData "接口异常！"
+// @Produce mpfd
+// @Success 200 {object} model.ReturnData "获取成功！"
 // @Router / [get]
 func (rest *IndexController) Get(c *gin.Context) {
-	rest.rc.Success(c, "hello Api", nil)
+	rest.rc.Success(c, "hello Api", model.ReturnData{})
 }
 
 func (rest *IndexController) Show(c *gin.Context) {
@@ -26,7 +26,7 @@ func (rest *IndexController) Show(c *gin.Context) {
 		Id int `uri:"id"`
 	}
 	if err := c.ShouldBindUri(&rewrite); err != nil {
-		c.JSON(400, gin.H{"msg": err})
+		c.JSON(400, gin.H{"msg": err.Error()})
 		return
 	}
 	rest.rc.Success(c, "操作成功show", nil)

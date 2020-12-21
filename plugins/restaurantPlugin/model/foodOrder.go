@@ -25,7 +25,7 @@ type FoodOrder struct {
 	QueueNo         string            `gorm:"type:varchar(10);comment:取餐队列号;not null" json:"queue_no"`
 	PayType         string            `gorm:"type:varchar(10);comment:第三方支付类型;not null" json:"pay_type"`
 	StoreId         int               `gorm:"type:int(11);comment:所属门店id;not null" json:"store_id"`
-	StoreName       string            `gorm:"->" json:"store_name"`
+	StoreName       string            `gorm:"-" json:"store_name"`
 	OrderType       int               `gorm:"type:tinyint(3);comment:订单类型（1 => 门店扫码就餐; 2 => 门店堂食就餐; 3 => 门店打包外带; 4 => 外卖;not null" json:"order_type"`
 	AppointmentTime string            `gorm:"type:varchar(20);comment:预约取餐时间" json:"appointment_time"`
 	OrderDetail     string            `gorm:"type:json;comment:订单详情;not null" json:"order_detail"`
@@ -34,7 +34,7 @@ type FoodOrder struct {
 	CouponFee       float64           `gorm:"type:decimal(7,2);comment:优惠金额;default:0;not null" json:"coupon_fee"`
 	Remark          string            `gorm:"type:varchar(255);comment:备注" json:"remark"`
 	Fee             float64           `gorm:"type:decimal(7,2);comment:合计金额;default:0;not null" json:"fee"`
-	TotalAmount     float64           `gorm:"->" json:"total_amount"`
+	TotalAmount     float64           `gorm:"-" json:"total_amount"`
 	DeskId          int               `gorm:"type:int(11);comment:桌号id" json:"desk_id"`
 	DeskName        string            `gorm:"type:varchar(40);comment:桌位名称详情" json:"desk_name"`
 	UserId          int               `gorm:"type:int(11);comment:下单人信息" json:"user_id"`
@@ -45,21 +45,26 @@ type FoodOrder struct {
 	FinishedAt      int64             `gorm:"type:int(11)" json:"finished_at"`
 	CreateTime      string            `gorm:"-" json:"create_time"`
 	FinishedTime    string            `gorm:"-" json:"finished_time"`
-	OrderStatus     string            `gorm:"type:varchar(20);comment:订单状态（WAIT_BUYER_PAY => 待支付，TRADE_SUCCESS => 待使用，TRADE_FINISHED=> 已完成，TRADE_CLOSED => 已关闭，TRADE_REFUND=>已退款）;not null" json:"order_status"`
+	OrderStatus     string            `gorm:"type:varchar(20);comment:订单状态（WAIT_BUYER_PAY => 待支付，TRADE_SUCCESS => 待使用，TRADE_FINISHED=> 已完成，TRADE_CLOSED => 已关闭，TRADE_REFUND=>已退款）;default:WAIT_BUYER_PAY;not null" json:"order_status"`
 	paginate        cmfModel.Paginate `gorm:"-"`
 }
 
 // 定单明细表
 type FoodOrderDetail struct {
-	Id        int     `json:"id"`
-	Code      string  `gorm:"type:varchar(32);comment:菜品唯一编号;not null" json:"code"`
-	OrderId   string  `gorm:"type:varchar(40);comment:订单号;not null" json:"order_id"`
-	FoodId    int     `gorm:"type:int(11);comment:所属食物id;not null" json:"food_id"`
-	FoodName  string  `gorm:"type:varchar(255);comment:菜品名称;not null" json:"food_name"`
-	SkuId     int     `gorm:"type:int(11);comment:所属食物规格id;not null" json:"sku_id"`
-	SkuDetail string  `gorm:"type:varchar(255);comment:规格详情;not null" json:"sku_detail"`
-	Count     int     `gorm:"type:int(11);comment:购买数量;not null" json:"count"`
-	Fee       float64 `gorm:"type:decimal(9,2);comment:菜品单价;not null" json:"fee"`
+	Id               int     `json:"id"`
+	Code             string  `gorm:"type:varchar(32);comment:菜品唯一编号;not null" json:"code"`
+	OrderId          string  `gorm:"type:varchar(40);comment:订单号;not null" json:"order_id"`
+	FoodId           int     `gorm:"type:int(11);comment:所属食物id;not null" json:"food_id"`
+	FoodThumbnail    string  `gorm:"type:varchar(255);comment:菜品缩略图;not null" json:"food_thumbnail"`
+	AlipayMaterialId string  `gorm:"type:varchar(256);comment:阿里素材标识;not null" json:"alipay_material_id"`
+	FoodName         string  `gorm:"type:varchar(255);comment:菜品名称;not null" json:"food_name"`
+	SkuId            int     `gorm:"type:int(11);comment:所属食物规格id;not null" json:"sku_id"`
+	SkuDetail        string  `gorm:"type:varchar(255);comment:规格详情;not null" json:"sku_detail"`
+	Count            int     `gorm:"type:int(11);comment:购买数量;not null" json:"count"`
+	DishType         string  `gorm:"type:varchar(40);comment:菜品类型;" json:"dish_type"`
+	Flavor           string  `gorm:"type:varchar(40);comment:菜品口味;" json:"flavor"`
+	CookingMethod    string  `gorm:"type:varchar(40);comment:菜品做法;" json:"cooking_method"`
+	Fee              float64 `gorm:"type:decimal(9,2);comment:菜品单价;not null" json:"fee"`
 }
 
 func (model *FoodOrder) AutoMigrate() {

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"gincmf/app/model"
-	"gincmf/app/util"
 	"github.com/gin-gonic/gin"
 	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
@@ -17,7 +16,7 @@ type UploadController struct {
 }
 
 func (rest *UploadController) Get(c *gin.Context) {
-	uploadSetting := util.UploadSetting(c)
+	uploadSetting := model.GetUploadSetting(c)
 	rest.rc.Success(c, "获取成功！", uploadSetting)
 }
 
@@ -26,7 +25,7 @@ func (rest *UploadController) Show(c *gin.Context) {
 		id int `uri:"id"`
 	}
 	if err := c.ShouldBindUri(&rewrite); err != nil {
-		c.JSON(400, gin.H{"msg": err})
+		c.JSON(400, gin.H{"msg": err.Error()})
 		return
 	}
 	rest.rc.Success(c, "操作成功show", nil)

@@ -7,6 +7,7 @@ package migrate
 
 import (
 	"fmt"
+	"gincmf/app/model"
 	"gincmf/app/util"
 	cmf "github.com/gincmf/cmf/bootstrap"
 	"io/ioutil"
@@ -20,7 +21,7 @@ type Region struct {
 
 func (migrate Region) AutoMigrate() {
 
-	// cmf.Db().AutoMigrate(&model.Region{})
+	cmf.Db().AutoMigrate(&model.Region{})
 
 	f, err := os.Open(util.CurrentPath() + "/data/region.sql")
 	if err != nil {

@@ -9,7 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"gincmf/app/util"
+	appModel "gincmf/app/model"
 	"gincmf/plugins/restaurantPlugin/controller/admin/settings"
 	"gincmf/plugins/restaurantPlugin/model"
 	"github.com/gin-gonic/gin"
@@ -76,7 +76,7 @@ func (rest *Index) Show(c *gin.Context) {
 		Id int `uri:"id"`
 	}
 	if err := c.ShouldBindUri(&rewrite); err != nil {
-		c.JSON(400, gin.H{"msg": err})
+		c.JSON(400, gin.H{"msg": err.Error()})
 		return
 	}
 
@@ -97,7 +97,7 @@ func (rest *Index) Edit(c *gin.Context) {
 		Id int `uri:"id"`
 	}
 	if err := c.ShouldBindUri(&rewrite); err != nil {
-		c.JSON(400, gin.H{"msg": err})
+		c.JSON(400, gin.H{"msg": err.Error()})
 		return
 	}
 
@@ -117,30 +117,32 @@ func (rest *Index) Edit(c *gin.Context) {
 		return
 	}
 
-	timeLayout := "2006-01-02 15:04:05"  //转化所需模板
-	tmp,_ := time.ParseInLocation(timeLayout, voucher.PublishStartTime, time.Local)
+	timeLayout := "2006-01-02 15:04:05" //转化所需模板
+	tmp, _ := time.ParseInLocation(timeLayout, voucher.PublishStartTime, time.Local)
 	tsUnix := tmp.Unix()
 
-	tmp,_ = time.ParseInLocation(timeLayout, voucher.PublishEndTime, time.Local)
+	tmp, _ = time.ParseInLocation(timeLayout, voucher.PublishEndTime, time.Local)
 	teUnix := tmp.Unix()
 
-	tmp,_ = time.ParseInLocation(timeLayout, publishEndTime, time.Local)
+	tmp, _ = time.ParseInLocation(timeLayout, publishEndTime, time.Local)
 	uTeUnix := tmp.Unix()
 
 	if uTeUnix < teUnix {
-		rest.rc.Error(c,"截止时间不能前调！",nil)
+		rest.rc.Error(c, "截止时间不能前调！", nil)
 		return
 	}
 
-	if uTeUnix <  tsUnix {
-		rest.rc.Error(c,"截止时间不能早于起始时间！",nil)
+	if uTeUnix < tsUnix {
+		rest.rc.Error(c, "截止时间不能早于起始时间！", nil)
 		return
 	}
 
-	if uTeUnix - tsUnix > 90 * 86400 {
-		rest.rc.Error(c,"截止时间不能超过起始时间90天！",nil)
+	if uTeUnix-tsUnix > 90*86400 {
+		rest.rc.Error(c, "截止时间不能超过起始时间90天！", nil)
 		return
 	}
+
+	voucher.PublishEndTime = publishEndTime
 
 	if voucher.SyncToAlipay == 1 {
 		bizContent := map[string]interface{}{
@@ -159,11 +161,11 @@ func (rest *Index) Edit(c *gin.Context) {
 
 	tx := cmf.NewDb().Save(&voucher)
 	if tx.Error != nil {
-		rest.rc.Error(c,"更新失败！"+tx.Error.Error(),nil)
+		rest.rc.Error(c, "更新失败！"+tx.Error.Error(), nil)
 		return
 	}
 
-	rest.rc.Success(c,"更新成功！",voucher)
+	rest.rc.Success(c, "更新成功！", voucher)
 }
 
 /**
@@ -241,7 +243,7 @@ func (rest *Index) Store(c *gin.Context) {
 		syncToAlipay = form.SyncToAlipay
 	}
 
-	businessJson := util.Options("business_info")
+	businessJson := appModel.Options("business_info")
 	bi := settings.BusinessInfo{}
 	json.Unmarshal([]byte(businessJson), &bi)
 	if bi.BrandName == "" || bi.BrandLogo == "" || bi.Mobile == "" {
@@ -331,4 +333,106 @@ func (rest *Index) Store(c *gin.Context) {
 
 func (rest *Index) Delete(c *gin.Context) {
 	rest.rc.Success(c, "操作成功Delete", nil)
+}
+
+/**
+ * @Author return <1140444693@qq.com>
+ * @Description 给用户发券
+ * @Date 2020/12/17 22:12:13
+ * @Param
+ * @return
+ **/
+
+func (rest *Index) Send(c *gin.Context) {
+
+	var form struct {
+		UserId    int `json:"user_id"`
+		VoucherId int `json:"voucher_id"`
+	}
+
+	err := c.ShouldBindJSON(&form)
+	if err != nil {
+		c.JSON(400, gin.H{"msg": err.Error()})
+		return
+	}
+
+	if form.UserId == 0 {
+		rest.rc.Error(c, "接收人不能为空！", nil)
+		return
+	}
+
+	if form.VoucherId == 0 {
+		rest.rc.Error(c, "优惠券id不能为空！", nil)
+		return
+	}
+
+	v := model.Voucher{}
+	vp := marketing.VoucherValidPeriod{}
+
+	data, err := v.Show([]string{"id = ? AND status = ?"}, []interface{}{form.VoucherId, 1})
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
+	json.Unmarshal([]byte(data.VoucherValidPeriod), &vp)
+
+	nowUnix := time.Now().Unix()
+	var validEndAt int64
+
+	if vp.Type == "ABSOLUTE" {
+		tmp, _ := time.ParseInLocation("2006-01-02 15:04:05", vp.End, time.Local)
+		validEndAt = tmp.Unix()
+	} else {
+		unix := 0
+		switch vp.Unit {
+		case "MINUTE":
+			unix = 60 * vp.Duration
+		case "HOUR":
+			unix = 3600 * vp.Duration
+		case "DAY":
+			unix = 86400 * vp.Duration
+		}
+
+		validEndAt = nowUnix + int64(unix)
+	}
+
+	vPost := model.VoucherPost{
+		VoucherId:    data.Id,
+		ValidStartAt: nowUnix,
+		ValidEndAt:   validEndAt,
+		UserId:       form.UserId,
+		CreateAt:     nowUnix,
+		UpdateAt:     nowUnix,
+	}
+
+	if data.SyncToAlipay == 1 {
+
+		tp := appModel.UserPart{}
+		tpData, err := tp.Show([]string{"u.id = ? AND tp.type = ? AND u.user_status = ?"}, []interface{}{form.UserId,"alipay-mp", 1})
+		if err != nil {
+			rest.rc.Error(c, err.Error(), nil)
+			return
+		}
+
+		result := new(model.Voucher).Send(data.TemplateId,tpData.OpenId,data.VoucherName)
+
+		if result.Response.Code != "10000" {
+			rest.rc.Error(c,"发送失败！"+result.Response.SubMsg,result)
+			return
+		}
+
+		vPost.AlipayVoucherId = result.Response.VoucherId
+
+	}
+
+	tx := cmf.NewDb().Create(&vPost)
+
+	if tx.Error != nil {
+		rest.rc.Error(c,"发送失败！"+tx.Error.Error(),tx.Error)
+		return
+	}
+
+	rest.rc.Success(c,"发送成功！",nil)
+
 }

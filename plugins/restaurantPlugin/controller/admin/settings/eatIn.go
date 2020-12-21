@@ -38,12 +38,12 @@ func (rest *EatIn) Edit(c *gin.Context) {
 		PickUpStartTime    string  `json:"pick_up_start_time"`   // 自提时间
 		PickUpEndTime      string  `json:"pick_up_end_time"`     // 自提时间
 		EnabledAppointment int     `json:"enabled_appointment"`  // 启用预约
-		Day                int     `json:"day"`
+		Day                int     `json:"day"`                  //可预约天数
 	}
 
 	err := c.ShouldBindJSON(&form)
 	if err != nil {
-		c.JSON(400, gin.H{"msg": err})
+		c.JSON(400, gin.H{"msg": err.Error()})
 		return
 	}
 

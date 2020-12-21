@@ -24,44 +24,6 @@ type Food struct {
 	rc controller.RestController
 }
 
-// 文档所需
-type dishesGoodsPaginate struct {
-	Data     []model.Food `json:"data"`
-	Current  string       `json:"current" example:"1"`
-	PageSize string       `json:"page_size" example:"10"`
-	Total    int64        `json:"total" example:"10"`
-}
-
-type dishesGoodsGet struct {
-	Code int                 `json:"code" example:"1"`
-	Msg  string              `json:"msg" example:"获取成功！"`
-	Data dishesGoodsPaginate `json:"data"`
-}
-
-type dishesGoodsStore struct {
-	Code int        `json:"code" example:"1"`
-	Msg  string     `json:"msg" example:"添加成功！"`
-	Data model.Food `json:"data"`
-}
-
-type dishesGoodsShow struct {
-	Code int        `json:"code" example:"1"`
-	Msg  string     `json:"msg" example:"获取成功！"`
-	Data model.Food `json:"data"`
-}
-
-type dishesGoodsEdit struct {
-	Code int        `json:"code" example:"1"`
-	Msg  string     `json:"msg" example:"修改成功！"`
-	Data model.Food `json:"data"`
-}
-
-type dishesGoodsDel struct {
-	Code int        `json:"code" example:"1"`
-	Msg  string     `json:"msg" example:"删除成功！"`
-	Data model.Food `json:"data"`
-}
-
 type materialJson struct {
 	MaterialName  string  `json:"material_name"`
 	MaterialPrice float64 `json:"material_price"`
@@ -80,6 +42,11 @@ type skuJson struct {
 	Volume        int     `json:"volume"` // 销量
 }
 
+type extVale struct {
+	Value string `json:"value"`
+	Label string `json:"label"`
+}
+
 /**
  * @Author return <1140444693@qq.com>
  * @Description 菜单列表管理
@@ -92,10 +59,14 @@ type skuJson struct {
 // @Description 查看全部菜品列表
 // @Tags restaurant 菜品管理
 // @Accept mpfd
-// @Param name formData string true "菜单名称"
-// @Produce json
-// @Success 200 {object} dishesGoodsGet "code:1 => 获取成功，code:0 => 获取异常" "
-// @Router /admin/dishes/goods [get]
+// @Param mid query string true "小程序唯一编号"
+// @Param store_id query string false "门店id"
+// @Param name query string false "菜品名称"
+// @Param category_id query string false "菜品分类"
+// @Produce mpfd
+// @Success 200 {object} model.Paginate{data=[]model.Food} "code:1 => 获取成功，code:0 => 获取失败"
+// @Failure 400 {object} model.ReturnData "{"code":400,"msg":"登录状态已失效！"}"
+// @Router /admin/dishes/food [get]
 func (rest *Food) Get(c *gin.Context) {
 
 	mid, _ := c.Get("mid")
@@ -151,17 +122,19 @@ func (rest *Food) Get(c *gin.Context) {
 // @Description 查看单个菜品
 // @Tags restaurant 菜品管理
 // @Accept mpfd
+// @Param mid query string true "小程序唯一编号"
 // @Param id path string true "单个菜单分类id"
-// @Produce json
-// @Success 200 {object} dishesGoodsShow "code:1 => 获取成功，code:0 => 获取异常"
-// @Router /admin/dishes/goods/{id} [get]
+// @Produce mpfd
+// @Success 200 {object} model.ReturnData{data=model.Food} "code:1 => 获取成功，code:0 => 获取异常"
+// @Failure 400 {object} model.ReturnData "{"code":400,"msg":"登录状态已失效！"}"
+// @Router /admin/dishes/food/{id} [get]
 func (rest Food) Show(c *gin.Context) {
 
 	var rewrite struct {
 		Id int `uri:"id"`
 	}
 	if err := c.ShouldBindUri(&rewrite); err != nil {
-		c.JSON(400, gin.H{"msg": err})
+		c.JSON(400, gin.H{"msg": err.Error()})
 		return
 	}
 
@@ -209,16 +182,39 @@ func (rest Food) Show(c *gin.Context) {
 // @Tags restaurant 菜品管理
 // @Accept mpfd
 // @Param id path string true "单个菜品id"
-// @Produce json
-// @Success 200 {object} dishesGoodsEdit "code:1 => 获取成功，code:0 => 获取异常" "
-// @Router /admin/dishes/goods/{id} [post]
+// @Param mid query string true "小程序唯一编号"
+// @Param store_id formData string true "门店id"
+// @Param name formData string true "菜品名称"
+// @Param category formData string true "菜品分类"
+// @Param thumbnail formData string false "菜品缩略图"
+// @Param food_code formData string false "菜品编码"
+// @Param use_member formData string false "启用会员价"
+// @Param member_price formData string false "会员价"
+// @Param original_price formData string false "原价"
+// @Param price formData string false "售价"
+// @Param box_fee formData string false "餐盒费"
+// @Param inventory formData string false "库存"
+// @Param volume formData string false "销量"
+// @Param scene formData string false "场景"
+// @Param start_sale formData string false "最低起售"
+// @Param use_sku formData string false "启用规格"
+// @Param use_tasty formData string false "启用口味"
+// @Param tasty formData string false "口味json"
+// @Param use_material formData string false "额外加料"
+// @Param material formData string false "加料"
+// @Param status formData string false "状态"
+// @Param food_sku formData string false "菜品规格"
+// @Produce mpfd
+// @Success 200 {object} model.ReturnData{data=model.Food} "code:1 => 获取成功，code:0 => 获取异常"
+// @Failure 400 {object} model.ReturnData "{"code":400,"msg":"登录状态已失效！"}"
+// @Router /admin/dishes/food/{id} [post]
 func (rest Food) Edit(c *gin.Context) {
 
 	var rewrite struct {
 		Id int `uri:"id"`
 	}
 	if err := c.ShouldBindUri(&rewrite); err != nil {
-		c.JSON(400, gin.H{"msg": err})
+		c.JSON(400, gin.H{"msg": err.Error()})
 		return
 	}
 
@@ -249,6 +245,27 @@ func (rest Food) Edit(c *gin.Context) {
 	category := c.PostForm("category")
 	if category == "" {
 		rest.rc.Error(c, "至少选择一项分类！", nil)
+		return
+	}
+
+	// 菜品类型
+	dishType := c.PostForm("dish_type")
+	if dishType == "" {
+		rest.rc.Error(c, "菜品类型不能为空！", nil)
+		return
+	}
+
+	// 口味
+	flavor := c.PostForm("flavor")
+	if flavor == "" {
+		rest.rc.Error(c, "菜品口味不能为空！", nil)
+		return
+	}
+
+	// 做法
+	cookingMethod := c.PostForm("cooking_method")
+	if cookingMethod == "" {
+		rest.rc.Error(c, "菜品做法不能为空！", nil)
 		return
 	}
 
@@ -443,6 +460,9 @@ func (rest Food) Edit(c *gin.Context) {
 			Mid:              midInt,
 			Name:             name,
 			FoodCode:         foodCode,
+			DishType:         dishType,
+			Flavor:           flavor,
+			CookingMethod:    cookingMethod,
 			UseSku:           useSkuInt,
 			Thumbnail:        thumbnail,
 			MemberPrice:      mp,
@@ -622,9 +642,32 @@ func (rest Food) Edit(c *gin.Context) {
 // @Description 提交添加单个菜品
 // @Tags restaurant 菜品管理
 // @Accept mpfd
-// @Produce json
-// @Success 200 {object} dishesGoodsStore "code:1 => 获取成功，code:0 => 获取异常" "
-// @Router /admin/dishes/goods [post]
+// @Produce mpfd
+// @Param mid query string true "小程序唯一编号"
+// @Param store_id formData string true "门店id"
+// @Param name formData string true "菜品名称"
+// @Param category formData string true "菜品分类"
+// @Param thumbnail formData string false "菜品缩略图"
+// @Param food_code formData string false "菜品编码"
+// @Param use_member formData string false "启用会员价"
+// @Param member_price formData string false "会员价"
+// @Param original_price formData string false "原价"
+// @Param price formData string false "售价"
+// @Param box_fee formData string false "餐盒费"
+// @Param inventory formData string false "库存"
+// @Param volume formData string false "销量"
+// @Param scene formData string false "场景"
+// @Param start_sale formData string false "最低起售"
+// @Param use_sku formData string false "启用规格"
+// @Param use_tasty formData string false "启用口味"
+// @Param tasty formData string false "口味json"
+// @Param use_material formData string false "额外加料"
+// @Param material formData string false "加料"
+// @Param status formData string false "状态"
+// @Param food_sku formData string false "菜品规格"
+// @Success 200 {object} model.ReturnData{data=model.Food} "code:1 => 获取成功，code:0 => 获取异常"
+// @Failure 400 {object} model.ReturnData "{"code":400,"msg":"登录状态已失效！"}"
+// @Router /admin/dishes/food [post]
 func (rest Food) Store(c *gin.Context) {
 
 	// 获取小程序mid
@@ -655,6 +698,27 @@ func (rest Food) Store(c *gin.Context) {
 	category := c.PostForm("category")
 	if category == "" {
 		rest.rc.Error(c, "至少选择一项分类！", nil)
+		return
+	}
+
+	// 菜品类型
+	dishType := c.PostForm("dish_type")
+	if dishType == "" {
+		rest.rc.Error(c, "菜品类型不能为空！", nil)
+		return
+	}
+
+	// 口味
+	flavor := c.PostForm("flavor")
+	if flavor == "" {
+		rest.rc.Error(c, "菜品口味不能为空！", nil)
+		return
+	}
+
+	// 做法
+	cookingMethod := c.PostForm("cooking_method")
+	if cookingMethod == "" {
+		rest.rc.Error(c, "菜品做法不能为空！", nil)
 		return
 	}
 
@@ -858,6 +922,9 @@ func (rest Food) Store(c *gin.Context) {
 			Mid:              midInt,
 			Name:             name,
 			FoodCode:         foodCode,
+			DishType:         dishType,
+			Flavor:           flavor,
+			CookingMethod:    cookingMethod,
 			UseSku:           useSkuInt,
 			Thumbnail:        thumbnail,
 			MemberPrice:      mp,
@@ -1037,16 +1104,17 @@ func (rest Food) Store(c *gin.Context) {
 // @Description 提交删除菜品
 // @Tags restaurant 菜品管理
 // @Accept mpfd
-// @Produce json
-// @Success 200 {object} dishesGoodsDel "code:1 => 获取成功，code:0 => 获取异常" "
-// @Router /admin/dishes/goods/{id} [delete]
+// @Produce mpfd
+// @Success 200 {object} model.ReturnData{data=model.Food} "code:1 => 删除成功，code:0 => 删除失败"
+// @Failure 400 {object} model.ReturnData "{"code":400,"msg":"登录状态已失效！"}"
+// @Router /admin/dishes/food/{id} [delete]
 func (rest Food) Delete(c *gin.Context) {
 
 	var rewrite struct {
 		Id int `uri:"id"`
 	}
 	if err := c.ShouldBindUri(&rewrite); err != nil {
-		c.JSON(400, gin.H{"msg": err})
+		c.JSON(400, gin.H{"msg": err.Error()})
 		return
 	}
 
@@ -1080,4 +1148,68 @@ func (rest Food) Delete(c *gin.Context) {
 	}
 
 	rest.rc.Success(c, "删除成功！", food)
+}
+
+// 获取食物的菜品类型
+func (rest *Food) DishType(c *gin.Context) {
+
+	var ev = []extVale{
+		{Label: "快餐小吃", Value: "fast_food"},
+		{Label: "茶饮", Value: "drinks"},
+		{Label: "烘焙甜品", Value: "dessert"},
+		{Label: "火锅", Value: "hotpot"},
+		{Label: "烧烤/香锅", Value: "bbq_and_spicy_pot"},
+		{Label: "西餐", Value: "western_food"},
+		{Label: "自助餐", Value: "buffet"},
+		{Label: "中餐地方菜", Value: "chinese_local_dish"},
+		{Label: "异域料理", Value: "exotic_cuisine"},
+		{Label: "其他", Value: "other"},
+	}
+
+	rest.rc.Success(c, "获取成功", ev)
+
+}
+
+// 获取食物的菜品类型
+func (rest *Food) Flavor(c *gin.Context) {
+
+	var ev = []extVale{
+		{Label: "辣", Value: "spicy"},
+		{Label: "咸", Value: "salty"},
+		{Label: "甜", Value: "sweet"},
+		{Label: "酸", Value: "sour"},
+		{Label: "苦", Value: "bitter"},
+		{Label: "麻", Value: "pungent"},
+		{Label: "鲜", Value: "umami"},
+		{Label: "其他", Value: "other"},
+	}
+
+	rest.rc.Success(c, "获取成功", ev)
+
+}
+
+// 获取食物的菜品类型
+func (rest *Food) CookingMethod(c *gin.Context) {
+
+	var ev = []extVale{
+		{Label: "炒", Value: "stir_fried"},
+		{Label: "蒸", Value: "steamed"},
+		{Label: "烧", Value: "braised"},
+		{Label: "焖", Value: "gentle_braised"},
+		{Label: "炖", Value: "stewed"},
+		{Label: "凉拌", Value: "cold_dish"},
+		{Label: "烤", Value: "grilled"},
+		{Label: "炸", Value: "deep_fried"},
+		{Label: "煮", Value: "boiled"},
+		{Label: "煎", Value: "umami"},
+		{Label: "烤", Value: "fried"},
+		{Label: "火锅", Value: "hotpot"},
+		{Label: "烘焙", Value: "baked"},
+		{Label: "砂锅", Value: "pot_cooking"},
+		{Label: "卤", Value: "pot_stewed"},
+		{Label: "其他", Value: "other"},
+	}
+
+	rest.rc.Success(c, "获取成功", ev)
+
 }

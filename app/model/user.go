@@ -1,8 +1,16 @@
 package model
 
 import (
+	"encoding/json"
+	"errors"
+	"github.com/gin-contrib/sessions"
+	"github.com/gin-gonic/gin"
 	cmf "github.com/gincmf/cmf/bootstrap"
+	cmfModel "github.com/gincmf/cmf/model"
+	"gorm.io/gorm"
+	"strconv"
 	"strings"
+	"time"
 )
 
 type User struct {
@@ -17,7 +25,7 @@ type User struct {
 	Balance           float64 `gorm:"type:decimal(10,2);comment:余额;not null" json:"balance"`
 	CreateAt          int64   `gorm:"type:int(11)" json:"create_at"`
 	UpdateAt          int64   `gorm:"type:int(11)" json:"update_at"`
-	UserStatus        int     `gorm:"type:tinyint(3);not null" json:"user_status"`
+	UserStatus        int     `gorm:"type:tinyint(3);not null;default:0" json:"user_status"`
 	UserLogin         string  `gorm:"type:varchar(60);not null" json:"user_login"`
 	UserPass          string  `gorm:"type:varchar(64);not null" json:"-"`
 	UserNickname      string  `gorm:"type:varchar(50);not null" json:"user_nickname"`
@@ -30,6 +38,7 @@ type User struct {
 	UserActivationKey string  `json:"user_activation_key"`
 	Mobile            string  `gorm:"type:varchar(20);not null" json:"mobile"`
 	More              string  `gorm:"type:text" json:"more"`
+	paginate          cmfModel.Paginate
 }
 
 type ThirdPart struct {
@@ -46,6 +55,62 @@ type ThirdPart struct {
  * @Param
  * @return
  **/
+
+func (model *User) Get(c *gin.Context, query []string, queryArgs []interface{}) (cmfModel.Paginate, error) {
+
+	var user []User
+	// 获取默认的系统分页
+	current, pageSize, err := model.paginate.Default(c)
+
+	if err != nil {
+		return cmfModel.Paginate{}, err
+	}
+
+	// 合并参数合计
+	queryStr := strings.Join(query, " AND ")
+
+	var total int64 = 0
+
+	cmf.NewDb().Where(queryStr, queryArgs...).Find(&user).Count(&total)
+	tx := cmf.NewDb().Where(queryStr, queryArgs...).Limit(pageSize).Offset((current - 1) * pageSize).Find(&user)
+
+	if tx.Error != nil && errors.Is(tx.Error,gorm.ErrRecordNotFound) {
+		return  cmfModel.Paginate{},errors.New("该页码内容不存在！")
+	}
+
+	type temResult struct {
+		User
+		LastLoginTime string `json:"last_login_time"`
+		CreateTime    string `json:"create_time"`
+	}
+	var tempResult []temResult
+	for _, v := range user {
+		var (
+			lastLoginTime string
+			createTime    string
+		)
+		if v.LastLoginAt == 0 {
+			lastLoginTime = "0"
+		} else {
+			lastLoginTime = time.Unix(v.LastLoginAt, 0).Format("2006-01-02 15:04:05")
+		}
+		if v.CreateAt == 0 {
+			createTime = "0"
+		} else {
+			createTime = time.Unix(v.CreateAt, 0).Format("2006-01-02 15:04:05")
+		}
+		tempResult = append(tempResult, temResult{User: v, LastLoginTime: lastLoginTime, CreateTime: createTime})
+	}
+
+	paginationData := cmfModel.Paginate{Data: tempResult, Current: current, PageSize: pageSize, Total: total}
+	if len(tempResult) == 0 {
+		paginationData.Data = make([]string, 0)
+	}
+
+	return paginationData,nil
+
+}
+
 func (model *User) Show(query []string, queryArgs []interface{}) (User, error) {
 	user := User{}
 
@@ -80,7 +145,7 @@ type UserPart struct {
  * @Param
  * @return
  **/
-func (model *UserPart) Show(query []string, queryArgs []interface{}) (*UserPart, error) {
+func (model UserPart) Show(query []string, queryArgs []interface{}) (*UserPart, error) {
 
 	up := UserPart{}
 
@@ -96,4 +161,33 @@ func (model *UserPart) Show(query []string, queryArgs []interface{}) (*UserPart,
 	}
 
 	return &up, nil
+}
+
+
+//获取当前用户信息
+func  (model *User) CurrentUser(c *gin.Context) User {
+	u := User{}
+	session :=sessions.Default(c)
+	user := session.Get("user")
+	userId, _ := c.Get("user_id")
+	userIdInt, _ := strconv.Atoi(userId.(string))
+
+	if user == nil {
+		cmf.Db().First(&u, "id = ?", userId)
+		jsonBytes, _ := json.Marshal(u)
+		session.Set("user", string(jsonBytes))
+		session.Save()
+	} else {
+		jsonBytes := user.(string)
+		json.Unmarshal([]byte(jsonBytes), &u)
+		if u.Id == 0 || u.Id != userIdInt {
+			u = User{}
+			cmf.Db().Where("id = ?", userId).First(&u)
+			jsonBytes, _ := json.Marshal(u)
+			session.Set("user", string(jsonBytes))
+			session.Save()
+			return u
+		}
+	}
+	return u
 }

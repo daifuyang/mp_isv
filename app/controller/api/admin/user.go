@@ -8,23 +8,19 @@ package admin
 import (
 	"fmt"
 	"gincmf/app/model"
-	gUtil "gincmf/app/util"
 	"github.com/gin-gonic/gin"
 	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
 	"github.com/gincmf/cmf/util"
 	"strconv"
-	"strings"
 	"time"
 )
 
-type UserController struct {
+type User struct {
 	rc controller.RestController
 }
 
-func (rest *UserController) Get(c *gin.Context) {
-
-	var user []model.User
+func (rest *User) Get(c *gin.Context) {
 
 	query := []string{"user_type = ?"}
 	queryArgs := []interface{}{"1"}
@@ -47,71 +43,22 @@ func (rest *UserController) Get(c *gin.Context) {
 		queryArgs = append(queryArgs, "%"+userEmail+"%")
 	}
 
-	queryStr := strings.Join(query, " AND ")
-
-	current := c.DefaultQuery("current", "1")
-	pageSize := c.DefaultQuery("pageSize", "10")
-	intCurrent, _ := strconv.Atoi(current)
-	intPageSize, _ := strconv.Atoi(pageSize)
-
-	if intCurrent <= 0 {
-		rest.rc.Error(c, "当前页码需大于0！", nil)
+	user := model.User{}
+	data,err := user.Get(c,query,queryArgs)
+	if err != nil {
+		rest.rc.Error(c,err.Error(),nil)
 		return
 	}
 
-	if intPageSize <= 0 {
-		rest.rc.Error(c, "每页数需大于0！", nil)
-		return
-	}
-
-	var total int64 = 0
-
-	cmf.NewDb().Where(queryStr, queryArgs...).Find(&user).Count(&total)
-	result := cmf.NewDb().Where(queryStr, queryArgs...).Limit(intPageSize).Offset((intCurrent - 1) * intPageSize).Find(&user)
-
-	if result.RowsAffected == 0 {
-		rest.rc.Error(c, "该页码内容不存在！", nil)
-		return
-	}
-
-	type temResult struct {
-		model.User
-		LastLoginTime string `json:"last_login_time"`
-		CreateTime    string `json:"create_time"`
-	}
-	var tempResult []temResult
-	for _, v := range user {
-		var (
-			lastLoginTime string
-			createTime    string
-		)
-		if v.LastLoginAt == 0 {
-			lastLoginTime = "0"
-		} else {
-			lastLoginTime = time.Unix(v.LastLoginAt, 0).Format("2006-01-02 15:04:05")
-		}
-		if v.CreateAt == 0 {
-			createTime = "0"
-		} else {
-			createTime = time.Unix(v.CreateAt, 0).Format("2006-01-02 15:04:05")
-		}
-		tempResult = append(tempResult, temResult{User: v, LastLoginTime: lastLoginTime, CreateTime: createTime})
-	}
-
-	paginationData := &model.Paginate{Data: tempResult, Current: current, PageSize: pageSize, Total: total}
-	if len(tempResult) == 0 {
-		paginationData.Data = make([]string, 0)
-	}
-
-	rest.rc.Success(c, "获取成功！", paginationData)
+	rest.rc.Success(c, "获取成功！", data)
 }
 
-func (rest *UserController) Show(c *gin.Context) {
+func (rest *User) Show(c *gin.Context) {
 	var rewrite struct {
 		Id int `uri:"id"`
 	}
 	if err := c.ShouldBindUri(&rewrite); err != nil {
-		c.JSON(400, gin.H{"msg": err})
+		c.JSON(400, gin.H{"msg": err.Error()})
 		return
 	}
 
@@ -142,12 +89,12 @@ func (rest *UserController) Show(c *gin.Context) {
 	rest.rc.Success(c, "获取成功！", result)
 }
 
-func (rest *UserController) Edit(c *gin.Context) {
+func (rest *User) Edit(c *gin.Context) {
 	var rewrite struct {
 		Id int `uri:"id"`
 	}
 	if err := c.ShouldBindUri(&rewrite); err != nil {
-		c.JSON(400, gin.H{"msg": err})
+		c.JSON(400, gin.H{"msg": err.Error()})
 		return
 	}
 
@@ -219,7 +166,7 @@ func (rest *UserController) Edit(c *gin.Context) {
 	rest.rc.Success(c, "更新成功！", nil)
 }
 
-func (rest *UserController) Store(c *gin.Context) {
+func (rest *User) Store(c *gin.Context) {
 
 	userLogin := c.PostForm("user_login")
 	if userLogin == "" {
@@ -285,13 +232,14 @@ func (rest *UserController) Store(c *gin.Context) {
 	rest.rc.Success(c, "操作成功！", user)
 }
 
-func (rest *UserController) Delete(c *gin.Context) {
+func (rest *User) Delete(c *gin.Context) {
 	rest.rc.Success(c, "操作成功Delete", nil)
 }
 
-func (rest *UserController) CurrentUser(c *gin.Context) {
+
+func (rest *User) CurrentUser(c *gin.Context) {
 	// 获取当前用户
-	var currentUser = gUtil.CurrentUser(c)
+	var currentUser = new(model.User).CurrentUser(c)
 
 	type temp struct {
 		model.User

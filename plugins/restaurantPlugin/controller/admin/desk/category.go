@@ -19,44 +19,6 @@ type CategoryController struct {
 	rc controller.RestController
 }
 
-// 文档所需
-type deskCatePaginate struct {
-	Data     []model.DeskCategory `json:"data"`
-	Current  string               `json:"current" example:"1"`
-	PageSize string               `json:"page_size" example:"10"`
-	Total    int64                `json:"total" example:"10"`
-}
-
-type deskCateGet struct {
-	Code int              `json:"code" example:"1"`
-	Msg  string           `json:"msg" example:"获取成功！"`
-	Data deskCatePaginate `json:"data"`
-}
-
-type deskCateStore struct {
-	Code int                `json:"code" example:"1"`
-	Msg  string             `json:"msg" example:"添加成功！"`
-	Data model.DeskCategory `json:"data"`
-}
-
-type deskCateShow struct {
-	Code int                `json:"code" example:"1"`
-	Msg  string             `json:"msg" example:"获取成功！"`
-	Data model.DeskCategory `json:"data"`
-}
-
-type deskCateEdit struct {
-	Code int                `json:"code" example:"1"`
-	Msg  string             `json:"msg" example:"修改成功！"`
-	Data model.DeskCategory `json:"data"`
-}
-
-type deskCateDel struct {
-	Code int                `json:"code" example:"1"`
-	Msg  string             `json:"msg" example:"删除成功！"`
-	Data model.DeskCategory `json:"data"`
-}
-
 /**
  * @Author return <1140444693@qq.com>
  * @Description 查看全部桌位类型列表
@@ -67,11 +29,11 @@ type deskCateDel struct {
 
 // @Summary 桌位类型管理
 // @Description 查看全部桌位类型列表
-// @Tags restaurant 菜单类型
+// @Tags restaurant 桌位分类管理
 // @Accept mpfd
-
-// @Produce json
-// @Success 200 {object} deskCateGet "code:1 => 获取成功，code:0 => 获取异常"
+// @Produce mpfd
+// @Success 200 {object} model.Paginate{data=[]model.DeskCategory} "code:1 => 获取成功，code:0 => 获取失败"
+// @Failure 400 {object} model.ReturnData "{"code":400,"msg":"登录状态已失效！"}"
 // @Router /admin/desk/category [get]
 func (rest CategoryController) Get(c *gin.Context) {
 
@@ -90,7 +52,7 @@ func (rest CategoryController) Get(c *gin.Context) {
 
 	category := model.DeskCategory{}
 
-	data, err := category.Index(c,query,queryArgs)
+	data, err := category.Index(c, query, queryArgs)
 
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)
@@ -110,18 +72,19 @@ func (rest CategoryController) Get(c *gin.Context) {
 
 // @Summary 查看单个菜单类型
 // @Description 查看单个菜单类型
-// @Tags restaurant 菜单类型
+// @Tags restaurant 桌位分类管理
 // @Accept mpfd
-// @Param id path string true "单个菜单类型id"
-// @Produce json
-// @Success 200 {object} deskCateShow "code:1 => 获取成功，code:0 => 获取异常"
+// @Param id path string true "单个桌位菜单id"
+// @Produce mpfd
+// @Success 200 {object} model.ReturnData{data=model.DeskCategory} "code:1 => 获取成功，code:0 => 获取异常"
+// @Failure 400 {object} model.ReturnData "{"code":400,"msg":"登录状态已失效！"}"
 // @Router /admin/desk/category/{id} [get]
 func (rest CategoryController) Show(c *gin.Context) {
 	var rewrite struct {
 		Id int `uri:"id"`
 	}
 	if err := c.ShouldBindUri(&rewrite); err != nil {
-		c.JSON(400, gin.H{"msg": err})
+		c.JSON(400, gin.H{"msg": err.Error()})
 		return
 	}
 
@@ -133,15 +96,15 @@ func (rest CategoryController) Show(c *gin.Context) {
 	mid, _ := c.Get("mid")
 
 	query = append(query, "id = ? AND mid = ?")
-	queryArgs = append(queryArgs, rewrite.Id,mid)
+	queryArgs = append(queryArgs, rewrite.Id, mid)
 
-     data,err := category.Show(query,queryArgs)
+	data, err := category.Show(query, queryArgs)
 	if err != nil {
-		if errors.Is(err,gorm.ErrRecordNotFound) {
-			rest.rc.Error(c,"该分类不存在！",nil)
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			rest.rc.Error(c, "该分类不存在！", nil)
 			return
 		}
-		rest.rc.Error(c,err.Error(),nil)
+		rest.rc.Error(c, err.Error(), nil)
 		return
 	}
 
@@ -158,11 +121,16 @@ func (rest CategoryController) Show(c *gin.Context) {
 
 // @Summary 提交修改单个菜单类型
 // @Description 提交修改单个菜单类型
-// @Tags restaurant 菜单类型
+// @Tags restaurant 桌位分类管理
 // @Accept mpfd
-// @Param id formData string true "单个菜单类型id"
-// @Produce json
-// @Success 200 {object} deskCateEdit "code:1 => 获取成功，code:0 => 获取异常"
+// @Param id path string true "单个桌位菜单id"
+// @Param mid query string true "小程序唯一编号"
+// @Param category_name formData string true "分类名称"
+// @Param least_seats formData string true "最少座位人数"
+// @Param maximum_seats formData string true "最多座位人数"
+// @Produce mpfd
+// @Success 200 {object}  model.ReturnData{data=model.DeskCategory} "code:1 => 更新成功，code:0 => 提交失败"
+// @Failure 400 {object} model.ReturnData "{"code":400,"msg":"登录状态已失效！"}"
 // @Router /admin/desk/category/{id} [post]
 func (rest CategoryController) Edit(c *gin.Context) {
 
@@ -170,7 +138,7 @@ func (rest CategoryController) Edit(c *gin.Context) {
 		Id int `uri:"id"`
 	}
 	if err := c.ShouldBindUri(&rewrite); err != nil {
-		c.JSON(400, gin.H{"msg": err})
+		c.JSON(400, gin.H{"msg": err.Error()})
 		return
 	}
 
@@ -178,7 +146,7 @@ func (rest CategoryController) Edit(c *gin.Context) {
 
 	categoryName := c.PostForm("category_name")
 	if categoryName == "" {
-		rest.rc.Error(c,"分类名称不能为空！",nil)
+		rest.rc.Error(c, "分类名称不能为空！", nil)
 		return
 	}
 
@@ -187,14 +155,14 @@ func (rest CategoryController) Edit(c *gin.Context) {
 	MaximumSeats := c.PostForm("maximum_seats")
 	maximumSeats, _ := strconv.Atoi(MaximumSeats)
 	category := model.DeskCategory{
-		Id: rewrite.Id,
-		Mid: mid.(int),
+		Id:           rewrite.Id,
+		Mid:          mid.(int),
 		CategoryName: categoryName,
 		LeastSeats:   leastSeatsInt,
 		MaximumSeats: maximumSeats,
 	}
 
-	data,err := category.Update()
+	data, err := category.Update()
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)
 		return
@@ -210,13 +178,17 @@ func (rest CategoryController) Edit(c *gin.Context) {
  * @Param
  * @return
  **/
-
 // @Summary 提交新增单个菜单类型
 // @Description 提交新增单个菜单类型
-// @Tags restaurant 菜单类型
+// @Tags restaurant 桌位分类管理
 // @Accept mpfd
-// @Produce json
-// @Success 200 {object} deskCateStore "code:1 => 获取成功，code:0 => 获取异常"
+// @Produce mpfd
+// @Param mid query string true "小程序唯一编号"
+// @Param category_name formData string true "分类名称"
+// @Param least_seats formData string true "最少座位人数"
+// @Param maximum_seats formData string true "最多座位人数"
+// @Success 200 {object} model.ReturnData{data=model.DeskCategory} "code:1 => 新增成功！，code:0 => 新增失败"
+// @Failure 400 {object} model.ReturnData "{"code":400,"msg":"登录状态已失效！"}"
 // @Router /admin/desk/category [post]
 func (rest CategoryController) Store(c *gin.Context) {
 
@@ -224,7 +196,7 @@ func (rest CategoryController) Store(c *gin.Context) {
 
 	categoryName := c.PostForm("category_name")
 	if categoryName == "" {
-		 rest.rc.Error(c,"分类名称不能为空！",nil)
+		rest.rc.Error(c, "分类名称不能为空！", nil)
 		return
 	}
 
@@ -233,15 +205,15 @@ func (rest CategoryController) Store(c *gin.Context) {
 	MaximumSeats := c.PostForm("maximum_seats")
 	maximumSeats, _ := strconv.Atoi(MaximumSeats)
 	category := model.DeskCategory{
-		Mid: mid.(int),
+		Mid:          mid.(int),
 		CategoryName: categoryName,
 		LeastSeats:   leastSeatsInt,
 		MaximumSeats: maximumSeats,
 	}
 
-	result,err :=  category.Store()
+	result, err := category.Store()
 	if err != nil {
-		rest.rc.Error(c,err.Error(),nil)
+		rest.rc.Error(c, err.Error(), nil)
 		return
 	}
 
@@ -258,11 +230,12 @@ func (rest CategoryController) Store(c *gin.Context) {
 
 // @Summary 提交删除菜单类型
 // @Description 提交删除单个菜单类型
-// @Tags restaurant 菜单类型
+// @Tags restaurant 桌位分类管理
 // @Accept mpfd
 // @Param id path string true "单个菜单类型id"
-// @Produce json
-// @Success 200 {object} deskCateDel "code:1 => 删除成功，code:0 => 删除失败"
+// @Produce mpfd
+// @Success 200 {object} model.ReturnData{data=model.DeskCategory} "code:1 => 删除成功，code:0 => 删除失败"
+// @Failure 400 {object} model.ReturnData "{"code":400,"msg":"登录状态已失效！"}"
 // @Router /admin/desk/category/{id} [delete]
 func (rest CategoryController) Delete(c *gin.Context) {
 
@@ -270,14 +243,14 @@ func (rest CategoryController) Delete(c *gin.Context) {
 		Id int `uri:"id"`
 	}
 	if err := c.ShouldBindUri(&rewrite); err != nil {
-		c.JSON(400, gin.H{"msg": err})
+		c.JSON(400, gin.H{"msg": err.Error()})
 		return
 	}
 
 	mid, _ := c.Get("mid")
 	midInt := mid.(int)
 	category := model.DeskCategory{}
-	cmf.NewDb().Where("mid = ? AND id = ?",midInt,rewrite.Id).Delete(&category)
+	cmf.NewDb().Where("mid = ? AND id = ?", midInt, rewrite.Id).Delete(&category)
 
 	rest.rc.Success(c, "删除成功！", nil)
 }

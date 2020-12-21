@@ -6,6 +6,18 @@
 *********************************************/
 package model
 
+import (
+	"errors"
+	"gincmf/app/util"
+	"github.com/gin-gonic/gin"
+	cmf "github.com/gincmf/cmf/bootstrap"
+	cmfModel "github.com/gincmf/cmf/model"
+	"gorm.io/gorm"
+	"strings"
+)
+
+type GetFileUrl func(url string) string
+
 type Asset struct {
 	Id         int    `json:"id"`
 	UserId     int    `gorm:"type:int(11);comment:所属用户id;not null" json:"user_id"`
@@ -19,9 +31,48 @@ type Asset struct {
 	Suffix     string `gorm:"type:varchar(10);comment:文件后缀;not null" json:"suffix"`
 	AssetType  int    `gorm:"column:type;type:tinyint(3);comment:资源类型;not null" json:"asset_type"`
 	More       string `gorm:"type:text;comment:更多配置" json:"more"`
+	paginate   cmfModel.Paginate
+    GetFileUrl GetFileUrl `gorm:"-" json:"-"`
 }
 
 type TempAsset struct {
 	Asset
 	PrevPath string `json:"prev_path"`
+}
+
+func (model *Asset) Get(c *gin.Context, query []string, queryArgs []interface{}) (cmfModel.Paginate, error) {
+
+	var assets []Asset
+	// 获取默认的系统分页
+	current, pageSize, err := model.paginate.Default(c)
+
+	if err != nil {
+		return cmfModel.Paginate{}, err
+	}
+
+	// 合并参数合计
+	queryStr := strings.Join(query, " AND ")
+
+	var total int64 = 0
+	cmf.NewDb().Where(queryStr, queryArgs...).Find(&assets).Count(&total)
+	tx := cmf.NewDb().Where(queryStr, queryArgs...).Limit(pageSize).Offset((current - 1) * pageSize).Order("id desc").Find(&assets)
+
+	if tx.Error != nil && errors.Is(tx.Error, gorm.ErrRecordNotFound) {
+		return cmfModel.Paginate{}, tx.Error
+	}
+
+	var tempAssets []TempAsset
+
+	for _, v := range assets {
+		prevPath := util.GetFileUrl(v.FilePath)
+		tempAssets = append(tempAssets, TempAsset{Asset: v, PrevPath: prevPath})
+	}
+
+	paginationData := cmfModel.Paginate{Data: tempAssets, Current: current, PageSize: pageSize, Total: total}
+	if len(tempAssets) == 0 {
+		paginationData.Data = make([]string, 0)
+	}
+
+	return paginationData, nil
+
 }

@@ -38,7 +38,7 @@ var doc = `{
                     "multipart/form-data"
                 ],
                 "produces": [
-                    "application/json"
+                    "multipart/form-data"
                 ],
                 "tags": [
                     "index"
@@ -46,156 +46,22 @@ var doc = `{
                 "summary": "入口文件",
                 "responses": {
                     "200": {
-                        "description": "code:1 =\u003e 获取成功，code:0 =\u003e 获取异常",
+                        "description": "获取成功！",
                         "schema": {
-                            "$ref": "#/definitions/model.ReturnData"
-                        }
-                    },
-                    "404": {
-                        "description": "接口异常！",
-                        "schema": {
-                            "$ref": "#/definitions/model.ReturnData"
+                            "$ref": "#/definitions/gincmf_app_model.ReturnData"
                         }
                     }
                 }
             }
         },
-        "/admin/desk/category": {
-            "get": {
-                "produces": [
-                    "application/json"
-                ],
-                "responses": {
-                    "200": {
-                        "description": "code:1 =\u003e 获取成功，code:0 =\u003e 获取异常",
-                        "schema": {
-                            "$ref": "#/definitions/desk.deskCateGet"
-                        }
-                    }
-                }
-            },
-            "post": {
-                "description": "提交新增单个菜单类型",
-                "consumes": [
-                    "multipart/form-data"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "restaurant 菜单类型"
-                ],
-                "summary": "提交新增单个菜单类型",
-                "responses": {
-                    "200": {
-                        "description": "code:1 =\u003e 获取成功，code:0 =\u003e 获取异常",
-                        "schema": {
-                            "$ref": "#/definitions/desk.deskCateStore"
-                        }
-                    }
-                }
-            }
-        },
-        "/admin/desk/category/{id}": {
-            "get": {
-                "description": "查看单个菜单类型",
-                "consumes": [
-                    "multipart/form-data"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "restaurant 菜单类型"
-                ],
-                "summary": "查看单个菜单类型",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "单个菜单类型id",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "code:1 =\u003e 获取成功，code:0 =\u003e 获取异常",
-                        "schema": {
-                            "$ref": "#/definitions/desk.deskCateShow"
-                        }
-                    }
-                }
-            },
-            "post": {
-                "description": "提交修改单个菜单类型",
-                "consumes": [
-                    "multipart/form-data"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "restaurant 菜单类型"
-                ],
-                "summary": "提交修改单个菜单类型",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "单个菜单类型id",
-                        "name": "id",
-                        "in": "formData",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "code:1 =\u003e 获取成功，code:0 =\u003e 获取异常",
-                        "schema": {
-                            "$ref": "#/definitions/desk.deskCateEdit"
-                        }
-                    }
-                }
-            },
-            "delete": {
-                "description": "提交删除单个菜单类型",
-                "consumes": [
-                    "multipart/form-data"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "restaurant 菜单类型"
-                ],
-                "summary": "提交删除菜单类型",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "单个菜单类型id",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "code:1 =\u003e 删除成功，code:0 =\u003e 删除失败",
-                        "schema": {
-                            "$ref": "#/definitions/desk.deskCateDel"
-                        }
-                    }
-                }
-            }
-        },
-        "/admin/desk/goods": {
+        "/admin/desk": {
             "get": {
                 "description": "查看全部桌位列表",
                 "consumes": [
                     "multipart/form-data"
                 ],
                 "produces": [
-                    "application/json"
+                    "multipart/form-data"
                 ],
                 "tags": [
                     "restaurant 桌位管理"
@@ -212,48 +78,383 @@ var doc = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "code:1 =\u003e 获取成功，code:0 =\u003e 获取异常\" ",
+                        "description": "code:1 =\u003e 获取成功，code:0 =\u003e 获取失败",
                         "schema": {
-                            "$ref": "#/definitions/desk.deskGoodsGet"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/model.Paginate"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/model.Desk"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "{\"code\":400,\"msg\":\"登录状态已失效！\"}",
+                        "schema": {
+                            "$ref": "#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData"
                         }
                     }
                 }
             },
             "post": {
-                "description": "提交添加单个桌位",
+                "description": "提交删除单个桌位",
                 "consumes": [
                     "multipart/form-data"
                 ],
                 "produces": [
-                    "application/json"
+                    "multipart/form-data"
                 ],
                 "tags": [
                     "restaurant 桌位管理"
                 ],
-                "summary": "提交添加单个桌位",
+                "summary": "提交删除桌位",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "单个菜单类型id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
                 "responses": {
                     "200": {
-                        "description": "code:1 =\u003e 获取成功，code:0 =\u003e 获取异常\" ",
+                        "description": "code:1 =\u003e 删除成功，code:0 =\u003e 删除失败",
                         "schema": {
-                            "$ref": "#/definitions/desk.deskGoodsStore"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/model.Desk"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "{\"code\":400,\"msg\":\"登录状态已失效！\"}",
+                        "schema": {
+                            "$ref": "#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData"
                         }
                     }
                 }
             }
         },
-        "/admin/desk/goods/{id}": {
+        "/admin/desk/category": {
+            "get": {
+                "description": "查看全部桌位类型列表",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "multipart/form-data"
+                ],
+                "tags": [
+                    "restaurant 桌位分类管理"
+                ],
+                "summary": "桌位类型管理",
+                "responses": {
+                    "200": {
+                        "description": "code:1 =\u003e 获取成功，code:0 =\u003e 获取失败",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/model.Paginate"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/model.DeskCategory"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "{\"code\":400,\"msg\":\"登录状态已失效！\"}",
+                        "schema": {
+                            "$ref": "#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "提交新增单个菜单类型",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "multipart/form-data"
+                ],
+                "tags": [
+                    "restaurant 桌位分类管理"
+                ],
+                "summary": "提交新增单个菜单类型",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "小程序唯一编号",
+                        "name": "mid",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "分类名称",
+                        "name": "category_name",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "最少座位人数",
+                        "name": "least_seats",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "最多座位人数",
+                        "name": "maximum_seats",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "code:1 =\u003e 新增成功！，code:0 =\u003e 新增失败",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/model.DeskCategory"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "{\"code\":400,\"msg\":\"登录状态已失效！\"}",
+                        "schema": {
+                            "$ref": "#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/desk/category/{id}": {
+            "get": {
+                "description": "查看单个菜单类型",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "multipart/form-data"
+                ],
+                "tags": [
+                    "restaurant 桌位分类管理"
+                ],
+                "summary": "查看单个菜单类型",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "单个桌位菜单id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "code:1 =\u003e 获取成功，code:0 =\u003e 获取异常",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/model.DeskCategory"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "{\"code\":400,\"msg\":\"登录状态已失效！\"}",
+                        "schema": {
+                            "$ref": "#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "提交修改单个菜单类型",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "multipart/form-data"
+                ],
+                "tags": [
+                    "restaurant 桌位分类管理"
+                ],
+                "summary": "提交修改单个菜单类型",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "单个桌位菜单id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "小程序唯一编号",
+                        "name": "mid",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "分类名称",
+                        "name": "category_name",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "最少座位人数",
+                        "name": "least_seats",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "最多座位人数",
+                        "name": "maximum_seats",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "code:1 =\u003e 更新成功，code:0 =\u003e 提交失败",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/model.DeskCategory"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "{\"code\":400,\"msg\":\"登录状态已失效！\"}",
+                        "schema": {
+                            "$ref": "#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "提交删除单个菜单类型",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "multipart/form-data"
+                ],
+                "tags": [
+                    "restaurant 桌位分类管理"
+                ],
+                "summary": "提交删除菜单类型",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "单个菜单类型id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "code:1 =\u003e 删除成功，code:0 =\u003e 删除失败",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/model.DeskCategory"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "{\"code\":400,\"msg\":\"登录状态已失效！\"}",
+                        "schema": {
+                            "$ref": "#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/desk/{id}": {
             "get": {
                 "description": "查看单个桌位",
                 "consumes": [
                     "multipart/form-data"
                 ],
                 "produces": [
-                    "application/json"
+                    "multipart/form-data"
                 ],
                 "tags": [
                     "restaurant 桌位管理"
                 ],
-                "summary": "单个桌位管理",
+                "summary": "单个桌位详情",
                 "parameters": [
                     {
                         "type": "string",
@@ -265,9 +466,27 @@ var doc = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "code:1 =\u003e 获取成功，code:0 =\u003e 获取异常\" ",
+                        "description": "code:1 =\u003e 获取成功，code:0 =\u003e 获取失败",
                         "schema": {
-                            "$ref": "#/definitions/desk.deskGoodsShow"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/model.Desk"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "{\"code\":400,\"msg\":\"登录状态已失效！\"}",
+                        "schema": {
+                            "$ref": "#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData"
                         }
                     }
                 }
@@ -278,7 +497,7 @@ var doc = `{
                     "multipart/form-data"
                 ],
                 "produces": [
-                    "application/json"
+                    "multipart/form-data"
                 ],
                 "tags": [
                     "restaurant 桌位管理"
@@ -291,36 +510,102 @@ var doc = `{
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "单个桌位id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "小程序唯一编号",
+                        "name": "mid",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "桌位名称",
+                        "name": "name",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "所属门店",
+                        "name": "store_id",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "所属分类",
+                        "name": "category_id",
+                        "in": "formData",
+                        "required": true
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "code:1 =\u003e 获取成功，code:0 =\u003e 获取异常\" ",
+                        "description": "code:1 =\u003e 获取成功，code:0 =\u003e 获取失败",
                         "schema": {
-                            "$ref": "#/definitions/desk.deskGoodsEdit"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/model.Desk"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "{\"code\":400,\"msg\":\"登录状态已失效！\"}",
+                        "schema": {
+                            "$ref": "#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData"
                         }
                     }
                 }
-            }
-        },
-        "/admin/desk/index/{id}": {
+            },
             "delete": {
                 "description": "提交删除桌位",
                 "consumes": [
                     "multipart/form-data"
                 ],
                 "produces": [
-                    "application/json"
+                    "multipart/form-data"
                 ],
                 "tags": [
-                    "restaurant 菜品管理"
+                    "restaurant 桌位管理"
                 ],
                 "summary": "提交删除桌位",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "单个桌位id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
                 "responses": {
                     "200": {
-                        "description": "code:1 =\u003e 获取成功，code:0 =\u003e 获取异常\" ",
+                        "description": "code:1 =\u003e 删除成功，code:0 =\u003e 删除失败",
                         "schema": {
-                            "$ref": "#/definitions/desk.deskGoodsDel"
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "{\"code\":400,\"msg\":\"登录状态已失效！\"}",
+                        "schema": {
+                            "$ref": "#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData"
                         }
                     }
                 }
@@ -333,13 +618,27 @@ var doc = `{
                     "multipart/form-data"
                 ],
                 "produces": [
-                    "application/json"
+                    "multipart/form-data"
                 ],
                 "tags": [
                     "restaurant 菜单分类"
                 ],
                 "summary": "菜单分类管理",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "门店id",
+                        "name": "store_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "小程序唯一编号",
+                        "name": "mid",
+                        "in": "query",
+                        "required": true
+                    },
                     {
                         "type": "string",
                         "description": "菜单名称",
@@ -383,7 +682,28 @@ var doc = `{
                     "200": {
                         "description": "code:1 =\u003e 获取成功，code:0 =\u003e 获取异常",
                         "schema": {
-                            "$ref": "#/definitions/dishes.dishesCateGet"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/model.Paginate"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/model.FoodCategory"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "{\"code\":400,\"msg\":\"登录状态已失效！\"}",
+                        "schema": {
+                            "$ref": "#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData"
                         }
                     }
                 }
@@ -458,7 +778,25 @@ var doc = `{
                     "200": {
                         "description": "code:1 =\u003e 获取成功，code:0 =\u003e 获取异常",
                         "schema": {
-                            "$ref": "#/definitions/dishes.dishesCateStore"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/model.FoodCategory"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "{\"code\":400,\"msg\":\"登录状态已失效！\"}",
+                        "schema": {
+                            "$ref": "#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData"
                         }
                     }
                 }
@@ -471,7 +809,7 @@ var doc = `{
                     "multipart/form-data"
                 ],
                 "produces": [
-                    "application/json"
+                    "multipart/form-data"
                 ],
                 "tags": [
                     "restaurant 菜单分类"
@@ -484,13 +822,38 @@ var doc = `{
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "小程序唯一编号",
+                        "name": "mid",
+                        "in": "query",
+                        "required": true
                     }
                 ],
                 "responses": {
                     "200": {
                         "description": "code:1 =\u003e 获取成功，code:0 =\u003e 获取异常",
                         "schema": {
-                            "$ref": "#/definitions/dishes.dishesCateShow"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/model.FoodCategory"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "{\"code\":400,\"msg\":\"登录状态已失效！\"}",
+                        "schema": {
+                            "$ref": "#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData"
                         }
                     }
                 }
@@ -501,7 +864,7 @@ var doc = `{
                     "multipart/form-data"
                 ],
                 "produces": [
-                    "application/json"
+                    "multipart/form-data"
                 ],
                 "tags": [
                     "restaurant 菜单分类"
@@ -514,13 +877,71 @@ var doc = `{
                         "name": "id",
                         "in": "formData",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "小程序唯一编号",
+                        "name": "mid",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "菜品名称",
+                        "name": "name",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "菜品图片",
+                        "name": "name",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "enum": [
+                            0,
+                            1,
+                            2
+                        ],
+                        "type": "integer",
+                        "description": "菜单类型（0=\u003e全部，1=\u003e到店，2=\u003e外卖）",
+                        "name": "type",
+                        "in": "formData"
+                    },
+                    {
+                        "enum": [
+                            0,
+                            1
+                        ],
+                        "type": "integer",
+                        "description": "是否必选（0=\u003e否，1=\u003e是）",
+                        "name": "is_required",
+                        "in": "formData"
+                    },
+                    {
+                        "enum": [
+                            0,
+                            1
+                        ],
+                        "type": "integer",
+                        "description": "状态（0=\u003e停用，1=\u003e启用）",
+                        "name": "status",
+                        "in": "formData"
                     }
                 ],
                 "responses": {
                     "200": {
                         "description": "code:1 =\u003e 获取成功，code:0 =\u003e 获取异常",
                         "schema": {
-                            "$ref": "#/definitions/dishes.dishesCateEdit"
+                            "$ref": "#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData"
+                        }
+                    },
+                    "400": {
+                        "description": "{\"code\":400,\"msg\":\"登录状态已失效！\"}",
+                        "schema": {
+                            "$ref": "#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData"
                         }
                     }
                 }
@@ -531,7 +952,7 @@ var doc = `{
                     "multipart/form-data"
                 ],
                 "produces": [
-                    "application/json"
+                    "multipart/form-data"
                 ],
                 "tags": [
                     "restaurant 菜单分类"
@@ -550,20 +971,26 @@ var doc = `{
                     "200": {
                         "description": "code:1 =\u003e 删除成功，code:0 =\u003e 删除失败",
                         "schema": {
-                            "$ref": "#/definitions/dishes.dishesCateDel"
+                            "$ref": "#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData"
+                        }
+                    },
+                    "400": {
+                        "description": "{\"code\":400,\"msg\":\"登录状态已失效！\"}",
+                        "schema": {
+                            "$ref": "#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData"
                         }
                     }
                 }
             }
         },
-        "/admin/dishes/goods": {
+        "/admin/dishes/food": {
             "get": {
                 "description": "查看全部菜品列表",
                 "consumes": [
                     "multipart/form-data"
                 ],
                 "produces": [
-                    "application/json"
+                    "multipart/form-data"
                 ],
                 "tags": [
                     "restaurant 菜品管理"
@@ -572,17 +999,56 @@ var doc = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "菜单名称",
-                        "name": "name",
-                        "in": "formData",
+                        "description": "小程序唯一编号",
+                        "name": "mid",
+                        "in": "query",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "门店id",
+                        "name": "store_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "菜品名称",
+                        "name": "name",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "菜品分类",
+                        "name": "category_id",
+                        "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "code:1 =\u003e 获取成功，code:0 =\u003e 获取异常\" ",
+                        "description": "code:1 =\u003e 获取成功，code:0 =\u003e 获取失败",
                         "schema": {
-                            "$ref": "#/definitions/dishes.dishesGoodsGet"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/model.Paginate"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/model.Food"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "{\"code\":400,\"msg\":\"登录状态已失效！\"}",
+                        "schema": {
+                            "$ref": "#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData"
                         }
                     }
                 }
@@ -593,36 +1059,199 @@ var doc = `{
                     "multipart/form-data"
                 ],
                 "produces": [
-                    "application/json"
+                    "multipart/form-data"
                 ],
                 "tags": [
                     "restaurant 菜品管理"
                 ],
                 "summary": "提交添加单个菜品",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "小程序唯一编号",
+                        "name": "mid",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "门店id",
+                        "name": "store_id",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "菜品名称",
+                        "name": "name",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "菜品分类",
+                        "name": "category",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "菜品缩略图",
+                        "name": "thumbnail",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "菜品编码",
+                        "name": "food_code",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "启用会员价",
+                        "name": "use_member",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "会员价",
+                        "name": "member_price",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "原价",
+                        "name": "original_price",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "售价",
+                        "name": "price",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "餐盒费",
+                        "name": "box_fee",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "库存",
+                        "name": "inventory",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "销量",
+                        "name": "volume",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "场景",
+                        "name": "scene",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "最低起售",
+                        "name": "start_sale",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "启用规格",
+                        "name": "use_sku",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "启用口味",
+                        "name": "use_tasty",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "口味json",
+                        "name": "tasty",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "额外加料",
+                        "name": "use_material",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "加料",
+                        "name": "material",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "状态",
+                        "name": "status",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "菜品规格",
+                        "name": "food_sku",
+                        "in": "formData"
+                    }
+                ],
                 "responses": {
                     "200": {
-                        "description": "code:1 =\u003e 获取成功，code:0 =\u003e 获取异常\" ",
+                        "description": "code:1 =\u003e 获取成功，code:0 =\u003e 获取异常",
                         "schema": {
-                            "$ref": "#/definitions/dishes.dishesGoodsStore"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/model.Food"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "{\"code\":400,\"msg\":\"登录状态已失效！\"}",
+                        "schema": {
+                            "$ref": "#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData"
                         }
                     }
                 }
             }
         },
-        "/admin/dishes/goods/{id}": {
+        "/admin/dishes/food/{id}": {
             "get": {
                 "description": "查看单个菜品",
                 "consumes": [
                     "multipart/form-data"
                 ],
                 "produces": [
-                    "application/json"
+                    "multipart/form-data"
                 ],
                 "tags": [
                     "restaurant 菜品管理"
                 ],
                 "summary": "单个菜品管理",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "小程序唯一编号",
+                        "name": "mid",
+                        "in": "query",
+                        "required": true
+                    },
                     {
                         "type": "string",
                         "description": "单个菜单分类id",
@@ -633,9 +1262,27 @@ var doc = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "code:1 =\u003e 获取成功，code:0 =\u003e 获取异常\" ",
+                        "description": "code:1 =\u003e 获取成功，code:0 =\u003e 获取异常",
                         "schema": {
-                            "$ref": "#/definitions/dishes.dishesGoodsShow"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/model.Food"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "{\"code\":400,\"msg\":\"登录状态已失效！\"}",
+                        "schema": {
+                            "$ref": "#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData"
                         }
                     }
                 }
@@ -646,7 +1293,7 @@ var doc = `{
                     "multipart/form-data"
                 ],
                 "produces": [
-                    "application/json"
+                    "multipart/form-data"
                 ],
                 "tags": [
                     "restaurant 菜品管理"
@@ -659,13 +1306,167 @@ var doc = `{
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "小程序唯一编号",
+                        "name": "mid",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "门店id",
+                        "name": "store_id",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "菜品名称",
+                        "name": "name",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "菜品分类",
+                        "name": "category",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "菜品缩略图",
+                        "name": "thumbnail",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "菜品编码",
+                        "name": "food_code",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "启用会员价",
+                        "name": "use_member",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "会员价",
+                        "name": "member_price",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "原价",
+                        "name": "original_price",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "售价",
+                        "name": "price",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "餐盒费",
+                        "name": "box_fee",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "库存",
+                        "name": "inventory",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "销量",
+                        "name": "volume",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "场景",
+                        "name": "scene",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "最低起售",
+                        "name": "start_sale",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "启用规格",
+                        "name": "use_sku",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "启用口味",
+                        "name": "use_tasty",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "口味json",
+                        "name": "tasty",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "额外加料",
+                        "name": "use_material",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "加料",
+                        "name": "material",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "状态",
+                        "name": "status",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "菜品规格",
+                        "name": "food_sku",
+                        "in": "formData"
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "code:1 =\u003e 获取成功，code:0 =\u003e 获取异常\" ",
+                        "description": "code:1 =\u003e 获取成功，code:0 =\u003e 获取异常",
                         "schema": {
-                            "$ref": "#/definitions/dishes.dishesGoodsEdit"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/model.Food"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "{\"code\":400,\"msg\":\"登录状态已失效！\"}",
+                        "schema": {
+                            "$ref": "#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData"
                         }
                     }
                 }
@@ -676,7 +1477,7 @@ var doc = `{
                     "multipart/form-data"
                 ],
                 "produces": [
-                    "application/json"
+                    "multipart/form-data"
                 ],
                 "tags": [
                     "restaurant 菜品管理"
@@ -684,9 +1485,301 @@ var doc = `{
                 "summary": "提交删除菜品",
                 "responses": {
                     "200": {
-                        "description": "code:1 =\u003e 获取成功，code:0 =\u003e 获取异常\" ",
+                        "description": "code:1 =\u003e 删除成功，code:0 =\u003e 删除失败",
                         "schema": {
-                            "$ref": "#/definitions/dishes.dishesGoodsDel"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/model.Food"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "{\"code\":400,\"msg\":\"登录状态已失效！\"}",
+                        "schema": {
+                            "$ref": "#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/member": {
+            "get": {
+                "description": "查看全部会员列表",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "multipart/form-data"
+                ],
+                "tags": [
+                    "restaurant 会员管理"
+                ],
+                "summary": "会员管理",
+                "responses": {
+                    "200": {
+                        "description": "code:1 =\u003e 获取成功，code:0 =\u003e 获取失败",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/model.Paginate"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/model.User"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "{\"code\":400,\"msg\":\"登录状态已失效！\"}",
+                        "schema": {
+                            "$ref": "#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/settings/business_info": {
+            "get": {
+                "description": "查看系统基础设置",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "multipart/form-data"
+                ],
+                "tags": [
+                    "restaurant 系统设置"
+                ],
+                "summary": "系统基础设置",
+                "responses": {
+                    "200": {
+                        "description": "code:1 =\u003e 获取成功，code:0 =\u003e 获取失败",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/settings.BusinessInfo"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "{\"code\":400,\"msg\":\"登录状态已失效！\"}",
+                        "schema": {
+                            "$ref": "#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "提交系统基础设置",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "multipart/form-data"
+                ],
+                "tags": [
+                    "restaurant 系统设置"
+                ],
+                "summary": "系统基础设置",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "品牌名称",
+                        "name": "brand_name",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "品牌LOGO",
+                        "name": "brand_logo",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "公司",
+                        "name": "company",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "公司地址",
+                        "name": "address",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "联系人",
+                        "name": "contact",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "手机号",
+                        "name": "mobile",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "邮箱",
+                        "name": "email",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "营业执照许可证",
+                        "name": "business_license",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "经营范围",
+                        "name": "business_scope",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "营业执照有效期",
+                        "name": "business_expired",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "营业执照照片",
+                        "name": "business_photo",
+                        "in": "formData"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "code:1 =\u003e 获取成功，code:0 =\u003e 获取失败",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/settings.BusinessInfo"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "{\"code\":400,\"msg\":\"登录状态已失效！\"}",
+                        "schema": {
+                            "$ref": "#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/settings/recharge": {
+            "get": {
+                "description": "查看充值规则设置",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "multipart/form-data"
+                ],
+                "tags": [
+                    "restaurant 充值规则"
+                ],
+                "summary": "充值规则设置",
+                "responses": {
+                    "200": {
+                        "description": "code:1 =\u003e 获取成功，code:0 =\u003e 获取失败",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/model.Recharge"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "{\"code\":400,\"msg\":\"登录状态已失效！\"}",
+                        "schema": {
+                            "$ref": "#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "查看充值规则设置",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "multipart/form-data"
+                ],
+                "tags": [
+                    "restaurant 充值规则"
+                ],
+                "summary": "充值规则设置",
+                "responses": {
+                    "200": {
+                        "description": "code:1 =\u003e 获取成功，code:0 =\u003e 获取失败",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/model.Recharge"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "{\"code\":400,\"msg\":\"登录状态已失效！\"}",
+                        "schema": {
+                            "$ref": "#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData"
                         }
                     }
                 }
@@ -699,7 +1792,7 @@ var doc = `{
                     "multipart/form-data"
                 ],
                 "produces": [
-                    "application/json"
+                    "multipart/form-data"
                 ],
                 "tags": [
                     "restaurant 门店管理"
@@ -737,9 +1830,30 @@ var doc = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "code:1 =\u003e 获取成功，code:0 =\u003e 获取异常",
+                        "description": "code:1 =\u003e 获取成功，code:0 =\u003e 获取失败",
                         "schema": {
-                            "$ref": "#/definitions/store.storeIndexGet"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/model.Paginate"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/model.Store"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "{\"code\":400,\"msg\":\"登录状态已失效！\"}",
+                        "schema": {
+                            "$ref": "#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData"
                         }
                     }
                 }
@@ -750,7 +1864,7 @@ var doc = `{
                     "multipart/form-data"
                 ],
                 "produces": [
-                    "application/json"
+                    "multipart/form-data"
                 ],
                 "tags": [
                     "restaurant 门店管理"
@@ -788,9 +1902,27 @@ var doc = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "code:1 =\u003e 获取成功，code:0 =\u003e 获取异常\" ",
+                        "description": "code:1 =\u003e 获取成功，code:0 =\u003e 获取失败",
                         "schema": {
-                            "$ref": "#/definitions/store.storeIndexStore"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/model.Store"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "{\"code\":400,\"msg\":\"登录状态已失效！\"}",
+                        "schema": {
+                            "$ref": "#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData"
                         }
                     }
                 }
@@ -803,7 +1935,7 @@ var doc = `{
                     "multipart/form-data"
                 ],
                 "produces": [
-                    "application/json"
+                    "multipart/form-data"
                 ],
                 "tags": [
                     "restaurant 门店管理"
@@ -820,9 +1952,27 @@ var doc = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "code:1 =\u003e 获取成功，code:0 =\u003e 获取异常\" ",
+                        "description": "code:1 =\u003e 获取成功，code:0 =\u003e 获取失败",
                         "schema": {
-                            "$ref": "#/definitions/store.storeIndexShow"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/model.Store"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "{\"code\":400,\"msg\":\"登录状态已失效！\"}",
+                        "schema": {
+                            "$ref": "#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData"
                         }
                     }
                 }
@@ -833,7 +1983,7 @@ var doc = `{
                     "multipart/form-data"
                 ],
                 "produces": [
-                    "application/json"
+                    "multipart/form-data"
                 ],
                 "tags": [
                     "restaurant 门店管理"
@@ -850,9 +2000,27 @@ var doc = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "code:1 =\u003e 获取成功，code:0 =\u003e 获取异常\" ",
+                        "description": "code:1 =\u003e 获取成功，code:0 =\u003e 获取失败",
                         "schema": {
-                            "$ref": "#/definitions/store.storeIndexEdit"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/model.Store"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "{\"code\":400,\"msg\":\"登录状态已失效！\"}",
+                        "schema": {
+                            "$ref": "#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData"
                         }
                     }
                 }
@@ -863,7 +2031,7 @@ var doc = `{
                     "multipart/form-data"
                 ],
                 "produces": [
-                    "application/json"
+                    "multipart/form-data"
                 ],
                 "tags": [
                     "restaurant 门店管理"
@@ -871,9 +2039,71 @@ var doc = `{
                 "summary": "删除单个门店",
                 "responses": {
                     "200": {
-                        "description": "code:1 =\u003e 获取成功，code:0 =\u003e 获取异常\" ",
+                        "description": "code:1 =\u003e 删除成功，code:0 =\u003e 删除失败",
                         "schema": {
-                            "$ref": "#/definitions/store.storeIndexDel"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/model.Store"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "{\"code\":400,\"msg\":\"登录状态已失效！\"}",
+                        "schema": {
+                            "$ref": "#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData"
+                        }
+                    }
+                }
+            }
+        },
+        "/app/voucher": {
+            "get": {
+                "description": "获取个人优惠券列表",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "multipart/form-data"
+                ],
+                "tags": [
+                    "app 优惠券列表"
+                ],
+                "summary": "优惠券列表",
+                "responses": {
+                    "200": {
+                        "description": "code:1 =\u003e 获取成功，code:0 =\u003e 获取失败",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/model.Paginate"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/model.Desk"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "{\"code\":400,\"msg\":\"登录状态已失效！\"}",
+                        "schema": {
+                            "$ref": "#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData"
                         }
                     }
                 }
@@ -881,444 +2111,133 @@ var doc = `{
         }
     },
     "definitions": {
-        "desk.deskCateDel": {
+        "gincmf_app_model.ReturnData": {
             "type": "object",
             "properties": {
                 "code": {
-                    "type": "integer",
-                    "example": 1
+                    "type": "integer"
                 },
                 "data": {
-                    "$ref": "#/definitions/model.DeskCategory"
+                    "type": "object"
                 },
                 "msg": {
-                    "type": "string",
-                    "example": "删除成功！"
+                    "type": "string"
                 }
             }
         },
-        "desk.deskCateEdit": {
+        "gincmf_plugins_restaurantPlugin_model.ReturnData": {
             "type": "object",
             "properties": {
                 "code": {
-                    "type": "integer",
-                    "example": 1
+                    "type": "integer"
                 },
                 "data": {
-                    "$ref": "#/definitions/model.DeskCategory"
+                    "type": "object"
                 },
                 "msg": {
-                    "type": "string",
-                    "example": "修改成功！"
-                }
-            }
-        },
-        "desk.deskCateGet": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "integer",
-                    "example": 1
-                },
-                "data": {
-                    "$ref": "#/definitions/desk.deskCatePaginate"
-                },
-                "msg": {
-                    "type": "string",
-                    "example": "获取成功！"
-                }
-            }
-        },
-        "desk.deskCatePaginate": {
-            "type": "object",
-            "properties": {
-                "current": {
-                    "type": "string",
-                    "example": "1"
-                },
-                "data": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/model.DeskCategory"
-                    }
-                },
-                "page_size": {
-                    "type": "string",
-                    "example": "10"
-                },
-                "total": {
-                    "type": "integer",
-                    "example": 10
-                }
-            }
-        },
-        "desk.deskCateShow": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "integer",
-                    "example": 1
-                },
-                "data": {
-                    "$ref": "#/definitions/model.DeskCategory"
-                },
-                "msg": {
-                    "type": "string",
-                    "example": "获取成功！"
-                }
-            }
-        },
-        "desk.deskCateStore": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "integer",
-                    "example": 1
-                },
-                "data": {
-                    "$ref": "#/definitions/model.DeskCategory"
-                },
-                "msg": {
-                    "type": "string",
-                    "example": "添加成功！"
-                }
-            }
-        },
-        "desk.deskGoodsDel": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "integer",
-                    "example": 1
-                },
-                "data": {
-                    "$ref": "#/definitions/model.Desk"
-                },
-                "msg": {
-                    "type": "string",
-                    "example": "删除成功！"
-                }
-            }
-        },
-        "desk.deskGoodsEdit": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "integer",
-                    "example": 1
-                },
-                "data": {
-                    "$ref": "#/definitions/model.Desk"
-                },
-                "msg": {
-                    "type": "string",
-                    "example": "修改成功！"
-                }
-            }
-        },
-        "desk.deskGoodsGet": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "integer",
-                    "example": 1
-                },
-                "data": {
-                    "$ref": "#/definitions/desk.deskGoodsPaginate"
-                },
-                "msg": {
-                    "type": "string",
-                    "example": "获取成功！"
-                }
-            }
-        },
-        "desk.deskGoodsPaginate": {
-            "type": "object",
-            "properties": {
-                "current": {
-                    "type": "string",
-                    "example": "1"
-                },
-                "data": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/model.Desk"
-                    }
-                },
-                "page_size": {
-                    "type": "string",
-                    "example": "10"
-                },
-                "total": {
-                    "type": "integer",
-                    "example": 10
-                }
-            }
-        },
-        "desk.deskGoodsShow": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "integer",
-                    "example": 1
-                },
-                "data": {
-                    "$ref": "#/definitions/model.Desk"
-                },
-                "msg": {
-                    "type": "string",
-                    "example": "获取成功！"
-                }
-            }
-        },
-        "desk.deskGoodsStore": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "integer",
-                    "example": 1
-                },
-                "data": {
-                    "$ref": "#/definitions/model.Desk"
-                },
-                "msg": {
-                    "type": "string",
-                    "example": "添加成功！"
-                }
-            }
-        },
-        "dishes.dishesCateDel": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "integer",
-                    "example": 1
-                },
-                "data": {
-                    "$ref": "#/definitions/model.FoodCategory"
-                },
-                "msg": {
-                    "type": "string",
-                    "example": "删除成功！"
-                }
-            }
-        },
-        "dishes.dishesCateEdit": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "integer",
-                    "example": 1
-                },
-                "data": {
-                    "$ref": "#/definitions/model.FoodCategory"
-                },
-                "msg": {
-                    "type": "string",
-                    "example": "修改成功！"
-                }
-            }
-        },
-        "dishes.dishesCateGet": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "integer",
-                    "example": 1
-                },
-                "data": {
-                    "$ref": "#/definitions/dishes.dishesCatePaginate"
-                },
-                "msg": {
-                    "type": "string",
-                    "example": "获取成功！"
-                }
-            }
-        },
-        "dishes.dishesCatePaginate": {
-            "type": "object",
-            "properties": {
-                "current": {
-                    "type": "string",
-                    "example": "1"
-                },
-                "data": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/model.FoodCategory"
-                    }
-                },
-                "page_size": {
-                    "type": "string",
-                    "example": "10"
-                },
-                "total": {
-                    "type": "integer",
-                    "example": 10
-                }
-            }
-        },
-        "dishes.dishesCateShow": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "integer",
-                    "example": 1
-                },
-                "data": {
-                    "$ref": "#/definitions/model.FoodCategory"
-                },
-                "msg": {
-                    "type": "string",
-                    "example": "获取成功！"
-                }
-            }
-        },
-        "dishes.dishesCateStore": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "integer",
-                    "example": 1
-                },
-                "data": {
-                    "$ref": "#/definitions/model.FoodCategory"
-                },
-                "msg": {
-                    "type": "string",
-                    "example": "添加成功！"
-                }
-            }
-        },
-        "dishes.dishesGoodsDel": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "integer",
-                    "example": 1
-                },
-                "data": {
-                    "$ref": "#/definitions/model.Food"
-                },
-                "msg": {
-                    "type": "string",
-                    "example": "删除成功！"
-                }
-            }
-        },
-        "dishes.dishesGoodsEdit": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "integer",
-                    "example": 1
-                },
-                "data": {
-                    "$ref": "#/definitions/model.Food"
-                },
-                "msg": {
-                    "type": "string",
-                    "example": "修改成功！"
-                }
-            }
-        },
-        "dishes.dishesGoodsGet": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "integer",
-                    "example": 1
-                },
-                "data": {
-                    "$ref": "#/definitions/dishes.dishesGoodsPaginate"
-                },
-                "msg": {
-                    "type": "string",
-                    "example": "获取成功！"
-                }
-            }
-        },
-        "dishes.dishesGoodsPaginate": {
-            "type": "object",
-            "properties": {
-                "current": {
-                    "type": "string",
-                    "example": "1"
-                },
-                "data": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/model.Food"
-                    }
-                },
-                "page_size": {
-                    "type": "string",
-                    "example": "10"
-                },
-                "total": {
-                    "type": "integer",
-                    "example": 10
-                }
-            }
-        },
-        "dishes.dishesGoodsShow": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "integer",
-                    "example": 1
-                },
-                "data": {
-                    "$ref": "#/definitions/model.Food"
-                },
-                "msg": {
-                    "type": "string",
-                    "example": "获取成功！"
-                }
-            }
-        },
-        "dishes.dishesGoodsStore": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "integer",
-                    "example": 1
-                },
-                "data": {
-                    "$ref": "#/definitions/model.Food"
-                },
-                "msg": {
-                    "type": "string",
-                    "example": "添加成功！"
+                    "type": "string"
                 }
             }
         },
         "model.Desk": {
-            "type": "object"
-        },
-        "model.DeskCategory": {
-            "type": "object"
-        },
-        "model.Food": {
             "type": "object",
             "properties": {
-                "create_at": {
+                "category_id": {
                     "type": "integer"
                 },
-                "delete_at": {
-                    "type": "integer"
-                },
-                "food_number": {
+                "category_name": {
                     "type": "string"
                 },
                 "id": {
                     "type": "integer"
                 },
+                "list_order": {
+                    "type": "number"
+                },
+                "mid": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "integer"
+                },
+                "store_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "model.DeskCategory": {
+            "type": "object",
+            "properties": {
+                "category_name": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "least_seats": {
+                    "type": "integer"
+                },
+                "maximum_seats": {
+                    "type": "integer"
+                },
+                "mid": {
+                    "type": "integer"
+                }
+            }
+        },
+        "model.Food": {
+            "type": "object",
+            "properties": {
+                "box_fee": {
+                    "type": "number"
+                },
+                "category": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.FoodCategory"
+                    }
+                },
+                "content": {
+                    "type": "string"
+                },
+                "create_at": {
+                    "type": "integer"
+                },
+                "create_time": {
+                    "type": "string"
+                },
+                "default_inventory": {
+                    "type": "integer"
+                },
+                "delete_at": {
+                    "type": "integer"
+                },
+                "food_code": {
+                    "type": "string"
+                },
+                "food_sku": {
+                    "$ref": "#/definitions/model.sSkuTemp"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "inventory": {
+                    "type": "integer"
+                },
                 "is_recommend": {
                     "type": "integer"
                 },
-                "is_take_out": {
-                    "type": "integer"
+                "material_json": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.FoodMaterialPost"
+                    }
+                },
+                "member_price": {
+                    "type": "number"
                 },
                 "mid": {
                     "type": "integer"
@@ -1329,16 +2248,67 @@ var doc = `{
                 "original_price": {
                     "type": "number"
                 },
+                "prev_path": {
+                    "type": "string"
+                },
                 "price": {
                     "type": "number"
                 },
+                "scene": {
+                    "type": "integer"
+                },
+                "sku_json": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/definitions/model.SpecPost"
+                        }
+                    }
+                },
+                "start_sale": {
+                    "description": "最少起售",
+                    "type": "integer"
+                },
                 "status": {
                     "type": "integer"
+                },
+                "store_id": {
+                    "type": "integer"
+                },
+                "tasty": {
+                    "type": "string"
+                },
+                "tasty_json": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "additionalProperties": true
+                    }
                 },
                 "thumbnail": {
                     "type": "string"
                 },
                 "update_at": {
+                    "type": "integer"
+                },
+                "update_time": {
+                    "type": "string"
+                },
+                "use_material": {
+                    "type": "integer"
+                },
+                "use_member": {
+                    "type": "number"
+                },
+                "use_sku": {
+                    "type": "integer"
+                },
+                "use_tasty": {
+                    "type": "integer"
+                },
+                "volume": {
+                    "description": "销量",
                     "type": "integer"
                 }
             }
@@ -1346,8 +2316,14 @@ var doc = `{
         "model.FoodCategory": {
             "type": "object",
             "properties": {
+                "count": {
+                    "type": "integer"
+                },
                 "create_at": {
                     "type": "integer"
+                },
+                "create_time": {
+                    "type": "string"
                 },
                 "delete_at": {
                     "type": "integer"
@@ -1367,28 +2343,100 @@ var doc = `{
                 "name": {
                     "type": "string"
                 },
+                "scene": {
+                    "type": "integer"
+                },
                 "status": {
                     "type": "integer"
                 },
-                "type": {
+                "store_id": {
                     "type": "integer"
                 },
                 "update_at": {
                     "type": "integer"
+                },
+                "update_time": {
+                    "type": "string"
                 }
             }
         },
-        "model.ReturnData": {
+        "model.FoodMaterialPost": {
             "type": "object",
             "properties": {
-                "code": {
-                    "type": "integer",
-                    "example": 1
+                "food_id": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "material_name": {
+                    "type": "string"
+                },
+                "material_price": {
+                    "type": "number"
+                }
+            }
+        },
+        "model.Paginate": {
+            "type": "object",
+            "properties": {
+                "current": {
+                    "type": "integer"
                 },
                 "data": {
                     "type": "object"
                 },
-                "msg": {
+                "page_size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "model.Recharge": {
+            "type": "object",
+            "properties": {
+                "gear": {
+                    "description": "储值金额档位",
+                    "type": "number"
+                },
+                "money": {
+                    "type": "number"
+                },
+                "money_enabled": {
+                    "type": "integer"
+                },
+                "point": {
+                    "type": "integer"
+                },
+                "point_enabled": {
+                    "type": "integer"
+                },
+                "voucher": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.voucherItem"
+                    }
+                },
+                "voucher_enabled": {
+                    "type": "integer"
+                }
+            }
+        },
+        "model.SpecPost": {
+            "type": "object",
+            "properties": {
+                "attr_value": {
+                    "type": "string"
+                },
+                "attr_value_id": {
+                    "type": "integer"
+                },
+                "food_id": {
+                    "type": "integer"
+                },
+                "name": {
                     "type": "string"
                 }
             }
@@ -1411,8 +2459,14 @@ var doc = `{
                 "create_at": {
                     "type": "integer"
                 },
+                "create_time": {
+                    "type": "string"
+                },
                 "delete_at": {
                     "type": "integer"
+                },
+                "distance": {
+                    "type": "number"
                 },
                 "district": {
                     "type": "integer"
@@ -1447,6 +2501,15 @@ var doc = `{
                 "province_name": {
                     "type": "string"
                 },
+                "scene": {
+                    "type": "integer"
+                },
+                "store_hours": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.sHours"
+                    }
+                },
                 "store_name": {
                     "type": "string"
                 },
@@ -1458,109 +2521,262 @@ var doc = `{
                 },
                 "update_at": {
                     "type": "integer"
+                },
+                "update_time": {
+                    "type": "string"
+                },
+                "use_appointment": {
+                    "type": "integer"
+                },
+                "use_desk": {
+                    "type": "integer"
                 }
             }
         },
-        "store.storeIndexDel": {
+        "model.User": {
             "type": "object",
             "properties": {
+                "avatar": {
+                    "type": "string"
+                },
+                "balance": {
+                    "type": "number"
+                },
+                "birthday": {
+                    "type": "integer"
+                },
+                "coin": {
+                    "type": "integer"
+                },
+                "create_at": {
+                    "type": "integer"
+                },
+                "end_at": {
+                    "type": "integer"
+                },
+                "end_time": {
+                    "type": "string"
+                },
+                "exp": {
+                    "type": "integer"
+                },
+                "gender": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "last_login_at": {
+                    "type": "integer"
+                },
+                "last_loginip": {
+                    "type": "string"
+                },
+                "mobile": {
+                    "type": "string"
+                },
+                "more": {
+                    "type": "string"
+                },
+                "open_id": {
+                    "type": "string"
+                },
+                "score": {
+                    "type": "integer"
+                },
+                "signature": {
+                    "type": "string"
+                },
+                "start_at": {
+                    "type": "integer"
+                },
+                "start_time": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "update_at": {
+                    "type": "integer"
+                },
+                "user_activation_key": {
+                    "type": "string"
+                },
+                "user_email": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "integer"
+                },
+                "user_login": {
+                    "type": "string"
+                },
+                "user_nickname": {
+                    "type": "string"
+                },
+                "user_realname": {
+                    "type": "string"
+                },
+                "user_status": {
+                    "type": "integer"
+                },
+                "user_type": {
+                    "type": "integer"
+                },
+                "user_url": {
+                    "type": "string"
+                },
+                "vip_can_open": {
+                    "type": "boolean"
+                },
+                "vip_level": {
+                    "type": "string"
+                },
+                "vip_name": {
+                    "type": "string"
+                },
+                "vip_num": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.foodSkuTemp": {
+            "type": "object",
+            "properties": {
+                "attr_post": {
+                    "type": "string"
+                },
+                "attr_value": {
+                    "type": "string"
+                },
+                "attr_value_id": {
+                    "type": "integer"
+                },
                 "code": {
-                    "type": "integer",
-                    "example": 1
+                    "type": "string"
                 },
-                "data": {
-                    "$ref": "#/definitions/model.Store"
+                "default_inventory": {
+                    "type": "integer"
                 },
-                "msg": {
-                    "type": "string",
-                    "example": "删除成功！"
+                "food_id": {
+                    "type": "integer"
+                },
+                "inventory": {
+                    "type": "integer"
+                },
+                "member_price": {
+                    "type": "number"
+                },
+                "original_price": {
+                    "type": "number"
+                },
+                "price": {
+                    "type": "number"
+                },
+                "sku_id": {
+                    "type": "integer"
+                },
+                "use_member": {
+                    "type": "integer"
+                },
+                "volume": {
+                    "description": "销量",
+                    "type": "integer"
                 }
             }
         },
-        "store.storeIndexEdit": {
+        "model.sHours": {
             "type": "object",
             "properties": {
-                "code": {
-                    "type": "integer",
-                    "example": 1
+                "end_time": {
+                    "type": "string"
                 },
-                "data": {
-                    "$ref": "#/definitions/model.Store"
-                },
-                "msg": {
-                    "type": "string",
-                    "example": "修改成功！"
+                "start_time": {
+                    "type": "string"
                 }
             }
         },
-        "store.storeIndexGet": {
+        "model.sSkuTemp": {
             "type": "object",
             "properties": {
-                "code": {
-                    "type": "integer",
-                    "example": 1
-                },
-                "data": {
-                    "$ref": "#/definitions/store.storeIndexPaginate"
-                },
-                "msg": {
-                    "type": "string",
-                    "example": "获取成功！"
-                }
-            }
-        },
-        "store.storeIndexPaginate": {
-            "type": "object",
-            "properties": {
-                "current": {
-                    "type": "string",
-                    "example": "1"
-                },
-                "data": {
+                "food_sku": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/model.Store"
+                        "$ref": "#/definitions/model.foodSkuTemp"
                     }
                 },
-                "page_size": {
-                    "type": "string",
-                    "example": "10"
-                },
-                "total": {
-                    "type": "integer",
-                    "example": 10
+                "spec": {
+                    "$ref": "#/definitions/model.spec"
                 }
             }
         },
-        "store.storeIndexShow": {
+        "model.spec": {
             "type": "object",
             "properties": {
-                "code": {
-                    "type": "integer",
-                    "example": 1
+                "attr_id": {
+                    "type": "integer"
                 },
-                "data": {
-                    "$ref": "#/definitions/model.Store"
-                },
-                "msg": {
-                    "type": "string",
-                    "example": "获取成功！"
+                "attr_key": {
+                    "type": "string"
                 }
             }
         },
-        "store.storeIndexStore": {
+        "model.voucherItem": {
             "type": "object",
             "properties": {
-                "code": {
-                    "type": "integer",
-                    "example": 1
+                "send_type": {
+                    "description": "发放方式：once：发放1次 month：每月发放",
+                    "type": "string"
                 },
-                "data": {
-                    "$ref": "#/definitions/model.Store"
+                "template_id": {
+                    "type": "string"
                 },
-                "msg": {
-                    "type": "string",
-                    "example": "添加成功！"
+                "voucher_id": {
+                    "type": "integer"
+                },
+                "voucher_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "settings.BusinessInfo": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "type": "string"
+                },
+                "alipay_logo_id": {
+                    "type": "string"
+                },
+                "brand_logo": {
+                    "type": "string"
+                },
+                "brand_name": {
+                    "type": "string"
+                },
+                "business_expired": {
+                    "type": "string"
+                },
+                "business_license": {
+                    "type": "string"
+                },
+                "business_photo": {
+                    "type": "string"
+                },
+                "business_scope": {
+                    "type": "string"
+                },
+                "company": {
+                    "type": "string"
+                },
+                "contact": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "mobile": {
+                    "type": "string"
                 }
             }
         }
@@ -1579,7 +2795,7 @@ type swaggerInfo struct {
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = swaggerInfo{
 	Version:     "1.0",
-	Host:        "127.0.0.1:4000",
+	Host:        "localhost:4002",
 	BasePath:    "/api/v1",
 	Schemes:     []string{},
 	Title:       "MP-ISV API",

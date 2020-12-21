@@ -36,4 +36,6 @@ func AutoMigrate () {
 
 	new(model.MemberCard).AutoMigrate()
 
+	new(model.RechargeOrder).AutoMigrate()
+
 }

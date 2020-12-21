@@ -20,7 +20,7 @@ import (
 // @license.name MIT
 // @license.url
 
-// @host www.gincmf.com
+// @host localhost:4002
 // @BasePath /api/v1
 func main() {
 	//初始化配置设置

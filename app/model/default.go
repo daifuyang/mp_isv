@@ -2,13 +2,13 @@ package model
 
 type Paginate struct {
 	Data     interface{} `json:"data"`
-	Current  string      `json:"current" example:"1"`
-	PageSize string      `json:"page_size" example:"10"`
-	Total    int64       `json:"total" example:"0"`
+	Current  int         `json:"current"`
+	PageSize int         `json:"page_size"`
+	Total    int64       `json:"total"`
 }
 
 type ReturnData struct {
-	Code int         `json:"code" example:"1"`
+	Code int         `json:"code"`
 	Msg  string      `json:"msg"`
 	Data interface{} `json:"data"`
 }

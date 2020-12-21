@@ -23,11 +23,11 @@ type voucherItem struct {
 
 // 等级权益
 type Benefit struct {
-	DiscountEnabled bool    `json:"discount_enabled"`
+	DiscountEnabled int     `json:"discount_enabled"`
 	Discount        float64 `json:"discount"`
-	PointsEnabled   bool    `json:"points_enabled"`
+	PointsEnabled   int     `json:"points_enabled"`
 	Points          int     `json:"points"`
-	VoucherEnabled  bool    `json:"voucher_enabled"`
+	VoucherEnabled  int     `json:"voucher_enabled"`
 	Voucher         voucher `json:"voucher"`
 }
 

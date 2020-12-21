@@ -23,7 +23,7 @@ type regionResult struct {
 func (model *Region) Region() []regionResult {
 	// 第一步查询出全部的省市区
 	var region []Region
-	cmf.Db().Debug().Find(&region)
+	cmf.Db().Find(&region)
 	result := recursionAddRegion(region, 0)
 	return result
 }
