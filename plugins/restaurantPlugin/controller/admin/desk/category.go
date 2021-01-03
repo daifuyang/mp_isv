@@ -50,6 +50,12 @@ func (rest CategoryController) Get(c *gin.Context) {
 		queryArgs = append(queryArgs, "%"+categoryName+"%")
 	}
 
+	storeId := c.PostForm("store_id")
+	if storeId == "" {
+		query = append(query, "store_id = ?")
+		queryArgs = append(queryArgs, storeId)
+	}
+
 	category := model.DeskCategory{}
 
 	data, err := category.Index(c, query, queryArgs)
@@ -144,6 +150,18 @@ func (rest CategoryController) Edit(c *gin.Context) {
 
 	mid, _ := c.Get("mid")
 
+	storeId := c.PostForm("store_id")
+	if storeId == "" {
+		rest.rc.Error(c, "门店不能为空！", nil)
+		return
+	}
+
+	storeIdInt, err := strconv.Atoi(storeId)
+	if err != nil {
+		rest.rc.Error(c, "门店id不能为空！", nil)
+		return
+	}
+
 	categoryName := c.PostForm("category_name")
 	if categoryName == "" {
 		rest.rc.Error(c, "分类名称不能为空！", nil)
@@ -157,6 +175,7 @@ func (rest CategoryController) Edit(c *gin.Context) {
 	category := model.DeskCategory{
 		Id:           rewrite.Id,
 		Mid:          mid.(int),
+		StoreId:      storeIdInt,
 		CategoryName: categoryName,
 		LeastSeats:   leastSeatsInt,
 		MaximumSeats: maximumSeats,
@@ -200,12 +219,25 @@ func (rest CategoryController) Store(c *gin.Context) {
 		return
 	}
 
+	storeId := c.PostForm("store_id")
+	if storeId == "" {
+		rest.rc.Error(c, "门店不能为空！", nil)
+		return
+	}
+
+	storeIdInt, err := strconv.Atoi(storeId)
+	if err != nil {
+		rest.rc.Error(c, "门店id不能为空！", nil)
+		return
+	}
+
 	leastSeats := c.PostForm("least_seats")
 	leastSeatsInt, _ := strconv.Atoi(leastSeats)
 	MaximumSeats := c.PostForm("maximum_seats")
 	maximumSeats, _ := strconv.Atoi(MaximumSeats)
 	category := model.DeskCategory{
 		Mid:          mid.(int),
+		StoreId:      storeIdInt,
 		CategoryName: categoryName,
 		LeastSeats:   leastSeatsInt,
 		MaximumSeats: maximumSeats,

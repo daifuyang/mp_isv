@@ -27,6 +27,7 @@ func AppAuthToken(c *gin.Context) {
 
 	var mpMap model.MpIsvAuth
 	json.Unmarshal([]byte(mpJsonStr), &mpMap)
+
 	alipayEasySdk.SetOption("AppAuthToken",mpMap.AppAuthToken)
 
 	if mpMap.AuthAppId == "" {
@@ -37,5 +38,20 @@ func AppAuthToken(c *gin.Context) {
 
 	c.Set("app_id",mpMap.AuthAppId)
 	c.Next()
+
+}
+
+func SpiLot(c *gin.Context)  {
+	r := c.Request
+	r.ParseForm()
+
+	// 获取设备终端id
+	// terminalId := strings.Join(r.Form["terminal_id"], "")
+
+	alipayEasySdk.SetOption("AppAuthToken","202012BBc94d62297edb49e385e2136023b0dX61")
+
+
+	c.Next()
+	// 查询终端所属支付宝用户
 
 }

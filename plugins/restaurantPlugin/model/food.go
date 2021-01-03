@@ -8,7 +8,6 @@ package model
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"gincmf/app/util"
 	"github.com/gin-gonic/gin"
 	cmf "github.com/gincmf/cmf/bootstrap"
@@ -55,7 +54,7 @@ type FoodStoreHouse struct {
 	UseTasty         int                      `gorm:"type:tinyint(3);comment:启用口味;default:0;not null" json:"use_tasty"`
 	Tasty            string                   `gorm:"type:text;comment:口味;" json:"tasty"`
 	TastyJson        []map[string]interface{} `gorm:"-" json:"tasty_json"`
-	UseMember        float64                  `gorm:"type:decimal(9,2);comment:是否启用菜品会员价;not null" json:"use_member"`
+	UseMember        int                      `gorm:"type:tinyint(3);comment:是否启用菜品会员价;not null" json:"use_member"`
 	MemberPrice      float64                  `gorm:"type:decimal(9,2);comment:菜品会员价;not null" json:"member_price"`
 	UseMaterial      int                      `gorm:"type:tinyint(3);comment:启用加料;default:0;not null" json:"use_material"`
 	MaterialJson     []FoodMaterialPost       `gorm:"-" json:"material_json"`
@@ -118,6 +117,7 @@ type FoodCategoryPost struct {
  **/
 type FoodMaterialPost struct {
 	Id            int      `json:"id"`
+	Mid           int      `gorm:"type:bigint(20);comment:对应小程序id;not null" json:"mid"`
 	FoodId        int      `gorm:"type:int(11)" json:"food_id"`
 	MaterialName  string   `gorm:"type:varchar(255);comment:加料名称;not null" json:"material_name"`
 	MaterialPrice float64  `gorm:"type:decimal(9,2);comment:加料加价;not null" json:"material_price"`
@@ -133,6 +133,7 @@ type FoodMaterialPost struct {
  **/
 
 type SpecPost struct {
+	AttrPostId  int    `json:"attr_post_id"`
 	AttrValueId int    `json:"attr_value_id"`
 	FoodId      int    `json:"food_id"`
 	Name        string `json:"name"`
@@ -317,6 +318,7 @@ func (model Food) Detail(query []string, queryArgs []interface{}) (Food, error) 
 		if err == nil {
 			for _, v := range attrData {
 				item := SpecPost{
+					AttrPostId:  v.AttrPostId,
 					AttrValueId: v.AttrValueId,
 					FoodId:      v.FoodId,
 					Name:        v.Name,
@@ -408,9 +410,6 @@ func (model Food) Detail(query []string, queryArgs []interface{}) (Food, error) 
 func (model Food) inSpec(attrPost int, attrData []tempAttrPost) tempAttrPost {
 
 	for _, v := range attrData {
-
-		fmt.Println(attrPost, v.AttrValueId)
-
 		if v.AttrPostId == attrPost {
 			return v
 		}
@@ -593,8 +592,6 @@ func (model FoodCategoryPost) Save(mid int, categoryIds []int) ([]FoodCategoryPo
 	var readyAddArr []FoodCategoryPost
 	for _, v := range nAddCategory {
 		categoryId := v.FoodCategoryId
-
-		fmt.Println(strconv.Itoa(categoryId), existCategory)
 		// 是否存在分类
 		if !util.ToLowerInArray(strconv.Itoa(categoryId), existCategory) {
 			return foodCategoryPostArr, errors.New("分类不正确！")

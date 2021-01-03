@@ -14,7 +14,6 @@ import (
 
 func Test_Migrate(t *testing.T) {
 	cmf.Initialize("./data/conf/config.json")
-	migrate.StartMigrate()
 	cmf.ManualDb("tenant_1051453199")
 	migrate.StartTenantMigrate()
 	saasMigrate.AutoMigrate()

@@ -10,7 +10,7 @@ import (
 	"gincmf/app/migrate"
 	AliMiddle "gincmf/plugins/alipayPlugin/middleware"
 	"gincmf/plugins/restaurantPlugin"
-	model2 "gincmf/plugins/restaurantPlugin/model"
+	resModel "gincmf/plugins/restaurantPlugin/model"
 	"gincmf/plugins/saasPlugin/controller/api/common"
 	"gincmf/plugins/saasPlugin/controller/api/tenant"
 	"gincmf/plugins/saasPlugin/controller/app"
@@ -27,8 +27,12 @@ func ApiListenRouter() {
 	// 租户通用管理
 	tenantGroup := cmf.Group("api/tenant", middleware.ValidationBearerToken, middleware.TenantDb, middleware.ValidationAdmin, middleware.ApiBaseController, middleware.Rbac)
 	{
-		tenantGroup.Get("/mp/apps", new(tenant.MpThemeController).Get)
-		tenantGroup.Post("/mp/create", new(tenant.MpThemeController).Store)
+		tenantGroup.Get("/mp/apps", new(tenant.MpTheme).Get)
+		tenantGroup.Get("/mp/apps/:id", new(tenant.MpTheme).Show)
+		tenantGroup.Post("/mp/create", new(tenant.MpTheme).Store)
+		tenantGroup.Post("/mp/apps/:id", new(tenant.MpTheme).Edit)
+		tenantGroup.Delete("/mp/apps/:id", new(tenant.MpTheme).Delete)
+
 		// 小程序页面管理
 		tenantGroup.Rest("/mp/page", new(tenant.MpThemePageController))
 		// 资源管理
@@ -40,7 +44,7 @@ func ApiListenRouter() {
 			migrate.StartTenantMigrate()
 			restaurantPlugin.AutoMigrate()
 			// 地址
-			cmf.NewDb().AutoMigrate(&model2.Address{})
+			cmf.NewDb().AutoMigrate(&resModel.Address{})
 			c.JSON(200, model.ReturnData{
 				Code: 1,
 				Data: nil,

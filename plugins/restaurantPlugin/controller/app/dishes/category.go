@@ -17,6 +17,8 @@ type Category struct {
 
 func (rest *Category) List(c *gin.Context) {
 
+	mid, _ := c.Get("mid")
+
 	storeId,_ := c.Get("store_id")
 
 	category := model.FoodCategory{}
@@ -24,8 +26,8 @@ func (rest *Category) List(c *gin.Context) {
 	var query []string
 	var queryArgs []interface{}
 
-	query = append(query,"store_id = ? AND delete_at = ? AND status = ?")
-	queryArgs = append(queryArgs,storeId,0,1)
+	query = append(query,"mid = ? AND store_id = ? AND delete_at = ? AND status = ?")
+	queryArgs = append(queryArgs,mid,storeId,0,1)
 
 	data ,err :=  category.ListByStore(query,queryArgs)
 

@@ -25,8 +25,10 @@ type Index struct {
 // @Router /admin/member [get]
 func (rest *Index) Get (c *gin.Context) {
 
-	var query []string
-	var queryArgs []interface{}
+	mid, _ := c.Get("mid")
+
+	var query = []string{"mid = ?","u.delete_at = ?"}
+	var queryArgs = []interface{}{mid,0}
 
 	u := model.User{}
 	data ,err := u.ThirdPartIndex(c,query,queryArgs)

@@ -24,6 +24,7 @@ type Desk struct {
 	CategoryName string            `gorm:"type:varchar(20);comment:对应小程序id;not null" json:"category_name"`
 	Status       int               `gorm:"type:tinyint(3);comment:桌位状态;default:1;not null" json:"status"`
 	ListOrder    float64           `gorm:"type:float;comment:排序;default:10000;not null" json:"list_order"`
+	Qrcode       string            `gorm:"-" json:"qrcode"`
 	paginate     cmfModel.Paginate `gorm:"-"`
 }
 

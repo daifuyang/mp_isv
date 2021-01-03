@@ -28,8 +28,11 @@ type Recharge struct {
 // @Failure 400 {object} model.ReturnData "{"code":400,"msg":"登录状态已失效！"}"
 // @Router /admin/settings/recharge [get]
 func (rest *Recharge) Show(c *gin.Context) {
+
+	mid, _ := c.Get("mid")
+
 	op := model.Option{}
-	result := cmf.NewDb().Where("option_name = ?", "recharge").First(&op)
+	result := cmf.NewDb().Where("option_name = ? AND mid = ?", "recharge",mid).First(&op)
 	if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, result.Error.Error(), nil)
 		return
@@ -50,6 +53,8 @@ func (rest *Recharge) Show(c *gin.Context) {
 // @Router /admin/settings/recharge [post]
 func (rest *Recharge) Edit(c *gin.Context) {
 
+	mid, _ := c.Get("mid")
+
 	var form []model.Recharge
 	err := c.ShouldBindJSON(&form)
 	if err != nil {
@@ -64,9 +69,10 @@ func (rest *Recharge) Edit(c *gin.Context) {
 	}
 
 	op := model.Option{}
+	op.Mid = mid.(int)
 	op.AutoLoad = 1
 	op.OptionName = "recharge"
-	result := cmf.NewDb().Where("option_name = ?", "recharge").First(&op)
+	result := cmf.NewDb().Where("option_name = ? AND mid = ?", "recharge",mid).First(&op)
 	if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, result.Error.Error(), nil)
 		return

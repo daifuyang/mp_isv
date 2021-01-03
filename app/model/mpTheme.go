@@ -6,7 +6,7 @@
 package model
 
 type MpTheme struct {
-	Id        int     `json:"-"`
+	Id        int     `json:"id"`
 	Number    int     `gorm:"type:int(11);comment:小程序加密编号;not null" json:"number"`
 	Category  int     `gorm:"type:tinyint(3);comment:小程序类型分类;not null;default:0" json:"category"`
 	Name      string  `gorm:"type:varchar(40);comment:小程序主题名称;not null" json:"name"`

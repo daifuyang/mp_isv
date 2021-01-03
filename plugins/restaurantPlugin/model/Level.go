@@ -5,6 +5,11 @@
  */
 package model
 
+import (
+	"encoding/json"
+	saasModel "gincmf/plugins/saasPlugin/model"
+)
+
 type Level struct {
 }
 
@@ -23,11 +28,11 @@ type voucherItem struct {
 
 // 等级权益
 type Benefit struct {
-	DiscountEnabled int     `json:"discount_enabled"`
+	EnabledDiscount int     `json:"enabled_discount"`
 	Discount        float64 `json:"discount"`
-	PointsEnabled   int     `json:"points_enabled"`
-	Points          int     `json:"points"`
-	VoucherEnabled  int     `json:"voucher_enabled"`
+	EnabledPoint    int     `json:"enabled_point"`
+	Point           int     `json:"point"`
+	EnabledVoucher  int     `json:"enabled_voucher"`
 	Voucher         voucher `json:"voucher"`
 }
 
@@ -43,8 +48,27 @@ type SLevel struct {
 }
 
 type VipInfo struct {
-	RechargePoint  int      `json:"recharge_point"`
-	ConsumePoint   int      `json:"consume_point"`
-	ExpValidPeriod int      `json:"exp_valid_period"`
-	Level          []SLevel `json:"level"`
+	EnabledRecharge int      `json:"enabled_recharge"` // 启用充值送
+	RechargePoint   int      `json:"recharge_score"`   // 经验值
+	EnabledConsume  int      `json:"enabled_consume"`  // 启用消费送
+	ConsumePoint    int      `json:"consume_score"`    // 经验值
+	ExpValidPeriod  int      `json:"exp_valid_period"`
+	Level           []SLevel `json:"level"`
+}
+
+func (model *Level) LevelDetail(vipLevel string,mid int) SLevel {
+
+	var vipInfo VipInfo
+	str := saasModel.Options("vip_info",mid)
+
+	_ = json.Unmarshal([]byte(str), &vipInfo)
+
+	for _, v := range vipInfo.Level {
+		if v.LevelId == vipLevel {
+			return v
+		}
+	}
+
+	return SLevel{}
+
 }

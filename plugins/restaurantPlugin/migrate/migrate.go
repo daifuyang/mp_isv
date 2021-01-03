@@ -26,16 +26,12 @@ func AutoMigrate () {
 	deskCategory.AutoMigrate()
 	foodSku.AutoMigrate()
 
+	new(model.User).AutoMigrate()
 	new(model.FoodOrder).AutoMigrate()
-
 	new(model.Option).AutoMigrate()
-
 	new(model.Voucher).AutoMigrate()
-
 	new(model.CardTemplate).AutoMigrate()
-
 	new(model.MemberCard).AutoMigrate()
-
 	new(model.RechargeOrder).AutoMigrate()
-
+	new(model.Printer).AutoMigrate()
 }

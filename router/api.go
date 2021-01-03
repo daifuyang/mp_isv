@@ -27,6 +27,9 @@ func ApiListenRouter() {
 		adminGroup.Get("/auth_access/:id", new(admin.AuthAccessController).Show)
 		adminGroup.Post("/auth_access/:id", new(admin.AuthAccessController).Edit)
 		adminGroup.Post("/auth_access", new(admin.AuthAccessController).Store)
+		adminGroup.Get("/notice/:id", new(admin.Notice).Show)
+		adminGroup.Post("/notice/:id/read", new(admin.Notice).Read)
+
 	}
 
 	// 获取短信验证码
@@ -69,6 +72,8 @@ func ApiListenRouter() {
 			Msg:  "清除成功！",
 		})
 	})
+
+	cmf.Socket("/socket/v1/admin/notice", new(admin.Notice).WsGet)
 
 	common.RegisterOauthRouter()
 }

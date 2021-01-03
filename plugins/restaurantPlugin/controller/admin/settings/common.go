@@ -47,8 +47,10 @@ type BusinessInfo struct {
 // @Failure 400 {object} model.ReturnData "{"code":400,"msg":"登录状态已失效！"}"
 // @Router /admin/settings/business_info [get]
 func (rest *Common) Show(c *gin.Context) {
+
+	mid, _ := c.Get("mid")
 	op := model.Option{}
-	result := cmf.NewDb().Where("option_name = ?", "business_info").First(&op)
+	result := cmf.NewDb().Where("option_name = ? AND mid = ?", "business_info",mid).First(&op)
 	if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, result.Error.Error(), nil)
 		return
@@ -91,6 +93,8 @@ func (rest *Common) Show(c *gin.Context) {
 // @Router /admin/settings/business_info [post]
 func (rest *Common) Edit(c *gin.Context) {
 
+	mid, _ := c.Get("mid")
+
 	// 品牌名
 	brandName := c.PostForm("brand_name")
 	if brandName == "" {
@@ -117,11 +121,11 @@ func (rest *Common) Edit(c *gin.Context) {
 		return
 	}
 
-	img := base.Image{}
+
 	bizContent := make(map[string]string, 0)
 	bizContent["image_type"] = "jpg"
 	bizContent["image_name"] = "brand_logo"
-	imgResult, err := img.Upload(bizContent, absPath)
+	imgResult, err := new(base.Image).Upload(bizContent, absPath)
 
 	if imgResult.Response.Code != "10000" {
 		rest.rc.Error(c, "上传失败！"+imgResult.Response.SubMsg, imgResult)
@@ -167,6 +171,7 @@ func (rest *Common) Edit(c *gin.Context) {
 		return
 	}
 
+	op.Mid = mid.(int)
 	op.AutoLoad = 1
 	op.OptionName = "business_info"
 

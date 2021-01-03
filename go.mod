@@ -9,6 +9,7 @@ require (
 	github.com/gin-contrib/sessions v0.0.3
 	github.com/gin-gonic/gin v1.6.3
 	github.com/gincmf/alipayEasySdk v0.0.1
+	github.com/gincmf/feieSdk v0.0.1
 	github.com/gincmf/cmf v0.0.6
 	github.com/go-openapi/spec v0.20.0 // indirect
 	github.com/go-playground/validator/v10 v10.4.1 // indirect
@@ -30,9 +31,10 @@ require (
 	google.golang.org/appengine v1.6.7 // indirect
 	gopkg.in/oauth2.v3 v3.12.0
 	gorm.io/driver/mysql v1.0.3 // indirect
-	gorm.io/gorm v1.20.6
+	gorm.io/gorm v1.20.9
 )
 
 replace github.com/gincmf/cmf v0.0.6 => ../cmf
 
 replace github.com/gincmf/alipayEasySdk v0.0.1 => ../alipay-easysdk-go
+replace github.com/gincmf/feieSdk v0.0.1 => ../feie-sdk

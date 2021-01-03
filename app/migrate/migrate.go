@@ -22,6 +22,7 @@ func AutoMigrate() {
 
 func StartMigrate() {
 	StartTenantMigrate()
+	new(user).AutoMigrate()
 	new(option).AutoMigrate()
 	new(mpIsvAuth).AutoMigrate()
 	new(tenant).AutoMigrate()
@@ -32,10 +33,12 @@ func StartMigrate() {
 
 // 租户表迁移
 func StartTenantMigrate() {
-	new(user).AutoTenantMigrate()
 	new(asset).AutoMigrate()
 	new(role).AutoMigrate()
 	new(authAccess).AutoMigrate()
 	new(authRule).AutoMigrate()
 	new(model.PayLog).AutoMigrate()
+	new(model.AdminNotice).AutoMigrate()
+	new(model.ScoreLog).AutoMigrate()
+	new(model.ExpLog).AutoMigrate()
 }

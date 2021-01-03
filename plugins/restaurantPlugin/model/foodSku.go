@@ -53,6 +53,7 @@ func (model FoodSku) ListByFoodId(query []string, queryArgs []interface{}) ([]Fo
 	return foodSku, nil
 }
 
+
 func (model FoodSku) Show(query []string, queryArgs []interface{}) (FoodSku, error) {
 
 	if model.Db == nil {
@@ -66,6 +67,33 @@ func (model FoodSku) Show(query []string, queryArgs []interface{}) (FoodSku, err
 		return foodSku, result.Error
 	}
 	return foodSku, nil
+}
+
+type SkuDetail struct{
+	FoodSku
+	SkuDetail string `json:"sku_detail"`
+}
+
+func (model FoodSku) Detail(query []string, queryArgs []interface{}) (SkuDetail, error) {
+
+	if model.Db == nil {
+		model.Db = cmf.NewDb()
+	}
+
+	queryStr := strings.Join(query, " AND ")
+
+	var sku SkuDetail
+
+	prefix := cmf.Conf().Database.Prefix
+
+	result := cmf.NewDb().Table(prefix+"food_sku sku").Select("sku.*,av.attr_value as sku_detail").
+		Joins("INNER JOIN "+prefix+"food_attr_post ap ON sku.attr_post = ap.attr_post_id").
+		Joins("INNER JOIN "+prefix+"food_attr_value av ON ap.attr_value_id = av.attr_value_id").
+		Where(queryStr, queryArgs...).Scan(&sku)
+	if result.Error != nil {
+		return sku, result.Error
+	}
+	return sku, nil
 }
 
 func (model FoodSku) Store() (FoodSku, error) {

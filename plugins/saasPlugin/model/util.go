@@ -8,6 +8,7 @@ package model
 import (
 	"encoding/json"
 	"fmt"
+	"gincmf/app/model"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	cmf "github.com/gincmf/cmf/bootstrap"
@@ -40,4 +41,15 @@ func CurrentTenant(c *gin.Context) Tenant {
 		}
 	}
 	return t
+}
+
+// 获取系统配置项
+func Options(key string,mid int) string {
+	option := model.Option{}
+	var optionJson string
+	uploadResult := cmf.NewDb().First(&option, "option_name = ? AND  mid = ?", key,mid) // 查询
+	if uploadResult.RowsAffected > 0 {
+		optionJson = option.OptionValue
+	}
+	return optionJson
 }

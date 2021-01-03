@@ -352,18 +352,19 @@ func (rest IndexController) Edit(c *gin.Context) {
 		return
 	}
 
-	// shop_category 门店类目
-	inCategory := c.PostFormMap("shop_category")
-
-	fmt.Println("inCategory",inCategory)
-
-	if len(inCategory) < 1 {
+	// topCategory
+	topCategory := c.PostForm("top_category")
+	if topCategory == "" {
 		rest.rc.Error(c, "门店类目不能为空！", nil)
 		return
 	}
 
-	topCategory := inCategory["0"]
-	shopCategory := inCategory["1"]
+	// shop_category 门店类目
+	shopCategory := c.PostForm("shop_category")
+	if shopCategory == "" {
+		rest.rc.Error(c, "门店类目不能为空！", nil)
+		return
+	}
 
 	tx := cmf.Db().Where("category_id = ? AND category_type = ?", shopCategory, 2).First(&appModel.ShopCategory{})
 
@@ -414,22 +415,6 @@ func (rest IndexController) Edit(c *gin.Context) {
 		return
 	}
 
-	// 启用桌号
-	useDesk := c.PostForm("use_desk")
-	useDeskInt, err := strconv.Atoi(useDesk)
-	if err != nil {
-		rest.rc.Error(c, "启用桌号点餐格式不正确！", err.Error())
-		return
-	}
-
-	// 启用堂食预约
-	useAppointment := c.PostForm("use_appointment")
-	useAppointmentInt, err := strconv.Atoi(useAppointment)
-	if err != nil {
-		rest.rc.Error(c, "启用堂食预约格式不正确！", nil)
-		return
-	}
-
 	// 营业时间
 	hours := c.PostForm("hours")
 	if !json.Valid([]byte(hours)) {
@@ -471,8 +456,6 @@ func (rest IndexController) Edit(c *gin.Context) {
 		Latitude:       latitudeFloat,
 		Scene:          sceneInt,
 		IsClosure:      isClosureInt,
-		UseDesk:        useDeskInt,
-		UseAppointment: useAppointmentInt,
 		Notice:         notice,
 		CreateAt:       time.Now().Unix(),
 		UpdateAt:       time.Now().Unix(),
@@ -486,7 +469,7 @@ func (rest IndexController) Edit(c *gin.Context) {
 
 		if v.AllTime == 1 {
 			openTime = "00:00"
-			endTime = "23.59"
+			endTime = "23:59"
 		}
 
 		if v.Mon == 1 {
@@ -569,28 +552,61 @@ func (rest IndexController) Edit(c *gin.Context) {
 	}
 
 	bizContent["shop_category"] = shopCategory
-	bizContent["store_id"] = storeNumber
+	bizContent["store_id"] = strconv.Itoa(storeNumber)
 	bizContent["shop_type"] = storeType
 	bizContent["ip_role_id"] = alipayUserId
 	bizContent["shop_name"] = storeName
 	bizContent["out_door_images"] = outDoorImages
 	bizContent["business_time"] = bt
 	bizContent["contact_mobile"] = phone
-	/*bizContent["contact_infos"] = []merchant.ContactInfo{
+	bizContent["contact_infos"] = []merchant.ContactInfo{
 		{
 			Name:   contactPerson,
 			Mobile: phone,
 		},
-	}*/
-
-	result := new(merchant.Shop).Modify(bizContent)
-	if result.Response.Code != "10000" {
-		rest.rc.Error(c, "同步失败！"+result.Response.SubMsg, nil)
-		return
 	}
 
-	store.OrderId = result.Response.OrderId
+	// 查询门店存不存在
+	shopResult := new(merchant.Shop).Query(bizContent)
 
+	if shopResult.Response.Code == "10000" {
+		result := new(merchant.Shop).Modify(bizContent)
+		if result.Response.Code != "10000" {
+			rest.rc.Error(c, "同步失败！"+result.Response.SubMsg, nil)
+			return
+		}
+		store.OrderId = result.Response.OrderId
+	}else{
+
+
+		result := new(merchant.Shop).Create(bizContent)
+		if result.Response.Code != "10000" {
+			rest.rc.Error(c, "同步失败！"+result.Response.SubMsg, nil)
+			return
+		}
+
+		store.AuditStatus = "wait"
+		store.OrderId = result.Response.OrderId
+
+		// 查询审核状态
+		bizContent = make(map[string]interface{}, 0)
+		bizContent["order_id"] = result.Response.OrderId
+		statusResult := new(merchant.Shop).QueryStatus(bizContent)
+
+		if statusResult.Response.Code != "10000" {
+			rest.rc.Error(c,"查询状态失败！"+statusResult.Response.SubMsg,nil)
+			return
+		}
+
+		switch statusResult.Response.Status {
+		case "031":
+			store.AuditStatus = "wait"
+		case "-1":
+			store.AuditStatus = "rejected"
+		case "99":
+			store.AuditStatus = "passed"
+		}
+	}
 	store, err = store.Update()
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)
@@ -743,15 +759,19 @@ func (rest IndexController) Store(c *gin.Context) {
 		return
 	}
 
-	// shop_category 门店类目
-	inCategory := c.PostFormMap("shop_category")
-	if len(inCategory) < 1 {
+	// topCategory
+	topCategory := c.PostForm("top_category")
+	if topCategory == "" {
 		rest.rc.Error(c, "门店类目不能为空！", nil)
 		return
 	}
 
-	topCategory := inCategory["0"]
-	shopCategory := inCategory["1"]
+	// shop_category 门店类目
+	shopCategory := c.PostForm("shop_category")
+	if shopCategory == "" {
+		rest.rc.Error(c, "门店类目不能为空！", nil)
+		return
+	}
 
 	tx := cmf.Db().Where("category_id = ? AND category_type = ?", shopCategory, 2).First(&appModel.ShopCategory{})
 
@@ -799,22 +819,6 @@ func (rest IndexController) Store(c *gin.Context) {
 	isClosureInt, err := strconv.Atoi(isClosure)
 	if err != nil {
 		rest.rc.Error(c, "歇业格式不正确！", nil)
-		return
-	}
-
-	// 启用桌号
-	useDesk := c.PostForm("use_desk")
-	useDeskInt, err := strconv.Atoi(useDesk)
-	if err != nil {
-		rest.rc.Error(c, "启用桌号点餐格式不正确！", nil)
-		return
-	}
-
-	// 启用堂食预约
-	useAppointment := c.PostForm("use_appointment")
-	useAppointmentInt, err := strconv.Atoi(useAppointment)
-	if err != nil {
-		rest.rc.Error(c, "启用堂食预约格式不正确！", nil)
 		return
 	}
 
@@ -870,8 +874,6 @@ func (rest IndexController) Store(c *gin.Context) {
 		Longitude:      longitudeFloat,
 		Latitude:       latitudeFloat,
 		IsClosure:      isClosureInt,
-		UseDesk:        useDeskInt,
-		UseAppointment: useAppointmentInt,
 		Notice:         notice,
 		CreateAt:       time.Now().Unix(),
 		UpdateAt:       time.Now().Unix(),
@@ -969,8 +971,6 @@ func (rest IndexController) Store(c *gin.Context) {
 		Address:      address,
 	}
 
-	fmt.Println("storeType", storeType)
-
 	bizContent["shop_category"] = shopCategory
 	bizContent["store_id"] = storeNumber
 	bizContent["shop_type"] = storeType
@@ -979,12 +979,12 @@ func (rest IndexController) Store(c *gin.Context) {
 	bizContent["out_door_images"] = outDoorImages
 	bizContent["business_time"] = bt
 	bizContent["contact_mobile"] = phone
-	/*bizContent["contact_infos"] = []merchant.ContactInfo{
+	bizContent["contact_infos"] = []merchant.ContactInfo{
 		{
 			Name:   contactPerson,
 			Mobile: phone,
 		},
-	}*/
+	}
 
 	result := new(merchant.Shop).Create(bizContent)
 	if result.Response.Code != "10000" {
@@ -992,7 +992,27 @@ func (rest IndexController) Store(c *gin.Context) {
 		return
 	}
 
+	store.AuditStatus = "wait"
 	store.OrderId = result.Response.OrderId
+
+	// 查询审核状态
+	bizContent = make(map[string]interface{}, 0)
+	bizContent["order_id"] = result.Response.OrderId
+	statusResult := new(merchant.Shop).QueryStatus(bizContent)
+
+	if statusResult.Response.Code != "10000" {
+		rest.rc.Error(c,"查询状态失败！"+statusResult.Response.SubMsg,nil)
+		return
+	}
+
+	switch statusResult.Response.Status {
+	case "031":
+		store.AuditStatus = "wait"
+	case "-1":
+		store.AuditStatus = "rejected"
+	case "99":
+		store.AuditStatus = "passed"
+	}
 
 	store, err = store.Store()
 	if err != nil {

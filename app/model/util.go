@@ -28,18 +28,6 @@ func SiteSettings() map[string]interface{} {
 	return nil
 }
 
-// 获取系统配置项
-func Options(key string) string {
-	option := Option{}
-	var optionJson string
-	uploadResult := cmf.NewDb().First(&option, "option_name = ?", key) // 查询
-	if uploadResult.RowsAffected > 0 {
-		optionJson = option.OptionValue
-	}
-	return optionJson
-}
-
-
 //获取网站上传配置信息
 func GetUploadSetting(c *gin.Context) *UploadSetting {
 	session := sessions.Default(c)

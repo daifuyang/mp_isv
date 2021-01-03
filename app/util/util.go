@@ -1,6 +1,12 @@
 package util
 
 import (
+	"crypto"
+	"crypto/rsa"
+	"crypto/sha256"
+	"crypto/x509"
+	"encoding/base64"
+	"encoding/pem"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	cmf "github.com/gincmf/cmf/bootstrap"
@@ -200,4 +206,28 @@ func DateUuid(ident string,insertKey string,date string) string {
 	nEncrypt := strconv.Itoa(EncodeId(uint64(n)))
 	uid := ident + now + nEncrypt
 	return uid
+}
+
+// 对参数签名，获取签名参数
+func ResponseSign(params string, pk string) (sign string) {
+
+	h := sha256.New()
+	h.Write([]byte(params))
+	// hashed := h.Sum(nil)
+	// 加密生成sign
+	// block 私钥
+
+	block := []byte(pk)
+
+	blocks, _ := pem.Decode(block)
+	privateKey, err := x509.ParsePKCS8PrivateKey(blocks.Bytes)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	digest := h.Sum(nil)
+	s, _ := rsa.SignPKCS1v15(nil, privateKey.(*rsa.PrivateKey), crypto.SHA256, digest)
+	sign = base64.StdEncoding.EncodeToString(s)
+
+	return sign
 }

@@ -6,11 +6,13 @@
 package user
 
 import (
-	"encoding/json"
+	"errors"
 	appModel "gincmf/app/model"
 	"gincmf/plugins/restaurantPlugin/model"
 	"github.com/gin-gonic/gin"
+	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
+	"gorm.io/gorm"
 	"time"
 )
 
@@ -21,35 +23,122 @@ type User struct {
 func (rest *User) Show(c *gin.Context) {
 
 	userId, _ := c.Get("mp_user_id")
+	Openid, _ := c.Get("open_id")
+	mpType, _ := c.Get("mp_type")
+
 	u := model.User{}
 	data, err := u.Show([]string{"u.id = ?"}, []interface{}{userId})
-	data.StartTime = time.Unix(data.StartAt, 0).Format("2006-01-02 15:04:05")
-	if data.EndAt != -1 {
-		data.EndTime = time.Unix(data.EndAt, 0).Format("2006-01-02 15:04:05")
-	}
 
-	var result struct {
-		model.User
-		ExpRangeEnd   int `json:"exp_range_end"`
-	}
+	data.OpenId = Openid.(string)
+	data.Type = mpType.(string)
 
-	vipInfo := appModel.Options("vip_info")
 
-	var viMap model.VipInfo
-	json.Unmarshal([]byte(vipInfo), &viMap)
-
-	for _,v := range viMap.Level{
-		if v.LevelId == data.VipLevel {
-			result.ExpRangeEnd =v.ExpRangeEnd
-			break
-		}
-	}
-
-	result.User = data
 	if err != nil {
 		rest.rc.Error(c, "获取失败！"+err.Error(), err)
 		return
 	}
 
-	rest.rc.Success(c, "获取成功！", result)
+	au := appModel.User{
+		LastLoginAt: time.Now().Unix(),
+		LastLoginIp: c.ClientIP(),
+	}
+
+	cmf.NewDb().Where("id",userId).Updates(&au)
+
+	data.LastLoginAt = au.LastLoginAt
+	data.LastLoginIp = au.LastLoginIp
+
+	rest.rc.Success(c, "获取成功！", data)
+}
+
+func (rest *User) Save(c *gin.Context) {
+
+	userId, _ := c.Get("mp_user_id")
+	Openid, _ := c.Get("open_id")
+	mid, _ := c.Get("mid")
+
+	var form struct {
+		Name     string `json:"name"`
+		Mobile   string `json:"mobile"`
+		Gender   int    `json:"gender"`
+		Birthday string `json:"birthday"`
+	}
+
+	if err := c.ShouldBindJSON(&form); err != nil {
+		c.JSON(400, gin.H{"msg": err.Error()})
+		return
+	}
+
+	if form.Name == "" {
+		rest.rc.Error(c, "姓名不能为空！", nil)
+		return
+	}
+
+	if form.Mobile == "" {
+		rest.rc.Error(c, "手机号不能为空！", nil)
+		return
+	}
+
+	gender := 0
+	if form.Gender == 1 {
+		gender = 1
+	}
+
+	if form.Gender == 2 {
+		gender = 2
+	}
+
+	if form.Birthday == "" {
+		rest.rc.Error(c, "生日不能为空！", nil)
+		return
+	}
+
+	tmp,err := time.ParseInLocation("2006-01-02", form.Birthday, time.Local)
+
+	if err != nil {
+		rest.rc.Error(c,"生日时间格式错误！",nil)
+		return
+	}
+
+	birthday := tmp.Unix()
+
+	u := model.User{}
+
+	// 查询当前手机号用户是否存在
+	tx := cmf.NewDb().Where("mobile = ?",form.Mobile).First(&u)
+	if tx.Error != nil && !errors.Is(tx.Error,gorm.ErrRecordNotFound) {
+		rest.rc.Error(c,tx.Error.Error(),nil)
+		return
+	}
+
+	u.Id = userId.(int)
+	u.Mid = mid.(int)
+	u.UserRealName = form.Name
+	u.Mobile = form.Mobile
+	u.Gender = gender
+	u.Birthday = birthday
+
+
+	// 新用户
+	if tx.RowsAffected == 0 {
+		tx = cmf.NewDb().Create(&u)
+	}else{
+		// 更新
+		tx = cmf.NewDb().Save(&u)
+	}
+
+	if tx.Error != nil {
+		rest.rc.Error(c,tx.Error.Error(),nil)
+		return
+	}
+
+	// 更新三方关联
+	tx = cmf.NewDb().Model(&model.ThirdPart{}).Where("open_id = ? AND mid = ?",Openid,mid).Update("user_id",u.Id)
+	if tx.Error != nil {
+		rest.rc.Error(c,tx.Error.Error(),nil)
+		return
+	}
+
+	rest.rc.Success(c,"更新成功！",u)
+
 }

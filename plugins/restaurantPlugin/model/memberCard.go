@@ -13,6 +13,7 @@ import (
 // 用户vip表
 type MemberCard struct {
 	Id        int    `json:"id"`
+	Mid       int    `gorm:"type:bigint(20);comment:对应小程序id;not null" json:"mid"`
 	UserId    int    `gorm:"type:int(11);not null" json:"user_id"`
 	VipNum    string `gorm:"type:varchar(32);comment:会员号;not null" json:"vip_num"`
 	VipLevel  string `gorm:"type:varchar(10);comment:会员等级;not null" json:"vip_level"`
@@ -24,12 +25,13 @@ type MemberCard struct {
 	CreateAt  int64  `gorm:"type:int(11);not null" json:"create_at"`
 	UpdateAt  int64  `gorm:"type:int(11);not null" json:"update_at"`
 	DeleteAt  int64  `gorm:"type:int(11);not null" json:"delete_at"`
-	Status    int    `gorm:"type:tinyint(3);default:0;not null" json:"status"`
+	Status    int    `gorm:"type:tinyint(3);default:1;not null" json:"status"`
 }
 
 // 开卡订单
 type MemberCardOrder struct {
 	Id           int     `json:"id"`
+	Mid          int     `gorm:"type:bigint(20);comment:对应小程序id;not null" json:"mid"`
 	OrderId      string  `gorm:"type:varchar(40);comment:订单号;not null" json:"order_id"`
 	VipNum       string  `gorm:"type:varchar(32);comment:会员号;not null" json:"vip_num"`
 	TradeNo      string  `gorm:"type:varchar(60);comment:支付宝订单号;not null" json:"trade_no"`

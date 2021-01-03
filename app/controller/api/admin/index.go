@@ -18,7 +18,9 @@ type IndexController struct {
 // @Success 200 {object} model.ReturnData "获取成功！"
 // @Router / [get]
 func (rest *IndexController) Get(c *gin.Context) {
-	rest.rc.Success(c, "hello Api", model.ReturnData{})
+	rest.rc.Success(c, "hello Api", model.ReturnData{
+		Data: c.ClientIP(),
+	})
 }
 
 func (rest *IndexController) Show(c *gin.Context) {

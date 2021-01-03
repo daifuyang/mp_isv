@@ -18,11 +18,11 @@ import (
 	"time"
 )
 
-type MpThemeController struct {
+type MpTheme struct {
 	rc controller.RestController
 }
 
-func (rest *MpThemeController) Get(c *gin.Context) {
+func (rest *MpTheme) Get(c *gin.Context) {
 	var mpTheme []model.MpTheme
 
 	current := c.DefaultQuery("current", "1")
@@ -43,7 +43,7 @@ func (rest *MpThemeController) Get(c *gin.Context) {
 
 	var total int64 = 0
 	cmf.NewDb().First(&mpTheme).Count(&total)
-	result := cmf.NewDb().Limit(intPageSize).Offset((intCurrent - 1) * intPageSize).Order("id desc").Find(&mpTheme)
+	result := cmf.NewDb().Where("delete_at = 0").Limit(intPageSize).Offset((intCurrent - 1) * intPageSize).Order("id desc").Find(&mpTheme)
 
 	type tempStruct struct {
 		model.MpTheme
@@ -91,7 +91,57 @@ func (rest *MpThemeController) Get(c *gin.Context) {
 	rest.rc.Success(c, "获取成功！", paginationData)
 }
 
-func (rest *MpThemeController) Store(c *gin.Context) {
+func (rest *MpTheme) Show(c *gin.Context) {
+
+	var rewrite struct {
+		Id int `uri:"id"`
+	}
+	if err := c.ShouldBindUri(&rewrite); err != nil {
+		c.JSON(400, gin.H{"msg": err.Error()})
+		return
+	}
+
+	mp := model.MpTheme{}
+	cmf.NewDb().Where("id = ?",rewrite.Id).First(&mp)
+
+	rest.rc.Success(c, "获取成功！", mp)
+
+}
+
+func (rest *MpTheme) Edit(c *gin.Context) {
+
+	var rewrite struct {
+		Id int `uri:"id"`
+	}
+	if err := c.ShouldBindUri(&rewrite); err != nil {
+		c.JSON(400, gin.H{"msg": err.Error()})
+		return
+	}
+
+	name := c.PostForm("name")
+	if name == "" {
+		rest.rc.Error(c, "name不能为空！", nil)
+		return
+	}
+
+	mp := model.MpTheme{}
+	tx := cmf.NewDb().Where("id = ?",rewrite.Id).First(&mp)
+
+	if tx.RowsAffected == 0 {
+		rest.rc.Error(c,"该小程序不存在！",nil)
+		return
+	}
+
+	mp.Name = name
+
+	cmf.NewDb().Save(&mp)
+
+	rest.rc.Success(c,"修改成功！",nil)
+
+}
+
+func (rest *MpTheme) Store(c *gin.Context) {
+
 	name := c.PostForm("name")
 	if name == "" {
 		rest.rc.Error(c, "name不能为空！", nil)
@@ -101,6 +151,15 @@ func (rest *MpThemeController) Store(c *gin.Context) {
 	themeId, _ := strconv.Atoi(themeIdStr)
 	tenantIdStr, _ := c.Get("user_id")
 	tenantId, _ := strconv.Atoi(tenantIdStr.(string))
+
+	// 判断当前用户开通的门户数
+	var count int64 = 0
+	cmf.NewDb().Model(&model.MpTheme{}).Where("delete_at = 0").Count(&count)
+
+	if count > 2 {
+		rest.rc.Error(c,"体验用户最多可以生成三个小程序！",nil)
+		return
+	}
 
 	/*
 	 ** 唯一uid编号生成逻辑
@@ -174,4 +233,25 @@ func (rest *MpThemeController) Store(c *gin.Context) {
 	}
 
 	rest.rc.Success(c, "创建成功！", mpTheme)
+}
+
+func (rest *MpTheme) Delete(c *gin.Context) {
+
+	var rewrite struct {
+		Id int `uri:"id"`
+	}
+	if err := c.ShouldBindUri(&rewrite); err != nil {
+		c.JSON(400, gin.H{"msg": err.Error()})
+		return
+	}
+
+
+	mp := model.MpTheme{
+		Id: rewrite.Id,
+		DeleteAt: time.Now().Unix(),
+	}
+	cmf.NewDb().Updates(&mp)
+
+	rest.rc.Success(c,"删除成功！",nil)
+
 }

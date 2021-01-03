@@ -12,6 +12,7 @@ import (
 	"gincmf/app/util"
 	"gincmf/plugins/restaurantPlugin/controller/admin/settings"
 	"gincmf/plugins/restaurantPlugin/model"
+	saasModel "gincmf/plugins/saasPlugin/model"
 	"github.com/gin-gonic/gin"
 	"github.com/gincmf/alipayEasySdk/payment"
 	cmf "github.com/gincmf/cmf/bootstrap"
@@ -25,10 +26,32 @@ type Recharge struct {
 	rc controller.RestController
 }
 
+func (rest *Recharge) Order(c *gin.Context) {
+
+	mid, _ := c.Get("mid")
+
+	// 获取当前用户信息
+	userId, _ := c.Get("mp_user_id")
+
+	var query = []string{"mid = ? AND  user_id = ? AND order_status = ?"}
+	var queryArgs = []interface{}{mid,userId,"TRADE_FINISHED"}
+
+	data,err := new(model.RechargeOrder).Index(c,query,queryArgs)
+
+	if err != nil {
+		rest.rc.Error(c,err.Error(),nil)
+		return
+	}
+
+	rest.rc.Success(c,"获取成功！",data)
+}
+
 // 查看充值规则
 func (rest *Recharge) Show(c *gin.Context) {
 
-	recJson := appModel.Options("recharge")
+	mid, _ := c.Get("mid")
+
+	recJson := saasModel.Options("recharge",mid.(int))
 
 	var recharge []model.Recharge
 	json.Unmarshal([]byte(recJson), &recharge)
@@ -37,7 +60,7 @@ func (rest *Recharge) Show(c *gin.Context) {
 	balance := user.Balance
 
 	var result struct {
-		Recharge []model.Recharge
+		Recharge []model.Recharge `json:"recharge"`
 		Balance  float64 `json:"balance"`
 	}
 
@@ -55,6 +78,7 @@ func (rest *Recharge) Pay(c *gin.Context) {
 	mpUserId, _ := c.Get("mp_user_id")
 	mpType, _ := c.Get("mp_type")
 	Openid, _ := c.Get("open_id")
+	mid, _ := c.Get("mid")
 
 	var form struct {
 		Fee float64 `json:"fee"`
@@ -72,7 +96,7 @@ func (rest *Recharge) Pay(c *gin.Context) {
 
 	ro := model.RechargeOrder{}
 
-	tx := cmf.NewDb().Where("user_id = ? AND fee = ? AND pay_type = ? AND order_status = ?",mpUserId,form.Fee,"alipay","WAIT_BUYER_PAY").First(&ro)
+	tx := cmf.NewDb().Where("user_id = ? AND mid = ? AND fee = ? AND pay_type = ? AND order_status = ?",mpUserId,mid,form.Fee,"alipay","WAIT_BUYER_PAY").First(&ro)
 
 	if tx.Error != nil && !errors.Is(tx.Error,gorm.ErrRecordNotFound) {
 		rest.rc.Error(c,tx.Error.Error(),nil)
@@ -99,13 +123,14 @@ func (rest *Recharge) Pay(c *gin.Context) {
 	}
 
 	// 支付宝小程序下单
-	businessJson := appModel.Options("business_info")
+	businessJson := saasModel.Options("business_info",mid.(int))
 	bi := settings.BusinessInfo{}
 	json.Unmarshal([]byte(businessJson), &bi)
 	// 支付宝小程序下单
 
 	nowUnix := time.Now().Unix()
 	ro.OrderId = orderId
+	ro.Mid = mid.(int)
 	ro.PayType = "alipay"
 	ro.UserId = mpUserId.(int)
 	ro.Fee = form.Fee
@@ -126,7 +151,8 @@ func (rest *Recharge) Pay(c *gin.Context) {
 		common := payment.Common{}
 		bizContent := make(map[string]interface{}, 0)
 		bizContent["out_trade_no"] = orderId
-		bizContent["total_amount"] = form.Fee
+		//bizContent["total_amount"] = form.Fee
+		bizContent["total_amount"] = 0.01
 		// bizContent["discountable_amount"] = 0
 		bizContent["subject"] = bi.BrandName
 		bizContent["body"] = bi.BrandName + "开通会员卡"

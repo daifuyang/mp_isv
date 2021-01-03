@@ -28,8 +28,10 @@ type Index struct {
 
 func (rest *Index) List(c *gin.Context) {
 
-	var query []string
-	var queryArgs []interface{}
+	mid, _ := c.Get("mid")
+
+	var query = []string{"mid = ?"}
+	var queryArgs = []interface{}{mid}
 
 	name := c.Query("name")
 
@@ -117,8 +119,10 @@ func (rest *Index) Show(c *gin.Context) {
 		Latitude:  lat,
 	}
 
-	query := []string{"store_number = ? AND delete_at = ?"}
-	queryArgs := []interface{}{rewrite.Id, 0}
+	mid, _ := c.Get("mid")
+
+	query := []string{"mid = ? AND store_number = ? AND delete_at = ?"}
+	queryArgs := []interface{}{mid,rewrite.Id, 0}
 
 	storeData, err := store.AppShow(query, queryArgs)
 

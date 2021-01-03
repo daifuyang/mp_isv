@@ -12,11 +12,14 @@ import (
 	appModel "gincmf/app/model"
 	"gincmf/plugins/restaurantPlugin/controller/admin/settings"
 	"gincmf/plugins/restaurantPlugin/model"
+	saasModel "gincmf/plugins/saasPlugin/model"
 	"github.com/gin-gonic/gin"
 	"github.com/gincmf/alipayEasySdk/marketing"
 	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
 	"gorm.io/gorm"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -26,18 +29,20 @@ type Index struct {
 
 func (rest *Index) Get(c *gin.Context) {
 
-	var query []string
-	var queryArgs []interface{}
+	mid, _ := c.Get("mid")
+
+	var query = []string{"mid = ?"}
+	var queryArgs = []interface{}{mid}
 
 	voucherName := c.PostForm("voucher_name")
 	if voucherName != "" {
-		query = append(query, "voucher_name like ?")
+		query = append(query, "v.voucher_name like ?")
 		queryArgs = append(queryArgs, "%"+voucherName+"%")
 	}
 
 	t := c.PostForm("type")
 	if t != "" {
-		query = append(query, "type = ?")
+		query = append(query, "v.type = ?")
 		queryArgs = append(queryArgs, t)
 	}
 
@@ -56,7 +61,7 @@ func (rest *Index) Get(c *gin.Context) {
 			rest.rc.Error(c, "结束时间非法！", err.Error())
 		}
 
-		query = append(query, "publish_start_time > ? AND publish_end_time < ?")
+		query = append(query, "p.create_at > ? AND p.create_at < ?")
 		queryArgs = append(queryArgs, startTimeStamp, endTimeStamp)
 	}
 
@@ -80,8 +85,10 @@ func (rest *Index) Show(c *gin.Context) {
 		return
 	}
 
+	mid, _ := c.Get("mid")
+
 	v := model.Voucher{}
-	data, err := v.Show([]string{"id = ? AND delete_at = ?"}, []interface{}{rewrite.Id, 0})
+	data, err := v.Show([]string{"id = ? AND  mid = ? AND delete_at = ?"}, []interface{}{rewrite.Id, mid, 0})
 
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)
@@ -96,12 +103,24 @@ func (rest *Index) Edit(c *gin.Context) {
 	var rewrite struct {
 		Id int `uri:"id"`
 	}
+
 	if err := c.ShouldBindUri(&rewrite); err != nil {
 		c.JSON(400, gin.H{"msg": err.Error()})
 		return
 	}
 
-	publishEndTime := c.PostForm("publish_end_time")
+	mid, _ := c.Get("mid")
+
+	alipayUserId, _ := c.Get("alipay_user_id")
+
+	var form struct {
+		StoreIds       []int  `json:"store_ids"`
+		PublishEndTime string `json:"publish_end_time"`
+	}
+
+	err := c.ShouldBindJSON(&form)
+
+	publishEndTime := form.PublishEndTime
 
 	if publishEndTime == "" {
 		rest.rc.Error(c, "发放结束时间不能为空！", nil)
@@ -110,7 +129,7 @@ func (rest *Index) Edit(c *gin.Context) {
 
 	voucher := model.Voucher{}
 
-	voucher, err := voucher.Show([]string{"id = ?"}, []interface{}{rewrite.Id})
+	voucher, err = voucher.Show([]string{"id = ? AND  mid = ? AND delete_at = ?"}, []interface{}{rewrite.Id, mid, 0})
 
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)
@@ -144,11 +163,45 @@ func (rest *Index) Edit(c *gin.Context) {
 
 	voucher.PublishEndTime = publishEndTime
 
+	storeIds := form.StoreIds
+
+	var store []model.Store
+
+	var sQuery []string
+	var sQueryArgs []interface{}
+
+	if len(storeIds) > 0 {
+		for _, v := range storeIds {
+			sQuery = append(sQuery, "id = ?")
+			sQueryArgs = append(sQueryArgs, v)
+		}
+	}
+
+	sQueryStr := strings.Join(sQuery, " OR ")
+	tx := cmf.NewDb().Where(sQueryStr, sQueryArgs...).Find(&store)
+
+	if tx.Error != nil {
+		rest.rc.Error(c, tx.Error.Error(), nil)
+		return
+	}
+
+	var storeArr []string
+	var storeIdArr []string
+	for _, v := range store {
+		number := strconv.Itoa(v.StoreNumber)
+		storeArr = append(storeArr, number)
+		storeIdArr = append(storeIdArr, strconv.Itoa(v.Id))
+	}
+
 	if voucher.SyncToAlipay == 1 {
 		bizContent := map[string]interface{}{
 			"template_id":      voucher.TemplateId,
 			"out_biz_no":       time.Now().Unix(),
 			"publish_end_time": publishEndTime,
+			"rule_conf": marketing.RuleConf{
+				Store: strings.Join(storeArr, ","),
+				Pid:   alipayUserId.(string),
+			},
 		}
 
 		result := new(marketing.CashlessVoucher).ModifyTemplate(bizContent, "")
@@ -159,9 +212,18 @@ func (rest *Index) Edit(c *gin.Context) {
 		}
 	}
 
-	tx := cmf.NewDb().Save(&voucher)
+	tx = cmf.NewDb().Save(&voucher)
 	if tx.Error != nil {
 		rest.rc.Error(c, "更新失败！"+tx.Error.Error(), nil)
+		return
+	}
+
+	// 保存门店关系
+	v := model.VoucherStorePost{VoucherId: voucher.Id}
+	err = v.Store(storeIdArr)
+
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
 		return
 	}
 
@@ -180,6 +242,7 @@ func (rest *Index) Store(c *gin.Context) {
 	alipayUserId, _ := c.Get("alipay_user_id")
 
 	var form struct {
+		StoreIds             []int                            `json:"store_ids"`
 		VoucherName          string                           `json:"voucher_name"`
 		Type                 int                              `json:"type"`
 		SyncToAlipay         int                              `json:"sync_to_alipay"`
@@ -200,6 +263,8 @@ func (rest *Index) Store(c *gin.Context) {
 		c.JSON(400, gin.H{"msg": err.Error()})
 		return
 	}
+
+	mid, _ := c.Get("mid")
 
 	if form.VoucherName == "" {
 		rest.rc.Error(c, "优惠券名称为必填！", nil)
@@ -238,14 +303,44 @@ func (rest *Index) Store(c *gin.Context) {
 		return
 	}
 
+	storeIds := form.StoreIds
+
+	var store []model.Store
+
+	var sQuery = []string{"mid = ?"}
+	var sQueryArgs = []interface{}{mid}
+
+	if len(storeIds) > 0 {
+		for _, v := range storeIds {
+			sQuery = append(sQuery, "id = ?")
+			sQueryArgs = append(sQueryArgs, v)
+		}
+	}
+
+	sQueryStr := strings.Join(sQuery, " OR ")
+	tx := cmf.NewDb().Where(sQueryStr, sQueryArgs...).Find(&store)
+
+	if tx.Error != nil {
+		rest.rc.Error(c, tx.Error.Error(), nil)
+		return
+	}
+
+	var storeArr []string
+	var storeIdArr []string
+	for _, v := range store {
+		number := strconv.Itoa(v.StoreNumber)
+		storeArr = append(storeArr, number)
+		storeIdArr = append(storeIdArr, strconv.Itoa(v.Id))
+	}
+
 	syncToAlipay := 0
 	if form.SyncToAlipay == 1 {
 		syncToAlipay = form.SyncToAlipay
 	}
 
-	businessJson := appModel.Options("business_info")
+	businessJson := saasModel.Options("business_info",mid.(int))
 	bi := settings.BusinessInfo{}
-	json.Unmarshal([]byte(businessJson), &bi)
+	_ = json.Unmarshal([]byte(businessJson), &bi)
 	if bi.BrandName == "" || bi.BrandLogo == "" || bi.Mobile == "" {
 		rest.rc.Error(c, "请先完善基本信息！", nil)
 		return
@@ -258,6 +353,7 @@ func (rest *Index) Store(c *gin.Context) {
 	descJson, _ := json.Marshal(form.VoucherDescription)
 
 	voucher := model.Voucher{
+		Mid:                  mid.(int),
 		VoucherName:          form.VoucherName,
 		Type:                 form.Type,
 		VoucherType:          form.VoucherType,
@@ -292,7 +388,8 @@ func (rest *Index) Store(c *gin.Context) {
 				"amount":                 form.Amount,
 				"floor_amount":           form.FloorAmount,
 				"rule_conf": marketing.RuleConf{
-					Pid: alipayUserId.(string),
+					Store: strings.Join(storeArr, ","),
+					Pid:   alipayUserId.(string),
 				},
 			}
 
@@ -305,10 +402,8 @@ func (rest *Index) Store(c *gin.Context) {
 			}
 
 			result = new(marketing.CashlessVoucher).CreateTemplate(bizContent, "")
-
+			fmt.Println(result)
 		}
-
-		fmt.Println(result)
 
 		if result.Response.Code == "10000" {
 			// 创建成功
@@ -324,6 +419,15 @@ func (rest *Index) Store(c *gin.Context) {
 	result := cmf.NewDb().Create(&voucher)
 	if result.Error != nil {
 		rest.rc.Error(c, result.Error.Error(), nil)
+		return
+	}
+
+	// 保存门店关系
+	v := model.VoucherStorePost{VoucherId: voucher.Id}
+	err = v.Store(storeIdArr)
+
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
 		return
 	}
 
@@ -356,6 +460,8 @@ func (rest *Index) Send(c *gin.Context) {
 		return
 	}
 
+	mid, _ := c.Get("mid")
+
 	if form.UserId == 0 {
 		rest.rc.Error(c, "接收人不能为空！", nil)
 		return
@@ -369,7 +475,7 @@ func (rest *Index) Send(c *gin.Context) {
 	v := model.Voucher{}
 	vp := marketing.VoucherValidPeriod{}
 
-	data, err := v.Show([]string{"id = ? AND status = ?"}, []interface{}{form.VoucherId, 1})
+	data, err := v.Show([]string{"id = ? AND mid = ? AND status = ?"}, []interface{}{form.VoucherId,mid, 1})
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)
 		return
@@ -409,16 +515,21 @@ func (rest *Index) Send(c *gin.Context) {
 	if data.SyncToAlipay == 1 {
 
 		tp := appModel.UserPart{}
-		tpData, err := tp.Show([]string{"u.id = ? AND tp.type = ? AND u.user_status = ?"}, []interface{}{form.UserId,"alipay-mp", 1})
-		if err != nil {
+		tpData, err := tp.Show([]string{"u.id = ? AND tp.type = ? AND u.user_status = ?"}, []interface{}{form.UserId, "alipay-mp", 1})
+		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 			rest.rc.Error(c, err.Error(), nil)
 			return
 		}
 
-		result := new(model.Voucher).Send(data.TemplateId,tpData.OpenId,data.VoucherName)
+		if tpData.Id == 0 {
+			rest.rc.Error(c, "该优惠券不存在或已过期！", nil)
+			return
+		}
+
+		result := new(model.Voucher).Send(data.TemplateId, tpData.OpenId, data.VoucherName)
 
 		if result.Response.Code != "10000" {
-			rest.rc.Error(c,"发送失败！"+result.Response.SubMsg,result)
+			rest.rc.Error(c, "发送失败！"+result.Response.SubMsg, result)
 			return
 		}
 
@@ -429,10 +540,10 @@ func (rest *Index) Send(c *gin.Context) {
 	tx := cmf.NewDb().Create(&vPost)
 
 	if tx.Error != nil {
-		rest.rc.Error(c,"发送失败！"+tx.Error.Error(),tx.Error)
+		rest.rc.Error(c, "发送失败！"+tx.Error.Error(), tx.Error)
 		return
 	}
 
-	rest.rc.Success(c,"发送成功！",nil)
+	rest.rc.Success(c, "发送成功！", nil)
 
 }

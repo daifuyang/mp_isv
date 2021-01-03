@@ -10,6 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gincmf/alipayEasySdk/marketing"
 	cmf "github.com/gincmf/cmf/bootstrap"
+	"github.com/gincmf/cmf/data"
 	cmfModel "github.com/gincmf/cmf/model"
 	"gorm.io/gorm"
 	"strconv"
@@ -20,6 +21,7 @@ import (
 // 优惠券
 type Voucher struct {
 	Id                   int     `json:"id"`
+	Mid                  int     `gorm:"type:bigint(20);comment:对应小程序id;not null" json:"mid"`
 	VoucherName          string  `gorm:"type:varchar(30);comment:优惠券名称，仅供商家可查看;not null" json:"voucher_name"`
 	Type                 int     `gorm:"type:tinyint(2);default:0;comment:0.全场优惠券，1.单品优惠券;not null" json:"type"`
 	VoucherType          string  `gorm:"type:varchar(64);comment:券类型，详见支付宝微信;not null" json:"voucher_type"`
@@ -43,22 +45,32 @@ type Voucher struct {
 	paginate             cmfModel.Paginate
 }
 
+// 优惠券所属门店列表
+type VoucherStorePost struct {
+	Id        int   `json:"id"`
+	VoucherId int   `gorm:"type:int(11);comment:魔板id;not null" json:"voucher_id"`
+	StoreId   int   `gorm:"type:int(11);comment:门店id;not null" json:"store_id"`
+	CreateAt  int64 `gorm:"type:int(11);comment:创建时间;not null" json:"create_at"`
+}
+
 // 优惠券发放表
 type VoucherPost struct {
 	Id              int    `json:"id"`
+	Mid             int    `gorm:"type:bigint(20);comment:对应小程序id;not null" json:"mid"`
 	VoucherId       int    `gorm:"type:int(11);comment:所属优惠券模板id;not null" json:"voucher_id"`
-	TemplateId      string `gorm:"-" json:"template_id"`
-	VoucherName     string `gorm:"-" json:"voucher_name"`
+	VoucherType     int    `gorm:"type:tinyint(3);comment:优惠券类型(0 => 全场: 1=> 单品);not null" json:"voucher_type"`
+	TemplateId      string `gorm:"-" json:"template_id,omitempty"`
+	VoucherName     string `gorm:"-" json:"voucher_name,omitempty"`
 	ValidStartAt    int64  `gorm:"type:int(11);comment:发放开始时间;not null" json:"valid_start_at"`
 	ValidEndAt      int64  `gorm:"type:int(11);comment:有效截止时间;not null" json:"valid_end_at"`
-	ValidStartTime  string `gorm:"-" json:"valid_start_time"`
-	ValidEndTime    string `gorm:"-" json:"valid_end_time"`
+	ValidStartTime  string `gorm:"-" json:"valid_start_time,omitempty"`
+	ValidEndTime    string `gorm:"-" json:"valid_end_time,omitempty"`
 	UserId          int    `gorm:"type:int(11);comment:所属人信息" json:"user_id"`
 	AlipayVoucherId string `gorm:"type:varchar(28);comment:支付宝券id" json:"alipay_voucher_id"`
 	CreateAt        int64  `gorm:"type:int(11)" json:"create_at"`
 	UpdateAt        int64  `gorm:"type:int(11)" json:"update_at"`
-	CreateTime      string `gorm:"-" json:"create_time"`
-	UpdateTime      string `gorm:"-" json:"update_time"`
+	CreateTime      string `gorm:"-" json:"create_time,omitempty"`
+	UpdateTime      string `gorm:"-" json:"update_time,omitempty"`
 	Status          int    `gorm:"type:tinyint(2);default:1;comment:状态;not null" json:"status"`
 	paginate        cmfModel.Paginate
 }
@@ -88,6 +100,7 @@ type VoucherResult struct {
  **/
 func (model *Voucher) AutoMigrate() {
 	cmf.NewDb().AutoMigrate(&model)
+	cmf.NewDb().AutoMigrate(&VoucherStorePost{})
 	cmf.NewDb().AutoMigrate(&VoucherPost{})
 }
 
@@ -130,8 +143,8 @@ func (model *Voucher) Index(c *gin.Context, query []string, queryArgs []interfac
 		publishEndTime := petUnix.Format(layout)
 		voucher[k].PublishEndTime = publishEndTime
 
-		voucher[k].CreateTime = time.Unix(v.CreateAt, 0).Format("2006-01-02 15:04:05")
-		voucher[k].UpdateTime = time.Unix(v.UpdateAt, 0).Format("2006-01-02 15:04:05")
+		voucher[k].CreateTime = time.Unix(v.CreateAt, 0).Format(layout)
+		voucher[k].UpdateTime = time.Unix(v.UpdateAt, 0).Format(layout)
 	}
 
 	if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
@@ -196,16 +209,31 @@ func (model *VoucherPost) Index(c *gin.Context, query []string, queryArgs []inte
 	queryStr := strings.Join(query, " AND ")
 	var total int64 = 0
 
-	var vp []VoucherPost
-	cmf.NewDb().Where(queryStr, queryArgs...).Find(&vp).Count(&total)
-	tx := cmf.NewDb().Where(queryStr, queryArgs...).Limit(pageSize).Offset((current - 1) * pageSize).Find(&vp)
+	var voucherResult []VoucherResult
+
+	prefix := cmf.Conf().Database.Prefix
+
+	cmf.NewDb().Table(prefix+"voucher_post p").Select("p.*,v.voucher_name,v.type,v.amount,v.total_amount,v.floor_amount,v.sync_to_alipay").
+		Joins("INNER JOIN "+prefix+"voucher v ON v.id = p.voucher_id").
+		Where(queryStr, queryArgs...).Count(&total)
+
+	tx := cmf.NewDb().Table(prefix+"voucher_post p").Select("p.*,v.voucher_name,v.type,v.amount,v.total_amount,v.floor_amount,v.sync_to_alipay").
+		Joins("INNER JOIN "+prefix+"voucher v ON v.id = p.voucher_id").
+		Where(queryStr, queryArgs...).Scan(&voucherResult)
 
 	if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 		return cmfModel.Paginate{}, tx.Error
 	}
 
-	paginate := cmfModel.Paginate{Data: vp, Current: current, PageSize: pageSize, Total: total}
-	if len(vp) == 0 {
+	for k, v := range voucherResult {
+		voucherResult[k].ValidStartTime = time.Unix(v.ValidStartAt, 0).Format(data.TimeLayout)
+		voucherResult[k].ValidEndTime = time.Unix(v.ValidEndAt, 0).Format(data.TimeLayout)
+		voucherResult[k].CreateTime = time.Unix(v.CreateAt, 0).Format(data.TimeLayout)
+		voucherResult[k].UpdateTime = time.Unix(v.UpdateAt, 0).Format(data.TimeLayout)
+	}
+
+	paginate := cmfModel.Paginate{Data: voucherResult, Current: current, PageSize: pageSize, Total: total}
+	if len(voucherResult) == 0 {
 		paginate.Data = make([]string, 0)
 	}
 
@@ -225,10 +253,10 @@ func (model *VoucherPost) Show(query []string, queryArgs []interface{}) (Voucher
 		Where(queryStr, queryArgs...).Scan(&voucherResult)
 
 	if tx.Error != nil {
-		return voucherResult,tx.Error
+		return voucherResult, tx.Error
 	}
 
-	return voucherResult,nil
+	return voucherResult, nil
 
 }
 
@@ -242,4 +270,47 @@ func (model *Voucher) Send(templateId string, openId string, voucherName string)
 	bizContent["memo"] = voucherName
 	result := new(marketing.CashlessVoucher).Send(bizContent)
 	return result
+}
+
+func (model *VoucherStorePost) Store(storeIds []string) error {
+
+	// 1,2,3 => 4,5
+	voucherId := model.VoucherId
+	// 获取源库拥有的
+	var storePost []VoucherStorePost
+	tx := cmf.NewDb().Where("voucher_id = ?", voucherId).Find(&storePost)
+
+	if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
+		return tx.Error
+	}
+
+	// 遍历存在的优惠券，查找需要添加的
+	var addPost []VoucherStorePost
+	for _, v := range storeIds {
+		storeId, _ := strconv.Atoi(v)
+		if !model.inStoreArray(storeId, storePost) || len(storePost) == 0 {
+			addPost = append(addPost, VoucherStorePost{
+				VoucherId: voucherId,
+				StoreId:   storeId,
+				CreateAt:  time.Now().Unix(),
+			})
+		}
+	}
+
+	// 添加待添加的
+	tx = cmf.NewDb().Create(&addPost)
+	if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
+		return tx.Error
+	}
+	return nil
+
+}
+
+func (model *VoucherStorePost) inStoreArray(storeId int, stores []VoucherStorePost) bool {
+	for _, v := range stores {
+		if storeId == v.StoreId {
+			return true
+		}
+	}
+	return false
 }

@@ -7,21 +7,48 @@ package card
 
 import (
 	"encoding/json"
-	appModel "gincmf/app/model"
 	"gincmf/app/util"
 	"gincmf/plugins/restaurantPlugin/controller/admin/settings"
 	"gincmf/plugins/restaurantPlugin/model"
+	saasModel "gincmf/plugins/saasPlugin/model"
 	"github.com/gin-gonic/gin"
 	"github.com/gincmf/alipayEasySdk/base"
 	"github.com/gincmf/alipayEasySdk/marketing"
 	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
+	"github.com/gincmf/cmf/data"
 	"strconv"
 	"time"
 )
 
 type Index struct {
 	rc controller.RestController
+}
+
+func (rest *Index) Show(c *gin.Context) {
+
+	mid, _ := c.Get("mid")
+
+	card := model.CardTemplate{}
+	tx := cmf.NewDb().Where("id = ? AND mid = ?", "1",mid).First(&card)
+
+	if tx.Error != nil {
+		rest.rc.Error(c, tx.Error.Error(), nil)
+		return
+	}
+
+	benefitInfo := card.BenefitInfo
+
+	var tbiArr []marketing.TemplateBenefitInfo
+	json.Unmarshal([]byte(benefitInfo), &tbiArr)
+
+	card.CardBackgroundPrev = util.GetFileUrl(card.CardBackground)
+	card.CreateTime = time.Unix(card.CreateAt, 0).Format(data.TimeLayout)
+	card.UpdateTime = time.Unix(card.CreateAt, 0).Format(data.TimeLayout)
+
+	card.BenefitInfoJson = tbiArr
+	rest.rc.Success(c,"获取成功！",card)
+
 }
 
 /**
@@ -35,6 +62,7 @@ type Index struct {
 func (rest *Index) Edit(c *gin.Context) {
 
 	appId, _ := c.Get("app_id")
+	mid, _ := c.Get("mid")
 
 	cardName := c.PostForm("card_name")
 	if cardName == "" {
@@ -45,9 +73,9 @@ func (rest *Index) Edit(c *gin.Context) {
 	card := model.CardTemplate{}
 	tx := cmf.NewDb().Where("id = ?", "1").First(&card)
 
-	cardBackground := c.PostForm("cardBackground")
+	cardBackground := c.PostForm("card_background")
 	if cardBackground == "" {
-		cardBackground = "uploads/template/vip.png"
+		cardBackground = "template/vip.png"
 	}
 
 	syncToAlipay := c.PostForm("sync_to_alipay")
@@ -56,7 +84,7 @@ func (rest *Index) Edit(c *gin.Context) {
 		syncToAlipayInt = 1
 	}
 
-	businessJson := appModel.Options("business_info")
+	businessJson := saasModel.Options("business_info",mid.(int))
 
 	bi := settings.BusinessInfo{}
 
@@ -94,6 +122,7 @@ func (rest *Index) Edit(c *gin.Context) {
 	}
 
 	t := time.Now().Unix()
+	card.Mid = mid.(int)
 	card.CardName = cardName
 	card.CardShowName = cardName
 	card.CardBackground = cardBackground
@@ -107,6 +136,7 @@ func (rest *Index) Edit(c *gin.Context) {
 	if syncToAlipayInt == 1 {
 
 		absPath := util.CurrentPath() + "/public/uploads/" + cardBackground
+
 		b, err := util.ExistPath(absPath)
 		if err != nil {
 			rest.rc.Error(c, err.Error(), nil)

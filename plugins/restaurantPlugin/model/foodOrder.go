@@ -9,9 +9,11 @@ import (
 	"errors"
 	"fmt"
 	isvModel "gincmf/app/model"
+	"gincmf/app/util"
 	"github.com/gin-gonic/gin"
 	"github.com/gincmf/alipayEasySdk/payment"
 	cmf "github.com/gincmf/cmf/bootstrap"
+	"github.com/gincmf/cmf/data"
 	cmfModel "github.com/gincmf/cmf/model"
 	"gorm.io/gorm"
 	"strings"
@@ -20,6 +22,7 @@ import (
 
 type FoodOrder struct {
 	Id              int               `json:"id"`
+	Mid             int               `gorm:"type:bigint(20);comment:对应小程序id;not null" json:"mid"`
 	OrderId         string            `gorm:"type:varchar(40);comment:订单号;not null" json:"order_id"`
 	TradeNo         string            `gorm:"type:varchar(60);comment:支付宝订单号;not null" json:"trade_no"`
 	QueueNo         string            `gorm:"type:varchar(10);comment:取餐队列号;not null" json:"queue_no"`
@@ -29,6 +32,7 @@ type FoodOrder struct {
 	OrderType       int               `gorm:"type:tinyint(3);comment:订单类型（1 => 门店扫码就餐; 2 => 门店堂食就餐; 3 => 门店打包外带; 4 => 外卖;not null" json:"order_type"`
 	AppointmentTime string            `gorm:"type:varchar(20);comment:预约取餐时间" json:"appointment_time"`
 	OrderDetail     string            `gorm:"type:json;comment:订单详情;not null" json:"order_detail"`
+	FoodDetail      []FoodOrderDetail `gorm:"-" json:"food_detail"`
 	BoxFee          float64           `gorm:"type:decimal(3,2);comment:餐盒费;default:0;not null" json:"box_fee"`
 	DeliveryFee     float64           `gorm:"type:decimal(3,2);comment:配送费;default:0;not null" json:"delivery_fee"`
 	CouponFee       float64           `gorm:"type:decimal(7,2);comment:优惠金额;default:0;not null" json:"coupon_fee"`
@@ -51,20 +55,23 @@ type FoodOrder struct {
 
 // 定单明细表
 type FoodOrderDetail struct {
-	Id               int     `json:"id"`
-	Code             string  `gorm:"type:varchar(32);comment:菜品唯一编号;not null" json:"code"`
-	OrderId          string  `gorm:"type:varchar(40);comment:订单号;not null" json:"order_id"`
-	FoodId           int     `gorm:"type:int(11);comment:所属食物id;not null" json:"food_id"`
-	FoodThumbnail    string  `gorm:"type:varchar(255);comment:菜品缩略图;not null" json:"food_thumbnail"`
-	AlipayMaterialId string  `gorm:"type:varchar(256);comment:阿里素材标识;not null" json:"alipay_material_id"`
-	FoodName         string  `gorm:"type:varchar(255);comment:菜品名称;not null" json:"food_name"`
-	SkuId            int     `gorm:"type:int(11);comment:所属食物规格id;not null" json:"sku_id"`
-	SkuDetail        string  `gorm:"type:varchar(255);comment:规格详情;not null" json:"sku_detail"`
-	Count            int     `gorm:"type:int(11);comment:购买数量;not null" json:"count"`
-	DishType         string  `gorm:"type:varchar(40);comment:菜品类型;" json:"dish_type"`
-	Flavor           string  `gorm:"type:varchar(40);comment:菜品口味;" json:"flavor"`
-	CookingMethod    string  `gorm:"type:varchar(40);comment:菜品做法;" json:"cooking_method"`
-	Fee              float64 `gorm:"type:decimal(9,2);comment:菜品单价;not null" json:"fee"`
+	Id                int     `json:"id"`
+	Code              string  `gorm:"type:varchar(32);comment:菜品唯一编号;not null" json:"code"`
+	OrderId           string  `gorm:"type:varchar(40);comment:订单号;not null" json:"order_id"`
+	FoodId            int     `gorm:"type:int(11);comment:所属食物id;not null" json:"food_id"`
+	FoodThumbnail     string  `gorm:"type:varchar(255);comment:菜品缩略图;not null" json:"food_thumbnail"`
+	FoodThumbnailPrev string  `gorm:"-" json:"food_thumbnail_prev"`
+	AlipayMaterialId  string  `gorm:"type:varchar(256);comment:阿里素材标识;not null" json:"alipay_material_id"`
+	FoodName          string  `gorm:"type:varchar(255);comment:菜品名称;not null" json:"food_name"`
+	SkuId             int     `gorm:"type:int(11);comment:所属食物规格id;not null" json:"sku_id"`
+	SkuDetail         string  `gorm:"type:varchar(255);comment:规格详情;not null" json:"sku_detail"`
+	UseMember         int     `gorm:"type:tinyint(3);comment:是否启用菜品会员价;not null" json:"use_member"`
+	MemberPrice       float64 `gorm:"type:decimal(9,2);comment:菜品会员价;not null" json:"member_price"`
+	Count             int     `gorm:"type:int(11);comment:购买数量;not null" json:"count"`
+	DishType          string  `gorm:"type:varchar(40);comment:菜品类型;" json:"dish_type"`
+	Flavor            string  `gorm:"type:varchar(40);comment:菜品口味;" json:"flavor"`
+	CookingMethod     string  `gorm:"type:varchar(40);comment:菜品做法;" json:"cooking_method"`
+	Fee               float64 `gorm:"type:decimal(9,2);comment:菜品单价;not null" json:"fee"`
 }
 
 func (model *FoodOrder) AutoMigrate() {
@@ -99,6 +106,21 @@ func (model FoodOrder) IndexByStore(c *gin.Context, query []string, queryArgs []
 
 	if result.Error != nil {
 		return cmfModel.Paginate{}, result.Error
+	}
+
+	for k, v := range fo {
+		v.CreateTime = time.Unix(v.CreateAt, 0).Format(data.TimeLayout)
+		var fod []FoodOrderDetail
+		tx := cmf.NewDb().Where("order_id", v.OrderId).Find(&fod)
+		if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
+			return cmfModel.Paginate{}, result.Error
+		}
+
+		for dk, dv := range fod {
+			fod[dk].FoodThumbnailPrev = util.GetFileUrl(dv.FoodThumbnail)
+		}
+
+		fo[k].FoodDetail = fod
 	}
 
 	paginate := cmfModel.Paginate{Data: fo, Current: current, PageSize: pageSize, Total: total}

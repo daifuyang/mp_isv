@@ -18,6 +18,7 @@ import (
 type DeskCategory struct {
 	Id           int               `json:"id"`
 	Mid          int               `gorm:"type:bigint(20);comment:对应小程序id;not null" json:"mid"`
+	StoreId      int               `gorm:"type:int(11);comment:门店id;not null" json:"store_id"`
 	CategoryName string            `gorm:"type:varchar(20);comment:座位名称;;not null" json:"category_name"`
 	LeastSeats   int               `gorm:"type:int(2);comment:最少人数;not null" json:"least_seats"`
 	MaximumSeats int               `gorm:"type:int(2);comment:最多人数;not null" json:"maximum_seats"`

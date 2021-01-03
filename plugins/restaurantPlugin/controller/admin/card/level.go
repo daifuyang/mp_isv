@@ -20,19 +20,52 @@ type Level struct {
 	rc controller.RestController
 }
 
+func (rest *Level) Show(c *gin.Context) {
+
+	mid, _ := c.Get("mid")
+
+	// 配置卡券基本配置
+	op := model.Option{}
+	vipResult := cmf.NewDb().Where("option_name = ? AND mid = ?", "vip_info",mid).First(&op)
+	if vipResult.Error != nil && !errors.Is(vipResult.Error, gorm.ErrRecordNotFound) {
+		rest.rc.Error(c, vipResult.Error.Error(), nil)
+		return
+	}
+
+	var vipInfoMap model.VipInfo
+	_ = json.Unmarshal([]byte(op.OptionValue), &vipInfoMap)
+
+	rest.rc.Success(c, "获取成功！", vipInfoMap)
+
+}
+
 func (rest *Level) Edit(c *gin.Context) {
 
+	mid, _ := c.Get("mid")
+
 	var form struct {
-		RechargePoint  int            `json:"recharge_point"`
-		ConsumePoint   int            `json:"consume_point"`
-		ExpValidPeriod int            `json:"exp_valid_period"`
-		Level          []model.SLevel `json:"level"`
+		EnabledRecharge int            `json:"enabled_recharge"` // 启用充值送
+		RechargePoint   int            `json:"recharge_point"`
+		EnabledConsume  int            `json:"enabled_consume"` // 启用消费送
+		ConsumePoint    int            `json:"consume_point"`
+		ExpValidPeriod  int            `json:"exp_valid_period"`
+		Level           []model.SLevel `json:"level"`
 	}
 
 	err := c.ShouldBindJSON(&form)
 	if err != nil {
 		c.JSON(400, gin.H{"msg": err.Error()})
 		return
+	}
+
+	enabledRecharge := 0
+	if form.EnabledRecharge == 1 {
+		enabledRecharge = 1
+	}
+
+	enabledConsume := 0
+	if form.EnabledConsume == 1 {
+		enabledConsume = 1
 	}
 
 	// 充值加经验值
@@ -66,7 +99,7 @@ func (rest *Level) Edit(c *gin.Context) {
 
 	// 配置卡券基本配置
 	op := model.Option{}
-	vipResult := cmf.NewDb().Where("option_name = ?", "vip_info").First(&op)
+	vipResult := cmf.NewDb().Where("option_name = ? AND mid = ?", "vip_info",mid).First(&op)
 	if vipResult.Error != nil && !errors.Is(vipResult.Error, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, vipResult.Error.Error(), nil)
 		return
@@ -74,13 +107,16 @@ func (rest *Level) Edit(c *gin.Context) {
 
 	var vipInfoMap model.VipInfo
 
+	vipInfoMap.EnabledRecharge = enabledRecharge
 	vipInfoMap.RechargePoint = rechargePoint
+	vipInfoMap.EnabledConsume = enabledConsume
 	vipInfoMap.ConsumePoint = consumePoint
 	vipInfoMap.ExpValidPeriod = expValidPeriod
 	vipInfoMap.Level = form.Level
 
 	vipInfoJson, _ := json.Marshal(&vipInfoMap)
 
+	op.Mid = mid.(int)
 	op.AutoLoad = 1
 	op.OptionName = "vip_info"
 	op.OptionValue = string(vipInfoJson)

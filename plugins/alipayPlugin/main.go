@@ -27,7 +27,7 @@ func Init() {
 		"appId":       "2021001192664075",
 		"version":     "1.0",
 		"charset":     "utf-8",
-		"notifyUrl":   "http://www.codecloud.ltd/api/v1/app/alipay/receive_notify",
+		"notifyUrl":   "https://www.codecloud.ltd/api/v1/app/alipay/receive_notify",
 		"AppCertPath": "./data/pem",
 		"AliCertPath": "./data/pem",
 	}

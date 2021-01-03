@@ -29,9 +29,11 @@ func (rest *Voucher) Get(c *gin.Context) {
 	// 获取当前用户信息
 	userId, _ := c.Get("mp_user_id")
 
-	data,err := new(model.VoucherPost).Index(c,[]string{"user_id = ? AND status = ?"},[]interface{}{userId,1})
+	mid, _ := c.Get("mid")
+
+	data,err := new(model.VoucherPost).Index(c,[]string{"user_id = ? AND p.mid = ? AND p.status = ?"},[]interface{}{userId,mid,1})
 	if err != nil {
-		rest.rc.Error(c,"获取失败！",nil)
+		rest.rc.Error(c,"获取失败！",err.Error())
 		return
 	}
 

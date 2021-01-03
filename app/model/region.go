@@ -30,7 +30,7 @@ func (model *Region) Region() []regionResult {
 
 func (model *Region) GetChildrenById(areaId int) []Region {
 	var region []Region
-	cmf.Db().Debug().Where("parent_id = ?", areaId).Find(&region)
+	cmf.Db().Where("parent_id = ?", areaId).Find(&region)
 	return region
 }
 

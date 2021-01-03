@@ -10,7 +10,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"gincmf/app/model"
+	cmfModel "gincmf/app/model"
+	"gincmf/plugins/restaurantPlugin/model"
 	saasModel "gincmf/plugins/saasPlugin/model"
 	"github.com/gin-gonic/gin"
 	"github.com/gincmf/alipayEasySdk"
@@ -141,40 +142,32 @@ func (rest *Auth) Redirect(c *gin.Context) {
 	}
 
 	oauth := base.Oauth{}
-	data := oauth.GetOpenToken(appAuthCode)
+	oauthResult := oauth.GetOpenToken(appAuthCode)
 
-	var result map[string]interface{}
-	_ = json.Unmarshal(data, &result)
 
-	temp := result["alipay_open_auth_token_app_response"]
-	response := temp.(map[string]interface{})
 
-	codeStatus := response["code"].(string)
+
+	response := oauthResult.Response
+	codeStatus := response.Code
 
 	if codeStatus == "10000" {
 
-		token := response["tokens"]
+		token := response.Tokens
 
-		tokenMap := token.([]interface{})
+		for _, v := range token {
 
-		for _, v := range tokenMap {
-
-			temp := v.(map[string]interface{})
-			userId := temp["user_id"].(string)
-			authAppId := temp["auth_app_id"].(string)
-			appAuthToken := temp["app_auth_token"].(string)
-			appRefreshToken := temp["app_refresh_token"].(string)
-			expiresIn := temp["expires_in"].(float64)
-			expiresInStr := strconv.FormatFloat(expiresIn, 'f', -1, 64)
-
-			reExpiresIn := temp["re_expires_in"].(float64)
-			reExpiresInStr := strconv.FormatFloat(reExpiresIn, 'f', -1, 64)
+			userId := v.UserId
+			authAppId := v.AuthAppId
+			appAuthToken := v.AppAuthToken
+			appRefreshToken := v.AppRefreshToken
+			expiresIn := v.ExpiresIn
+			reExpiresIn := v.ReExpiresIn
 
 			tenantId,_ := strconv.Atoi(inParams["tenant_id"])
 			mpId,_ := strconv.Atoi(inParams["mp_id"])
 			t := inParams["type"]
 
-			auth := model.MpIsvAuth{
+			auth := cmfModel.MpIsvAuth{
 				TenantId:tenantId,
 				MpId: mpId,
 				Type: t,
@@ -189,8 +182,8 @@ func (rest *Auth) Redirect(c *gin.Context) {
 			auth.AuthAppId = authAppId
 			auth.AppAuthToken = appAuthToken
 			auth.AppRefreshToken = appRefreshToken
-			auth.ExpiresIn = expiresInStr
-			auth.ReExpiresIn = reExpiresInStr
+			auth.ExpiresIn = expiresIn
+			auth.ReExpiresIn = reExpiresIn
 
 			if result.RowsAffected == 0 {
 				cmf.Db().Create(&auth)
@@ -203,7 +196,7 @@ func (rest *Auth) Redirect(c *gin.Context) {
 		}
 	}
 
-	rest.rc.Error(c, "授权失败！", result)
+	rest.rc.Error(c, "授权失败！"+response.SubMsg, response)
 }
 
 /**
@@ -218,7 +211,9 @@ func (rest *Auth) Token (c *gin.Context) {
 
 	appId,_ := c.Get("app_id")
 
-	isvAuth :=	model.MpIsvAuth{}
+	mid,_ := c.Get("mid")
+
+	isvAuth :=	cmfModel.MpIsvAuth{}
 	rowResult := cmf.Db().Where("auth_app_id = ?",appId).First(&isvAuth)
 	if rowResult.RowsAffected == 0 {
 		rest.rc.Error(c,"小程序不存在，请联系管理员！",nil)
@@ -235,21 +230,15 @@ func (rest *Auth) Token (c *gin.Context) {
 
 	base := base.Oauth{}
 	data := base.GetSystemToken(code)
-	var result *responseData
-	json.Unmarshal(data, &result)
 
-	if result.AlipaySystemOauthTokenResponse == nil {
-		var errResult map[string]interface{}
-		json.Unmarshal(data, &errResult)
-		rest.rc.Error(c,"获取失败！",errResult)
+	if data.Response.UserId == "" {
+		rest.rc.Error(c,"获取失败！"+data.ErrorResponse.SubMsg,data.ErrorResponse)
 		return
 	}
 
-	response := result.AlipaySystemOauthTokenResponse
-	openId := response.UserId
-
-	query := []string{"open_id = ?"}
-	queryArgs :=[]interface{}{openId}
+	openId := data.Response.UserId
+	query := []string{"open_id = ? AND tp.mid = ?"}
+	queryArgs :=[]interface{}{openId,mid}
 
 	// 查询当前用户是否存在
 	userPart := model.UserPart{}
@@ -260,13 +249,14 @@ func (rest *Auth) Token (c *gin.Context) {
 	}
 
 	// 当前三方关系不存在 新建第三方用户
-	if partData  == nil {
+	if partData.Id == 0 {
 		cmf.NewDb().Create(&model.ThirdPart{
+			Mid: mid.(int),
 			Type: "alipay-mp",
 			UserId: 0,
 			OpenId:openId,
 		})
 	}
 
-	rest.rc.Success(c,"获取成功！",result)
+	rest.rc.Success(c,"获取成功！",data.Response)
 }

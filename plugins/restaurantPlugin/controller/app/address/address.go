@@ -7,7 +7,7 @@ package address
 
 import (
 	"errors"
-	model2 "gincmf/plugins/restaurantPlugin/model"
+	"gincmf/plugins/restaurantPlugin/model"
 	"github.com/gin-gonic/gin"
 	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
@@ -29,8 +29,10 @@ type Address struct {
  **/
 func (rest *Address) Get(c *gin.Context) {
 
-	var address []model2.Address
-	result := cmf.NewDb().Find(&address)
+	mid, _ := c.Get("mid")
+
+	var address []model.Address
+	result := cmf.NewDb().Where("mid = ?", mid).Find(&address)
 
 	if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, result.Error.Error(), nil)
@@ -58,17 +60,19 @@ func (rest *Address) Show(c *gin.Context) {
 		return
 	}
 
-	address := model2.Address{}
+	mid, _ := c.Get("mid")
+
+	address := model.Address{}
 	var result *gorm.DB
 	if rewrite.Id == "default" {
-		result = cmf.NewDb().Where("`default` = ?", 1).First(&address)
-	}else {
-		result = cmf.NewDb().Where("id = ?", rewrite.Id).First(&address)
+		result = cmf.NewDb().Where("`default` = ? AND mid = ?", 1, mid).First(&address)
+	} else {
+		result = cmf.NewDb().Where("id = ? AND mid = ?", rewrite.Id, mid).First(&address)
 	}
 
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			rest.rc.Error(c,"该地址不存在！", nil)
+			rest.rc.Error(c, "该地址不存在！", nil)
 			return
 		}
 
@@ -89,6 +93,8 @@ func (rest *Address) Show(c *gin.Context) {
  **/
 
 func (rest *Address) Store(c *gin.Context) {
+
+	mid, _ := c.Get("mid")
 
 	name := c.PostForm("name")
 	if name == "" {
@@ -148,7 +154,8 @@ func (rest *Address) Store(c *gin.Context) {
 		dInt = 1
 	}
 
-	address := model2.Address{
+	address := model.Address{
+		Mid:     mid.(int),
 		Name:    name,
 		Gender:  genderInt,
 		Mobile:  mobileInt,
@@ -157,10 +164,9 @@ func (rest *Address) Store(c *gin.Context) {
 		Default: dInt,
 	}
 
-
 	if dInt == 1 {
 		// 取消默认
-		cmf.NewDb().Debug().Model(&model2.Address{}).Where("`default`= ?", 1).Update("default", 0)
+		cmf.NewDb().Debug().Model(&model.Address{}).Where("`default`= ?", 1).Update("default", 0)
 	}
 
 	result := cmf.NewDb().Create(&address)
@@ -192,6 +198,7 @@ func (rest *Address) Edit(c *gin.Context) {
 		return
 	}
 
+	mid, _ := c.Get("mid")
 
 	name := c.PostForm("name")
 	if name == "" {
@@ -250,19 +257,20 @@ func (rest *Address) Edit(c *gin.Context) {
 	if d == "1" {
 		dInt = 1
 	}
-	oAddr := model2.Address{}
-	res := cmf.NewDb().Where("id = ?",rewrite.Id).First(&oAddr)
+	oAddr := model.Address{}
+	res := cmf.NewDb().Where("id = ?", rewrite.Id).First(&oAddr)
 	if res.Error != nil {
-		if errors.Is(res.Error,gorm.ErrRecordNotFound) {
-			rest.rc.Error(c,"该地址不存在！",nil)
+		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
+			rest.rc.Error(c, "该地址不存在！", nil)
 			return
 		}
-		rest.rc.Error(c,res.Error.Error(),nil)
+		rest.rc.Error(c, res.Error.Error(), nil)
 		return
 	}
 
-	address := model2.Address{
-		Id: oAddr.Id,
+	address := model.Address{
+		Mid:     mid.(int),
+		Id:      oAddr.Id,
 		Name:    name,
 		Gender:  genderInt,
 		Mobile:  mobileInt,
@@ -273,7 +281,7 @@ func (rest *Address) Edit(c *gin.Context) {
 
 	if dInt == 1 {
 		// 取消默认
-		cmf.NewDb().Model(&model2.Address{}).Where("`default` = ?", 1).Update("default", 0)
+		cmf.NewDb().Model(&model.Address{}).Where("`default` = ?", 1).Update("default", 0)
 	}
 
 	result := cmf.NewDb().Save(&address)
@@ -305,15 +313,17 @@ func (rest *Address) Delete(c *gin.Context) {
 		return
 	}
 
-	address := model2.Address{}
+	mid, _ := c.Get("mid")
 
-	result := cmf.NewDb().Where("id = ?",rewrite.Id).Delete(&address)
+	address := model.Address{}
+
+	result := cmf.NewDb().Where("id = ? AND mid = ?", rewrite.Id,mid).Delete(&address)
 
 	if result.Error != nil {
-		rest.rc.Error(c,result.Error.Error(),nil)
+		rest.rc.Error(c, result.Error.Error(), nil)
 		return
 	}
 
-	rest.rc.Success(c,"删除成功！",nil)
+	rest.rc.Success(c, "删除成功！", nil)
 
 }

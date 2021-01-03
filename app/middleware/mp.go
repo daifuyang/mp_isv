@@ -41,11 +41,7 @@ func ValidationMp(c *gin.Context) {
 	param := req.Form
 	appId := strings.Join(param["app_id"], "")
 
-	fmt.Println("appId",appId)
-
 	authAppId := strings.Join(param["auth_app_id"], "")
-
-
 
 	if authAppId != "" {
 		appId = authAppId

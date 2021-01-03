@@ -58,7 +58,7 @@ func (model FoodAttrPost) attrPost() ([]tempAttrPost, error) {
 
 	var tempAttr []tempAttrPost
 	prefix := cmf.Conf().Database.Prefix
-	result := cmf.NewDb().Debug().Select("ap.food_id,ap.attr_post_id,v.attr_value_id,v.attr_value,k.attr_id,k.name").Table(prefix+"food_attr_post ap").
+	result := cmf.NewDb().Select("ap.food_id,ap.attr_post_id,v.attr_value_id,v.attr_value,k.attr_id,k.name").Table(prefix+"food_attr_post ap").
 		Joins("INNER JOIN "+prefix+"food_attr_value v ON ap.attr_value_id = v.attr_value_id").
 		Joins("INNER JOIN "+prefix+"food_attr_key k ON k.attr_id = v.attr_id").
 		Where("ap.food_id = ?", model.FoodId).Order("ap.attr_post_id asc").Scan(&tempAttr)

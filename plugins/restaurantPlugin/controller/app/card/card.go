@@ -8,15 +8,17 @@ package card
 import (
 	"encoding/json"
 	"errors"
-	appModel "gincmf/app/model"
 	"gincmf/app/util"
 	"gincmf/plugins/restaurantPlugin/controller/admin/settings"
 	"gincmf/plugins/restaurantPlugin/model"
+	saasModel "gincmf/plugins/saasPlugin/model"
 	"github.com/gin-gonic/gin"
+	"github.com/gincmf/alipayEasySdk/base"
 	"github.com/gincmf/alipayEasySdk/marketing"
 	"github.com/gincmf/alipayEasySdk/payment"
 	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
+	"github.com/gincmf/cmf/data"
 	"gorm.io/gorm"
 	"net/url"
 	"strconv"
@@ -37,12 +39,14 @@ type Card struct {
  **/
 func (rest *Card) VipDetail(c *gin.Context) {
 
+	mid, _ := c.Get("mid")
+
 	// 获取当前用户信息
 	userId, _ := c.Get("mp_user_id")
 
 	u := model.User{}
 
-	userData, err := u.Show([]string{"u.id = ?"}, []interface{}{userId})
+	userData, err := u.Show([]string{"u.id = ?"}, []interface{}{userId, mid})
 
 	if err != nil {
 		rest.rc.Error(c, "获取失败！"+err.Error(), err)
@@ -51,7 +55,7 @@ func (rest *Card) VipDetail(c *gin.Context) {
 
 	// 获取会员卡状态
 	card := model.CardTemplate{}
-	tx := cmf.NewDb().Where("id = ? AND status = ? AND delete_at = ?", 1, 1, 0).First(&card)
+	tx := cmf.NewDb().Where("id = ? AND mid = ? AND status = ? AND delete_at = ?", 1, mid, 1, 0).First(&card)
 	if tx.Error != nil {
 		rest.rc.Error(c, tx.Error.Error(), nil)
 		return
@@ -63,7 +67,7 @@ func (rest *Card) VipDetail(c *gin.Context) {
 		GetType      string        `json:"get_type"` //获得方式 free:免费 pay:付费 storage:储值
 		Benefit      model.Benefit `json:"benefit"`
 		ValidPeriod  int           `json:"valid_period"` // 会员有效期
-		Num          float64       `json:"num"`
+		Fee          float64       `json:"fee"`
 		ApplyCardUrl string        `json:"apply_card_url"`
 		Allow        bool          `json:"allow"`
 	}
@@ -75,7 +79,7 @@ func (rest *Card) VipDetail(c *gin.Context) {
 	}
 
 	// 获取当前配置会员卡开卡信息
-	vipInfo := appModel.Options("vip_info")
+	vipInfo := saasModel.Options("vip_info", mid.(int))
 
 	var viMap model.VipInfo
 	json.Unmarshal([]byte(vipInfo), &viMap)
@@ -106,7 +110,7 @@ func (rest *Card) VipDetail(c *gin.Context) {
 			}
 			result.Level = v.LevelId
 			result.Name = v.LevelName
-			result.Num = v.Num
+			result.Fee = v.Num
 			result.Benefit = v.Benefit
 			break
 		}
@@ -129,9 +133,11 @@ func (rest *Card) Send(c *gin.Context) {
 	mpUserId, _ := c.Get("mp_user_id")
 	mpType, _ := c.Get("mp_type")
 	Openid, _ := c.Get("open_id")
-	// 获取当前用户信息
+
+	// 获取当前租户信息
 	mid, _ := c.Get("mid")
 
+	// 获取当前用户信息
 	userId, _ := c.Get("mp_user_id")
 
 	u := model.User{}
@@ -144,13 +150,13 @@ func (rest *Card) Send(c *gin.Context) {
 
 	// 获取会员卡状态
 	card := model.CardTemplate{}
-	tx := cmf.NewDb().Where("id = ? AND status = ? AND delete_at = ?", 1, 1, 0).First(&card)
+	tx := cmf.NewDb().Where("id = ? AND mid = ? AND status = ? AND delete_at = ?", 1, mid, 1, 0).First(&card)
 	if tx.Error != nil {
 		rest.rc.Error(c, tx.Error.Error(), nil)
 		return
 	}
 
-	vipInfo := appModel.Options("vip_info")
+	vipInfo := saasModel.Options("vip_info", mid.(int))
 
 	var viMap model.VipInfo
 	json.Unmarshal([]byte(vipInfo), &viMap)
@@ -174,7 +180,7 @@ func (rest *Card) Send(c *gin.Context) {
 	yearStr, monthStr, dayStr := util.CurrentDate()
 	insertKey := "mp_isv" + strconv.Itoa(mid.(int)) + ":member_card:" + yearStr + monthStr + dayStr
 	date := yearStr + monthStr + dayStr
-	vipNum := util.DateUuid("",insertKey,date)
+	vipNum := util.DateUuid("", insertKey, date)
 	// 新建会员卡
 	switch viMap.Level[levelId].GetType {
 	case "pay":
@@ -187,15 +193,15 @@ func (rest *Card) Send(c *gin.Context) {
 			return
 		}
 
-		tx := cmf.NewDb().Where("user_id = ? AND vip_level = ? AND fee = ? AND pay_type = ? AND order_status = ?",mpUserId,vip.VipLevel,fee,"alipay","WAIT_BUYER_PAY").First(&co)
+		tx := cmf.NewDb().Where("user_id = ? AND mid = ? AND vip_level = ? AND fee = ? AND pay_type = ? AND order_status = ?", mpUserId, mid, vip.VipLevel, fee, "alipay", "WAIT_BUYER_PAY").First(&co)
 
-		if tx.Error != nil && !errors.Is(tx.Error,gorm.ErrRecordNotFound) {
-			rest.rc.Error(c,tx.Error.Error(),nil)
+		if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
+			rest.rc.Error(c, tx.Error.Error(), nil)
 			return
 		}
 
 		if tx.RowsAffected > 0 {
-			rest.rc.Success(c,"获取历史订单成功！",co)
+			rest.rc.Success(c, "获取历史订单成功！", co)
 			return
 		}
 
@@ -214,14 +220,15 @@ func (rest *Card) Send(c *gin.Context) {
 		}
 
 		// 判断用户是否已经开过会员卡
-		vipData ,err := vip.Show([]string{"user_id = ?"},[]interface{}{userId})
-		if err != nil && !errors.Is(err,gorm.ErrRecordNotFound) {
-			rest.rc.Error(c,err.Error(),nil)
+		vipData, err := vip.Show([]string{"user_id = ?"}, []interface{}{userId})
+		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+			rest.rc.Error(c, err.Error(), nil)
 			return
 		}
 
 		// 未开过卡
 		if vipData.Id == 0 {
+			vip.Mid = mid.(int)
 			vip.VipLevel = viMap.Level[0].LevelId
 			vip.VipName = viMap.Level[0].LevelName
 			vip.EndAt = int64(card.ValidPeriod) + nowUnix
@@ -232,7 +239,7 @@ func (rest *Card) Send(c *gin.Context) {
 		}
 
 		// 支付宝小程序下单
-		businessJson := appModel.Options("business_info")
+		businessJson := saasModel.Options("business_info", mid.(int))
 		bi := settings.BusinessInfo{}
 		json.Unmarshal([]byte(businessJson), &bi)
 
@@ -244,6 +251,11 @@ func (rest *Card) Send(c *gin.Context) {
 		co.Fee = fee
 		co.CreateAt = nowUnix
 		co.OrderStatus = "WAIT_BUYER_PAY"
+
+		brandName := bi.BrandName
+		if brandName == "" {
+			brandName = "开通会员卡"
+		}
 
 		// 支付宝小程序下单
 		if mpType == "alipay" {
@@ -261,9 +273,10 @@ func (rest *Card) Send(c *gin.Context) {
 			common := payment.Common{}
 			bizContent := make(map[string]interface{}, 0)
 			bizContent["out_trade_no"] = orderId
-			bizContent["total_amount"] = fee
+			// bizContent["total_amount"] = fee
+			bizContent["total_amount"] = 0.01
 			// bizContent["discountable_amount"] = 0
-			bizContent["subject"] = bi.BrandName
+			bizContent["subject"] = brandName
 			bizContent["body"] = bi.BrandName + "开通会员卡"
 			bizContent["buyer_id"] = Openid
 			bizContent["goods_detail"] = aliDetail
@@ -297,6 +310,7 @@ func (rest *Card) Send(c *gin.Context) {
 		fallthrough
 	default:
 		if userData.StartAt == 0 {
+			vip.Mid = mid.(int)
 			vip.VipLevel = viMap.Level[0].LevelId
 			vip.VipName = viMap.Level[0].LevelName
 			vip.EndAt = int64(card.ValidPeriod) + nowUnix
@@ -322,8 +336,10 @@ func (rest *Card) Send(c *gin.Context) {
 
 func (rest *Card) Apply(c *gin.Context) {
 
+	mid, _ := c.Get("mid")
+
 	card := model.CardTemplate{}
-	tx := cmf.NewDb().Where("id = ?", 1).First(&card)
+	tx := cmf.NewDb().Where("id = ? AND mid = ?", 1, mid).First(&card)
 
 	if tx.Error != nil {
 		rest.rc.Error(c, tx.Error.Error(), nil)
@@ -348,5 +364,113 @@ func (rest *Card) Apply(c *gin.Context) {
 	enEscapeUrl, _ := url.QueryUnescape(result.Response.ApplyCardUrl)
 
 	rest.rc.Success(c, "获取成功！", gin.H{"apply_card_url": enEscapeUrl})
+
+}
+
+// 同步到支付宝卡包
+func (rest *Card) SyncCardToAlipay(c *gin.Context) {
+
+	authToken := c.PostForm("auth_token")
+
+	if authToken == "" {
+		rest.rc.Error(c, "用户授权token不能为空！", nil)
+		return
+	}
+
+	oauthResult := new(base.Oauth).GetSystemToken(authToken)
+
+	if oauthResult.Response.Code != "" {
+		rest.rc.Error(c, "授权令牌获取失败！"+oauthResult.Response.SubMsg, nil)
+		return
+	}
+
+	accessToken := oauthResult.Response.AccessToken
+
+	mpUserId, _ := c.Get("mp_user_id")
+	Openid, _ := c.Get("open_id")
+	mid, _ := c.Get("mid")
+
+	ct, err := new(model.CardTemplate).Show([]string{"id = ? AND mid = ? AND status = ?"}, []interface{}{1, mid, 1})
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
+	mc, err := new(model.MemberCard).Show([]string{"user_id = ? AND mid = ? AND status = ? and delete_at = ?"}, []interface{}{mpUserId, mid, 1, 0})
+
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
+	u, err := new(model.User).Show([]string{"u.id = ? AND mid = ? AND user_type = ? AND user_status = ?"}, []interface{}{mpUserId, mid, 0, 1})
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
+	cui := marketing.CardUserInfo{
+		UserUniId:     Openid.(string),
+		UserUniIdType: "UID",
+	}
+
+	ftl := []marketing.FrontTextList{{
+		Label: "文标题一",
+		Value: "急速",
+	}, {
+		Label: "文标题二",
+		Value: "高效",
+	}, {
+		Label: "文标题三",
+		Value: "稳定",
+	}}
+
+	openDate := time.Unix(mc.StartAt, 0).Format(data.TimeLayout)
+	ValidDate := time.Unix(mc.EndAt, 0).Format(data.TimeLayout)
+
+	cei := marketing.CardExtInfo{
+		OpenDate:       openDate,
+		ValidDate:      ValidDate,
+		Level:          mc.VipLevel,
+		Point:          strconv.Itoa(u.Score),
+		Balance:        strconv.FormatFloat(u.Balance, 'f', -1, 64),
+		ExternalCardNo: mc.VipNum,
+		FrontTextList:  ftl,
+	}
+
+	gende := ""
+	if u.Gender == 1 {
+		gende = "MALE"
+	}
+	if u.Gender == 2 {
+		gende = "FEMALE"
+	}
+
+	mei := marketing.MemberExtInfo{
+		Name:  u.UserRealName,
+		Birth: "2016-06-27",
+		Cell:  "15161178721",
+	}
+
+	if gende != "" {
+		mei.Gende = gende
+	}
+
+	bizContent := map[string]interface{}{
+		"out_serial_no":    time.Now().Unix(),
+		"card_template_id": ct.TemplateId,
+		"card_user_info":   cui,
+		"card_ext_info":    cei,
+		"member_ext_info":  mei,
+	}
+
+	cardResult := new(marketing.Card).Send(bizContent, accessToken)
+
+	if cardResult.Response.Code != "10000" {
+		rest.rc.Error(c, "同步失败！"+cardResult.Response.SubMsg, cardResult.Response)
+		return
+	}
+
+	rest.rc.Success(c, "同步成功！", nil)
 
 }

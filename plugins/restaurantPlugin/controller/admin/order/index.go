@@ -43,8 +43,10 @@ var clientsMap = make(map[Client]bool)
 **/
 func (rest *Index) Index(c *gin.Context) {
 
-	var query []string
-	var queryArgs []interface{}
+	mid, _ := c.Get("mid")
+
+	var query = []string{"mid = ?"}
+	var queryArgs = []interface{}{mid}
 
 	// 订单号
 	orderId := c.Query("order_id")
@@ -95,8 +97,10 @@ func (rest *Index) Index(c *gin.Context) {
 
 func (rest *Index) Confirm(c *gin.Context) {
 
-	var query []string
-	var queryArgs []interface{}
+	mid, _ := c.Get("mid")
+
+	var query = []string{"mid = ?"}
+	var queryArgs = []interface{}{mid}
 
 	// 订单号
 	orderId := c.PostForm("order_id")
@@ -139,8 +143,10 @@ func (rest *Index) Cancel(c *gin.Context) {
 
 	appId, _ := c.Get("app_id")
 
-	var query []string
-	var queryArgs []interface{}
+	mid, _ := c.Get("mid")
+
+	var query = []string{"mid = ?"}
+	var queryArgs = []interface{}{mid}
 
 	// 订单号
 	orderId := c.PostForm("order_id")
@@ -188,7 +194,6 @@ func (rest *Index) Order(w http.ResponseWriter, r *http.Request) {
 	}
 
 	defer c.Close()
-
 	var client = Client{
 		conn: c,
 	}
@@ -196,13 +201,12 @@ func (rest *Index) Order(w http.ResponseWriter, r *http.Request) {
 	for {
 
 		mt, message, err := c.ReadMessage()
-
 		if err != nil {
 			log.Println("read:", err)
 			c.Close()
 		}
-
 		var result struct {
+			Mid         int `json:"mid"`
 			Token       string `json:"token"`
 			OrderId     string `json:"order_id"`
 			StoreId     string `json:"store_id"`
@@ -230,9 +234,14 @@ func (rest *Index) Order(w http.ResponseWriter, r *http.Request) {
 			clientsMap[client] = true
 		}
 
-		var query []string
-		var queryArgs []interface{}
+		mid := result.Mid
+		if mid == 0 {
+			c.WriteMessage(mt, []byte( rest.rc.JsonError("mid不能为空！", nil) ));
+			return
+		}
 
+		var query = []string{"mid = ?"}
+		var queryArgs = []interface{}{mid}
 		// 订单号
 		orderId := result.OrderId
 		if orderId != "" {

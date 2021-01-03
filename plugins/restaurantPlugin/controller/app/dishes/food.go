@@ -6,7 +6,6 @@
 package dishes
 
 import (
-	"fmt"
 	"gincmf/plugins/restaurantPlugin/model"
 	"github.com/gin-gonic/gin"
 	"github.com/gincmf/cmf/controller"
@@ -17,9 +16,9 @@ type Food struct {
 }
 
 type foodCate struct {
-	CategoryId int `json:"category_id"`
-	Name string `json:"name"`
-	Food []model.Food `json:"food"`
+	CategoryId int          `json:"category_id"`
+	Name       string       `json:"name"`
+	Food       []model.Food `json:"food"`
 }
 
 /**
@@ -29,63 +28,62 @@ type foodCate struct {
  * @Param
  * @return
  **/
-func (rest *Food) List (c *gin.Context) {
+func (rest *Food) List(c *gin.Context) {
 
-	storeId,_ := c.Get("store_id")
+	mid, _ := c.Get("mid")
+
+	storeId, _ := c.Get("store_id")
 	// 获取门店参数
 	category := model.FoodCategory{}
 
 	var query []string
 	var queryArgs []interface{}
 
-	query = append(query,"store_id = ? AND delete_at = ? AND status = 1")
-	queryArgs = append(queryArgs,storeId,0,1)
+	query = append(query, "mid = ? AND store_id = ? AND delete_at = ? AND status = 1")
+	queryArgs = append(queryArgs, mid, storeId, 0, 1)
 
-	categoryData ,err :=  category.List(query,queryArgs)
+	categoryData, err := category.List(query, queryArgs)
 	if err != nil {
-		rest.rc.Error(c,"获取失败！",nil)
+		rest.rc.Error(c, "获取失败！", nil)
 		return
 	}
 
 	// 获取全部菜品
 	food := model.Food{}
-	foodData,err := food.ListByCategory([]string{"fc.store_id = ? AND f.status = ? AND f.delete_at = ?"},[]interface{}{storeId,1,0})
+	foodData, err := food.ListByCategory([]string{"f.mid = ? AND fc.store_id = ? AND f.status = ? AND f.delete_at = ?"}, []interface{}{mid, storeId, 1, 0})
 
 	if err != nil {
-		rest.rc.Error(c,"获取菜品错误！",err.Error())
+		rest.rc.Error(c, "获取菜品错误！", err.Error())
 		return
 	}
 
 	// 最终结果项
-	var foodCateMap = make([]foodCate,0)
+	var foodCateMap = make([]foodCate, 0)
 
-	for _,v := range categoryData{
+	for _, v := range categoryData {
 
 		// 当前分类项
 		fc := foodCate{
 			CategoryId: v.FoodCategory.Id,
-			Name: v.FoodCategory.Name,
+			Name:       v.FoodCategory.Name,
 		}
 
 		// 当前菜品项
-		foodArr := make([]model.Food,0)
-		for _,fv := range foodData{
-
-			fmt.Println(v.FoodCategory.Id ,fv.CategoryId)
-
+		foodArr := make([]model.Food, 0)
+		for _, fv := range foodData {
 			// 寻找分类,存入菜品
 			if v.FoodCategory.Id == fv.CategoryId {
-				foodArr = append(foodArr,fv.Food)
+				foodArr = append(foodArr, fv.Food)
 			}
 		}
 
 		fc.Food = foodArr
 		// 存入一个分类
-		foodCateMap = append(foodCateMap,fc)
+		foodCateMap = append(foodCateMap, fc)
 
 	}
 
-	rest.rc.Success(c,"获取成功！",foodCateMap)
+	rest.rc.Success(c, "获取成功！", foodCateMap)
 }
 
 /**
@@ -95,7 +93,7 @@ func (rest *Food) List (c *gin.Context) {
  * @Param
  * @return
  **/
-func (rest *Food) Detail (c *gin.Context)   {
+func (rest *Food) Detail(c *gin.Context) {
 
 	var rewrite struct {
 		Id int `uri:"id"`
@@ -107,15 +105,17 @@ func (rest *Food) Detail (c *gin.Context)   {
 
 	id := rewrite.Id
 
+	mid, _ := c.Get("mid")
+
 	food := model.Food{}
-	query := []string{"id = ? AND delete_at = ?"}
-	queryArgs := []interface{}{id,0}
-	data,err := food.Detail(query,queryArgs)
+	query := []string{"mid = ? AND id = ? AND delete_at = ?"}
+	queryArgs := []interface{}{mid, id, 0}
+	data, err := food.Detail(query, queryArgs)
 	if err != nil {
-		rest.rc.Error(c,err.Error(),nil)
+		rest.rc.Error(c, err.Error(), nil)
 		return
 	}
-	rest.rc.Success(c,"获取成功！",data)
+	rest.rc.Success(c, "获取成功！", data)
 
 }
 
@@ -127,7 +127,7 @@ func (rest *Food) Detail (c *gin.Context)   {
  * @return
  **/
 
-func (rest *Food) Sku (c *gin.Context)   {
+func (rest *Food) Sku(c *gin.Context) {
 
 	var rewrite struct {
 		Id int `uri:"id"`
@@ -139,20 +139,20 @@ func (rest *Food) Sku (c *gin.Context)   {
 
 	sku := c.Query("sku")
 	if sku == "" {
-		rest.rc.Error(c,"规格唯一标识不能为空！",nil)
+		rest.rc.Error(c, "规格唯一标识不能为空！", nil)
 		return
 	}
 
-    fSku :=	model.FoodSku{}
+	fSku := model.FoodSku{}
 
-    query := []string{"food_id = ? AND attr_post = ?"}
-    queryArgs := []interface{}{rewrite.Id,sku}
+	query := []string{"food_id = ? AND attr_post = ?"}
+	queryArgs := []interface{}{rewrite.Id, sku}
 
-	data,err := fSku.Show(query,queryArgs)
+	data, err := fSku.Show(query, queryArgs)
 
 	if err != nil {
-		rest.rc.Error(c,err.Error(),nil)
+		rest.rc.Error(c, err.Error(), nil)
 		return
 	}
-	rest.rc.Success(c,"获取成功！",data)
+	rest.rc.Success(c, "获取成功！", data)
 }

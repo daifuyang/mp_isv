@@ -41,12 +41,12 @@ type Store struct {
 	Latitude       float64           `gorm:"type:decimal(10,7);comment:纬度;not null" json:"latitude"`
 	Scene          int               `gorm:"type:tinyint(3);comment:支持场景（0 =>全部；1=>堂食；2=>外卖）;default:0;not null" json:"scene"`
 	IsClosure      int               `gorm:"type:tinyint(3);comment:是否歇业;not null;default:0" json:"is_closure"`
-	UseDesk        int               `gorm:"type:tinyint(3);comment:启用桌号;not null;default:0" json:"use_desk"`
-	UseAppointment int               `gorm:"type:tinyint(3);comment:支持堂食预约;default:0;not null" json:"use_appointment"`
 	Notice         string            `gorm:"type:varchar(255);comment:公告通知" json:"notice"`
 	CreateAt       int64             `gorm:"type:int(11)" json:"create_at"`
 	UpdateAt       int64             `gorm:"type:int(11)" json:"update_at"`
 	DeleteAt       int64             `gorm:"type:int(10);comment:删除时间;default:0" json:"delete_at"`
+	AuditStatus    string            `gorm:"type:varchar(20);comment:审核状态(passed:通过,rejected:拒绝,wait:审核中);default:wait;not null" json:"audit_status"`
+	Reason         string            `gorm:"type:varchar(255);comment:拒绝愿意" json:"reason"`
 	CreateTime     string            `gorm:"-" json:"create_time"`
 	UpdateTime     string            `gorm:"-" json:"update_time"`
 	Distance       float64           `gorm:"->" json:"distance"`
@@ -571,7 +571,7 @@ func (model *StoreHours) Hours() ([]StoreHours, error) {
 	mid := model.Mid
 
 	var sh []StoreHours
-	result := cmf.NewDb().Debug().Where("store_id = ? AND mid = ?", storeId, mid).Find(&sh)
+	result := cmf.NewDb().Where("store_id = ? AND mid = ?", storeId, mid).Find(&sh)
 
 	if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return sh, result.Error

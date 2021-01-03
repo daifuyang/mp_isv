@@ -15,9 +15,10 @@ import (
 
 type User struct {
 	Id                int     `json:"id"`
-	UserType          int     `gorm:"type:tinyint(3);not null" json:"user_type"`
-	Gender            int     `gorm:"type:tinyint(2);comment:性别;0:保密,1:男,2:女" json:"gender"`
+	UserType          int     `gorm:"type:tinyint(3);not null;default:0" json:"user_type"`
+	Gender            int     `gorm:"type:tinyint(2);comment:性别;0:保密,1:男,2:女;default:0" json:"gender"`
 	Birthday          int64   `gorm:"type:int(11)" json:"birthday"`
+	BirthdayTime      string  `gorm:"-" json:"birthday_time"`
 	LastLoginAt       int64   `gorm:"type:int(11)" json:"last_login_at"`
 	Score             int     `gorm:"type:bigint(20);comment:积分;default:0;not null" json:"score"`
 	Coin              int     `gorm:"type:bigint(20);comment:金币;default:0;not null" json:"coin"`
@@ -25,7 +26,8 @@ type User struct {
 	Balance           float64 `gorm:"type:decimal(10,2);comment:余额;not null" json:"balance"`
 	CreateAt          int64   `gorm:"type:int(11)" json:"create_at"`
 	UpdateAt          int64   `gorm:"type:int(11)" json:"update_at"`
-	UserStatus        int     `gorm:"type:tinyint(3);not null;default:0" json:"user_status"`
+	DeleteAt          int64   `gorm:"type:int(11)" json:"delete_at"`
+	UserStatus        int     `gorm:"type:tinyint(3);not null;default:1" json:"user_status"`
 	UserLogin         string  `gorm:"type:varchar(60);not null" json:"user_login"`
 	UserPass          string  `gorm:"type:varchar(64);not null" json:"-"`
 	UserNickname      string  `gorm:"type:varchar(50);not null" json:"user_nickname"`
@@ -74,8 +76,8 @@ func (model *User) Get(c *gin.Context, query []string, queryArgs []interface{}) 
 	cmf.NewDb().Where(queryStr, queryArgs...).Find(&user).Count(&total)
 	tx := cmf.NewDb().Where(queryStr, queryArgs...).Limit(pageSize).Offset((current - 1) * pageSize).Find(&user)
 
-	if tx.Error != nil && errors.Is(tx.Error,gorm.ErrRecordNotFound) {
-		return  cmfModel.Paginate{},errors.New("该页码内容不存在！")
+	if tx.Error != nil && errors.Is(tx.Error, gorm.ErrRecordNotFound) {
+		return cmfModel.Paginate{}, errors.New("该页码内容不存在！")
 	}
 
 	type temResult struct {
@@ -107,7 +109,7 @@ func (model *User) Get(c *gin.Context, query []string, queryArgs []interface{}) 
 		paginationData.Data = make([]string, 0)
 	}
 
-	return paginationData,nil
+	return paginationData, nil
 
 }
 
@@ -163,11 +165,10 @@ func (model UserPart) Show(query []string, queryArgs []interface{}) (*UserPart, 
 	return &up, nil
 }
 
-
-//获取当前用户信息
-func  (model *User) CurrentUser(c *gin.Context) User {
+//获取后台当前用户信息
+func (model *User) CurrentUser(c *gin.Context) User {
 	u := User{}
-	session :=sessions.Default(c)
+	session := sessions.Default(c)
 	user := session.Get("user")
 	userId, _ := c.Get("user_id")
 	userIdInt, _ := strconv.Atoi(userId.(string))
