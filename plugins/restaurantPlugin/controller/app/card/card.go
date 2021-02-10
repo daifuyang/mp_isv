@@ -226,31 +226,37 @@ func (rest *Card) Send(c *gin.Context) {
 			return
 		}
 
-		// 未开过卡
-		if vipData.Id == 0 {
-			vip.Mid = mid.(int)
-			vip.VipLevel = viMap.Level[0].LevelId
-			vip.VipName = viMap.Level[0].LevelName
-			vip.EndAt = int64(card.ValidPeriod) + nowUnix
-			vip.EndAt = time.Now().Unix()
-			vip.VipNum = vipNum
-			vip.Status = 0
-			cmf.NewDb().Create(&vip)
-		}
-
 		// 支付宝小程序下单
 		businessJson := saasModel.Options("business_info", mid.(int))
 		bi := settings.BusinessInfo{}
 		json.Unmarshal([]byte(businessJson), &bi)
 
+		// 未开过卡
+		if vipData.Id == 0 {
+			vip.Mid = mid.(int)
+			vip.VipLevel = viMap.Level[0].LevelId
+			vip.VipName = viMap.Level[0].LevelName
+			vip.StartAt = time.Now().Unix()
+			vip.EndAt = int64(card.ValidPeriod) + nowUnix
+			vip.VipNum = vipNum
+			vip.Status = 0
+			cmf.NewDb().Create(&vip)
+
+			co.VipName = viMap.Level[0].LevelName
+			co.VipLevel = viMap.Level[0].LevelId
+		}else{
+			co.VipName = vipData.VipName
+			co.VipLevel = vipData.VipLevel
+		}
+
 		co.VipNum = vipNum
-		co.VipLevel = viMap.Level[0].LevelId
 		co.OrderId = orderId
 		co.PayType = "alipay"
 		co.UserId = mpUserId.(int)
 		co.Fee = fee
 		co.CreateAt = nowUnix
 		co.OrderStatus = "WAIT_BUYER_PAY"
+
 
 		brandName := bi.BrandName
 		if brandName == "" {

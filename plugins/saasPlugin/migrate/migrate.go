@@ -7,23 +7,23 @@ package migrate
 
 import (
 	appModel "gincmf/app/model"
+	"gincmf/plugins/portalPlugin"
 	"gincmf/plugins/restaurantPlugin"
-	"gincmf/plugins/restaurantPlugin/model"
+	"gincmf/plugins/saasPlugin/model"
 	cmf "github.com/gincmf/cmf/bootstrap"
 )
 
 func AutoMigrate () {
-	cmf.NewDb().AutoMigrate(&appModel.MpTheme{})
-	cmf.NewDb().AutoMigrate(&appModel.MpThemePage{})
-
 	// 租户资源管理器
 	cmf.NewDb().AutoMigrate(&appModel.Asset{})
 
-	// 地址
-	cmf.NewDb().AutoMigrate(&model.Address{})
+
+	cmf.NewDb().AutoMigrate(&model.MpTheme{})
+	cmf.NewDb().AutoMigrate(&model.MpThemePage{})
 
 	// 餐厅插件
 	// 租户同步数据库迁移
 	restaurantPlugin.AutoMigrate()
+	portalPlugin.AutoMigrate()
 
 }

@@ -7,14 +7,13 @@ package middleware
 
 import (
 	"encoding/json"
-	"fmt"
 	"gincmf/app/model"
+	saasModel "gincmf/plugins/saasPlugin/model"
 	"github.com/gin-gonic/gin"
 	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
 	"net/http"
 	"strconv"
-	"strings"
 )
 
 /**
@@ -29,27 +28,34 @@ func ValidationMerchant(c *gin.Context) {
 	// 获取小程序mid
 	r := c.Request
 	r.ParseForm()
-	mid := strings.Join(r.Form["mid"], "")
-	fmt.Println("mid", mid)
+	midMap := r.Form["mid"]
 
-	if mid == "" {
+	if len(midMap) == 0 {
 		c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "小程序商户id不能为空"})
 		c.Abort()
 		return
 	}
 
+	mid := midMap[0]
+
 	mpIsv := model.MpIsvAuth{}
-	cmf.Db().Where("mp_id = ?",mid).Order("id desc").First(&mpIsv)
+	tx := cmf.Db().Where("mp_id = ?",mid).Order("id desc").First(&mpIsv)
+
+	if tx.RowsAffected == 0 {
+		controller.RestController{}.ErrorCode(c, 20001,"小程序编号不正确！", nil)
+		c.Abort()
+	}
+
 	mpJson,_ := json.Marshal(&mpIsv)
 	c.Set("mp_json",string(mpJson))
 
 	c.Set("alipay_user_id",mpIsv.UserId)
 
 	// 验证当前小程序是否存在
-	result := cmf.NewDb().Where("number = ?", mid).First(&model.MpTheme{})
+	result := cmf.NewDb().Where("mid = ?", mid).First(&saasModel.MpTheme{})
 
 	if result.RowsAffected == 0 {
-		controller.RestController{}.Error(c, "小程序编号不正确！", nil)
+		controller.RestController{}.ErrorCode(c, 20001,"小程序编号不正确！", nil)
 		c.Abort()
 	}
 

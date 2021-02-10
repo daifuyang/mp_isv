@@ -6,14 +6,19 @@
 package address
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
+	"gincmf/app/util"
 	"gincmf/plugins/restaurantPlugin/model"
+	saasModel "gincmf/plugins/saasPlugin/model"
 	"github.com/gin-gonic/gin"
 	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
 	"gorm.io/gorm"
 	"regexp"
 	"strconv"
+	"strings"
 )
 
 type Address struct {
@@ -31,6 +36,21 @@ func (rest *Address) Get(c *gin.Context) {
 
 	mid, _ := c.Get("mid")
 
+	storeNumber := c.Query("store_number")
+
+	var (
+		store model.Store
+		err   error
+	)
+
+	if storeNumber != "" {
+		store, err = new(model.Store).Show([]string{"store_number = ? AND  mid = ? AND delete_at = ?"}, []interface{}{storeNumber, mid, 0})
+		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+			rest.rc.Error(c, err.Error(), nil)
+			return
+		}
+	}
+
 	var address []model.Address
 	result := cmf.NewDb().Where("mid = ?", mid).Find(&address)
 
@@ -39,7 +59,38 @@ func (rest *Address) Get(c *gin.Context) {
 		return
 	}
 
-	rest.rc.Success(c, "获取成功！", address)
+	// 获取当前堂食配置
+	takeJson := saasModel.Options("take_out", store.Mid)
+	var takeOut model.TakeOut
+	_ = json.Unmarshal([]byte(takeJson), &takeOut)
+
+	type addressTemp struct {
+		model.Address
+		Distance float64 `json:"distance,omitempty"`
+		OutRange bool    `json:"out_range,omitempty"`
+	}
+
+	var addressResult = make([]addressTemp,0)
+
+	for _, v := range address {
+
+		distance := util.EarthDistance(v.Latitude, v.Longitude, store.Latitude, store.Longitude)
+
+		at := addressTemp{
+			Address:v,
+			Distance: distance,
+		}
+
+		// 超出距离
+		if distance > takeOut.DeliveryDistance {
+			at.OutRange = true
+		}
+
+		addressResult = append(addressResult,at)
+
+	}
+
+	rest.rc.Success(c, "获取成功！", addressResult)
 }
 
 /**
@@ -62,6 +113,32 @@ func (rest *Address) Show(c *gin.Context) {
 
 	mid, _ := c.Get("mid")
 
+	storeNumber := c.Query("store_number")
+
+	var (
+		store model.Store
+		err   error
+	)
+
+	var takeOut model.TakeOut
+
+	if storeNumber != "" {
+		store, err = new(model.Store).Show([]string{"store_number = ? AND  mid = ? AND delete_at = ?"}, []interface{}{storeNumber, mid, 0})
+		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+			rest.rc.Error(c, err.Error(), nil)
+			return
+		}
+
+		if store.Id == 0 {
+			rest.rc.Error(c,"门店不存在！",nil)
+			return
+		}
+
+		// 获取当前堂食配置
+		takeJson := saasModel.Options("take_out", store.Mid)
+		_ = json.Unmarshal([]byte(takeJson), &takeOut)
+	}
+
 	address := model.Address{}
 	var result *gorm.DB
 	if rewrite.Id == "default" {
@@ -80,7 +157,28 @@ func (rest *Address) Show(c *gin.Context) {
 		return
 	}
 
-	rest.rc.Success(c, "获取成功！", address)
+	var addressResult struct{
+		model.Address
+		Distance float64 `json:"distance,omitempty"`
+		OutRange bool    `json:"out_range,omitempty"`
+	}
+
+	addressResult.Address = address
+
+	fmt.Println(address.Latitude,address.Longitude)
+
+	distanceFloat := util.EarthDistance(address.Latitude, address.Longitude, store.Latitude, store.Longitude)
+
+	distance, _ := strconv.ParseFloat(fmt.Sprintf("%.2f", distanceFloat), 64)
+
+	// 超出距离
+	if distance > takeOut.DeliveryDistance {
+		addressResult.OutRange = true
+	}
+
+	addressResult.Distance = distance
+
+	rest.rc.Success(c, "获取成功！", addressResult)
 
 }
 
@@ -141,6 +239,24 @@ func (rest *Address) Store(c *gin.Context) {
 		return
 	}
 
+	geo := model.GeoAddress(addr)
+
+	if len(geo.MapGeoCodes) == 0 {
+		rest.rc.Error(c, "该地址不存在", nil)
+		return
+	}
+
+	if len(geo.MapGeoCodes) > 1 {
+		rest.rc.Error(c, "该地址不够详细，请补全详细地址", nil)
+		return
+	}
+
+	location := geo.MapGeoCodes[0].Location
+	lMap := strings.Split(location, ",")
+
+	longitude, _ := strconv.ParseFloat(lMap[0], 64)
+	latitude, _ := strconv.ParseFloat(lMap[1], 64)
+
 	room := c.PostForm("room")
 	if room == "" {
 		rest.rc.Error(c, "门牌号不能为空哦！", nil)
@@ -155,13 +271,15 @@ func (rest *Address) Store(c *gin.Context) {
 	}
 
 	address := model.Address{
-		Mid:     mid.(int),
-		Name:    name,
-		Gender:  genderInt,
-		Mobile:  mobileInt,
-		Address: addr,
-		Room:    room,
-		Default: dInt,
+		Mid:       mid.(int),
+		Name:      name,
+		Gender:    genderInt,
+		Mobile:    mobileInt,
+		Address:   addr,
+		Longitude: longitude,
+		Latitude:  latitude,
+		Room:      room,
+		Default:   dInt,
 	}
 
 	if dInt == 1 {
@@ -245,6 +363,25 @@ func (rest *Address) Edit(c *gin.Context) {
 		return
 	}
 
+	geo := model.GeoAddress(addr)
+
+	if len(geo.MapGeoCodes) == 0 {
+		rest.rc.Error(c, "该地址不存在", nil)
+		return
+	}
+
+	if len(geo.MapGeoCodes) > 1 {
+		rest.rc.Error(c, "该地址不够详细，请补全详细地址", nil)
+		return
+	}
+
+	location := geo.MapGeoCodes[0].Location
+
+	lMap := strings.Split(location, ",")
+
+	longitude, _ := strconv.ParseFloat(lMap[0], 64)
+	latitude, _ := strconv.ParseFloat(lMap[1], 64)
+
 	room := c.PostForm("room")
 	if room == "" {
 		rest.rc.Error(c, "门牌号不能为空哦！", nil)
@@ -269,14 +406,16 @@ func (rest *Address) Edit(c *gin.Context) {
 	}
 
 	address := model.Address{
-		Mid:     mid.(int),
-		Id:      oAddr.Id,
-		Name:    name,
-		Gender:  genderInt,
-		Mobile:  mobileInt,
-		Address: addr,
-		Room:    room,
-		Default: dInt,
+		Mid:       mid.(int),
+		Id:        oAddr.Id,
+		Name:      name,
+		Gender:    genderInt,
+		Mobile:    mobileInt,
+		Address:   addr,
+		Longitude: longitude,
+		Latitude:  latitude,
+		Room:      room,
+		Default:   dInt,
 	}
 
 	if dInt == 1 {
@@ -317,7 +456,7 @@ func (rest *Address) Delete(c *gin.Context) {
 
 	address := model.Address{}
 
-	result := cmf.NewDb().Where("id = ? AND mid = ?", rewrite.Id,mid).Delete(&address)
+	result := cmf.NewDb().Where("id = ? AND mid = ?", rewrite.Id, mid).Delete(&address)
 
 	if result.Error != nil {
 		rest.rc.Error(c, result.Error.Error(), nil)

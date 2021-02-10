@@ -13,6 +13,7 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
+	"gincmf/app/util"
 	easyUtil "github.com/gincmf/alipayEasySdk/util"
 	"testing"
 )
@@ -59,4 +60,13 @@ func Test_getSign(t *testing.T) {
 		fmt.Println("err", err)
 	}
 
+}
+
+func Test_getDistance(t *testing.T){
+
+
+
+	result := util.EarthDistance(31.3200050,121.4848560,31.2244920,121.5411470)
+
+	fmt.Println(result)
 }

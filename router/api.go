@@ -14,6 +14,9 @@ import (
 //web路由初始化
 func ApiListenRouter() {
 
+	// 全局中间件
+	cmf.HandleFunc = append(cmf.HandleFunc,middleware.AllowCors)
+
 	adminGroup := cmf.Group("api/admin", middleware.ValidationBearerToken, middleware.ValidationAdmin, middleware.ApiBaseController, middleware.Rbac)
 	{
 		adminGroup.Rest("/settings", new(admin.SettingsController))

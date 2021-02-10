@@ -6,12 +6,32 @@
 package model
 
 import (
+	"encoding/json"
 	"gincmf/app/util"
 	cmf "github.com/gincmf/cmf/bootstrap"
+	cmfUtil "github.com/gincmf/cmf/util"
 	"math"
 	"strconv"
 	"time"
 )
+
+type GeoResult struct {
+	Status      string     `json:"status"`
+	Info        string     `json:"info"`
+	InfoCode    string     `json:"infocode"`
+	Count       string     `json:"count"`
+	MapGeoCodes []geoCodes `json:"geocodes"`
+}
+
+type geoCodes struct {
+	FormattedAddress string `json:"formatted_address"`
+	Country          string `json:"country"`
+	Province         string `json:"province"`
+	Citycode         string `json:"citycode"`
+	City             string `json:"city"`
+	District         string `json:"district"`
+	Location         string `json:"location"`
+}
 
 func QueueNo(appId string) string {
 	// 生成取餐号
@@ -41,4 +61,14 @@ func QueueNo(appId string) string {
 	cmf.NewRedisDb().ExpireAt(insertKey, today)
 
 	return queueNo
+}
+
+func GeoAddress(address string) GeoResult {
+	url := "https://restapi.amap.com/v3/geocode/geo?address=" + address + "&key=76ac3510ca6d38aac23ddd8ba6d92aab"
+	_, geoResult := cmfUtil.Request("GET", url, nil, nil)
+
+	var geo GeoResult
+	_ = json.Unmarshal(geoResult,&geo)
+
+	return geo
 }

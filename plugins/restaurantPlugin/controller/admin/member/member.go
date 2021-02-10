@@ -27,7 +27,7 @@ func (rest *Index) Get (c *gin.Context) {
 
 	mid, _ := c.Get("mid")
 
-	var query = []string{"mid = ?","u.delete_at = ?"}
+	var query = []string{"u.mid = ?","u.delete_at = ?"}
 	var queryArgs = []interface{}{mid,0}
 
 	u := model.User{}

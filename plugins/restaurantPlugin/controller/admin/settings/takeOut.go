@@ -34,7 +34,7 @@ func (rest *TakeOut) Show(c *gin.Context) {
 
 	op := model.Option{}
 
-	result := cmf.NewDb().Where("option_name = ? AND store_id = ? AND mid = ?", "take_out", rewrite.Id,mid).First(&op)
+	result := cmf.NewDb().Where("option_name = ? AND store_id = ? AND mid = ?", "take_out", rewrite.Id, mid).First(&op)
 	if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, result.Error.Error(), nil)
 		return
@@ -60,6 +60,10 @@ func (rest *TakeOut) Edit(c *gin.Context) {
 		StopBeforeMin      int     `json:"stop_before_min"`
 		AutomaticOrder     int     `json:"automatic_order"`   // 自动接单
 		DeliveryDistance   float64 `json:"delivery_distance"` // 配送距离
+		StartKm            float64 `json:"start_km"`          // 起步km
+		StartFee           float64 `json:"start_fee"`         // 起步价格
+		StepKm             float64 `json:"step_km"`           // 阶梯距离
+		StepFee            float64 `json:"step_fee"`          // 阶梯价格
 	}
 
 	err := c.ShouldBindJSON(&form)
@@ -112,6 +116,16 @@ func (rest *TakeOut) Edit(c *gin.Context) {
 		automaticOrder = 1
 	}
 
+	if form.StartKm == 0 {
+		rest.rc.Error(c, "起步公里不能为空！", nil)
+		return
+	}
+
+	if form.StartFee == 0 {
+		rest.rc.Error(c, "起步价不能为空！", nil)
+		return
+	}
+
 	op.Mid = mid.(int)
 	op.StoreId = form.StoreId
 	op.AutoLoad = 1
@@ -126,6 +140,10 @@ func (rest *TakeOut) Edit(c *gin.Context) {
 		AutomaticOrder:     automaticOrder,
 		DeliveryDistance:   form.DeliveryDistance,
 		StopBeforeMin:      form.StopBeforeMin,
+		StartKm:            form.StartKm,
+		StartFee:           form.StartFee,
+		StepKm:             form.StepKm,
+		StepFee:            form.StepFee,
 	}
 	val, err := json.Marshal(ei)
 	if err != nil {

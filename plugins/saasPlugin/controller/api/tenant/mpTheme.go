@@ -7,7 +7,9 @@ package tenant
 
 import (
 	"fmt"
-	"gincmf/app/model"
+	cmfModel "gincmf/app/model"
+	"gincmf/plugins/saasPlugin/model"
+
 	"gincmf/app/util"
 	"github.com/gin-gonic/gin"
 	cmf "github.com/gincmf/cmf/bootstrap"
@@ -57,23 +59,24 @@ func (rest *MpTheme) Get(c *gin.Context) {
 		result := cmf.NewDb().Where("theme_id = ? and home = 1", v.Id).First(&mpThemeFile)
 
 		// 对外加密id
-		number := util.EncodeId(uint64(mpThemeFile.Id))
+		mid := util.EncodeId(uint64(mpThemeFile.Id))
 
 		if result.Error != nil {
 			themeFile := model.MpThemePage{
 				ThemeId:  v.Id,
+				Mid:      v.Mid,
 				Title:    "首页",
 				Home:     1,
 				CreateAt: time.Now().Unix(),
 			}
 			cmf.NewDb().Create(&themeFile)
 
-			number = util.EncodeId(uint64(themeFile.Id))
+			mid = util.EncodeId(uint64(themeFile.Id))
 		}
 
 		temp = append(temp, tempStruct{
 			MpTheme: v,
-			HomeId:  number,
+			HomeId:  mid,
 		})
 
 	}
@@ -83,7 +86,7 @@ func (rest *MpTheme) Get(c *gin.Context) {
 		return
 	}
 
-	paginationData := &model.Paginate{Data: temp, Current: intCurrent, PageSize: intPageSize, Total: total}
+	paginationData := cmfModel.Paginate{Data: temp, Current: intCurrent, PageSize: intPageSize, Total: total}
 	if len(temp) == 0 {
 		paginationData.Data = make([]string, 0)
 	}
@@ -102,7 +105,7 @@ func (rest *MpTheme) Show(c *gin.Context) {
 	}
 
 	mp := model.MpTheme{}
-	cmf.NewDb().Where("id = ?",rewrite.Id).First(&mp)
+	cmf.NewDb().Where("id = ?", rewrite.Id).First(&mp)
 
 	rest.rc.Success(c, "获取成功！", mp)
 
@@ -125,10 +128,10 @@ func (rest *MpTheme) Edit(c *gin.Context) {
 	}
 
 	mp := model.MpTheme{}
-	tx := cmf.NewDb().Where("id = ?",rewrite.Id).First(&mp)
+	tx := cmf.NewDb().Where("id = ?", rewrite.Id).First(&mp)
 
 	if tx.RowsAffected == 0 {
-		rest.rc.Error(c,"该小程序不存在！",nil)
+		rest.rc.Error(c, "该小程序不存在！", nil)
 		return
 	}
 
@@ -136,7 +139,7 @@ func (rest *MpTheme) Edit(c *gin.Context) {
 
 	cmf.NewDb().Save(&mp)
 
-	rest.rc.Success(c,"修改成功！",nil)
+	rest.rc.Success(c, "修改成功！", nil)
 
 }
 
@@ -157,7 +160,7 @@ func (rest *MpTheme) Store(c *gin.Context) {
 	cmf.NewDb().Model(&model.MpTheme{}).Where("delete_at = 0").Count(&count)
 
 	if count > 2 {
-		rest.rc.Error(c,"体验用户最多可以生成三个小程序！",nil)
+		rest.rc.Error(c, "体验用户最多可以生成三个小程序！", nil)
 		return
 	}
 
@@ -191,10 +194,10 @@ func (rest *MpTheme) Store(c *gin.Context) {
 
 	nStr := yearStr + monthStr + dayStr + strconv.FormatInt(val, 10)
 	n, _ := strconv.Atoi(nStr)
-	number := util.EncodeId(uint64(n))
+	mid := util.EncodeId(uint64(n))
 
 	mpTheme := model.MpTheme{
-		Number:   number,
+		Mid:      mid,
 		Name:     name,
 		ThemeId:  themeId,
 		TenantId: tenantId,
@@ -212,7 +215,9 @@ func (rest *MpTheme) Store(c *gin.Context) {
 		if themeId == 0 {
 			mpThemeFile = append(mpThemeFile, model.MpThemePage{
 				ThemeId:  mpTheme.Id,
+				Mid: mid,
 				Title:    "首页",
+				File: "home",
 				Home:     1,
 				CreateAt: time.Now().Unix(),
 			})
@@ -245,13 +250,12 @@ func (rest *MpTheme) Delete(c *gin.Context) {
 		return
 	}
 
-
 	mp := model.MpTheme{
-		Id: rewrite.Id,
+		Id:       rewrite.Id,
 		DeleteAt: time.Now().Unix(),
 	}
 	cmf.NewDb().Updates(&mp)
 
-	rest.rc.Success(c,"删除成功！",nil)
+	rest.rc.Success(c, "删除成功！", nil)
 
 }

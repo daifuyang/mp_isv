@@ -41,4 +41,5 @@ func StartTenantMigrate() {
 	new(model.AdminNotice).AutoMigrate()
 	new(model.ScoreLog).AutoMigrate()
 	new(model.ExpLog).AutoMigrate()
+	new(model.RechargeLog).AutoMigrate()
 }

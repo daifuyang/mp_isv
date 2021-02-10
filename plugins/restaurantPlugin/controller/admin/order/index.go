@@ -45,7 +45,7 @@ func (rest *Index) Index(c *gin.Context) {
 
 	mid, _ := c.Get("mid")
 
-	var query = []string{"mid = ?"}
+	var query = []string{"fo.mid = ?"}
 	var queryArgs = []interface{}{mid}
 
 	// 订单号
@@ -206,7 +206,7 @@ func (rest *Index) Order(w http.ResponseWriter, r *http.Request) {
 			c.Close()
 		}
 		var result struct {
-			Mid         int `json:"mid"`
+			Mid         string `json:"mid"`
 			Token       string `json:"token"`
 			OrderId     string `json:"order_id"`
 			StoreId     string `json:"store_id"`
@@ -235,12 +235,12 @@ func (rest *Index) Order(w http.ResponseWriter, r *http.Request) {
 		}
 
 		mid := result.Mid
-		if mid == 0 {
-			c.WriteMessage(mt, []byte( rest.rc.JsonError("mid不能为空！", nil) ));
+		if mid == "" {
+			c.WriteMessage(mt, []byte( rest.rc.JsonError("mid不能为空！", nil) ))
 			return
 		}
 
-		var query = []string{"mid = ?"}
+		var query = []string{"fo.mid = ?"}
 		var queryArgs = []interface{}{mid}
 		// 订单号
 		orderId := result.OrderId

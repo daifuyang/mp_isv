@@ -76,6 +76,24 @@ func (rest *Index) Get(c *gin.Context) {
 	rest.rc.Success(c, "获取成功！", data)
 }
 
+func (rest *Index) List(c *gin.Context) {
+
+	mid, _ := c.Get("mid")
+
+	var query = []string{"mid = ?"}
+	var queryArgs = []interface{}{mid}
+
+	data, err :=  new(model.Voucher).List(query,queryArgs)
+
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
+	rest.rc.Success(c, "获取成功！", data)
+
+}
+
 func (rest *Index) Show(c *gin.Context) {
 	var rewrite struct {
 		Id int `uri:"id"`

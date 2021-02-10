@@ -229,6 +229,8 @@ func (rest Food) Edit(c *gin.Context) {
 		return
 	}
 
+	excerpt := c.PostForm("excerpt")
+
 	storeId := c.PostForm("store_id")
 	if storeId == "" {
 		rest.rc.Error(c, "门店不能为空！", nil)
@@ -250,24 +252,24 @@ func (rest Food) Edit(c *gin.Context) {
 
 	// 菜品类型
 	dishType := c.PostForm("dish_type")
-	if dishType == "" {
+	/*if dishType == "" {
 		rest.rc.Error(c, "菜品类型不能为空！", nil)
 		return
-	}
+	}*/
 
 	// 口味
 	flavor := c.PostForm("flavor")
-	if flavor == "" {
+	/*if flavor == "" {
 		rest.rc.Error(c, "菜品口味不能为空！", nil)
 		return
-	}
+	}*/
 
 	// 做法
 	cookingMethod := c.PostForm("cooking_method")
-	if cookingMethod == "" {
+	/*if cookingMethod == "" {
 		rest.rc.Error(c, "菜品做法不能为空！", nil)
 		return
-	}
+	}*/
 
 	// 获取菜品的图片
 	thumbnail := c.PostForm("thumbnail")
@@ -459,6 +461,7 @@ func (rest Food) Edit(c *gin.Context) {
 			Id:               rewrite.Id,
 			Mid:              midInt,
 			Name:             name,
+			Excerpt:          excerpt,
 			FoodCode:         foodCode,
 			DishType:         dishType,
 			Flavor:           flavor,
@@ -526,11 +529,13 @@ func (rest Food) Edit(c *gin.Context) {
 		for _, v := range materialMap {
 			materialPost := model.FoodMaterialPost{
 				FoodId:        food.Id,
+				Mid:           midInt,
 				MaterialName:  v.MaterialName,
 				MaterialPrice: v.MaterialPrice,
 			}
 			materialArr = append(materialArr, materialPost)
 		}
+
 		fmp := model.FoodMaterialPost{
 			FoodId: food.Id,
 			Db:     tx,
@@ -546,11 +551,24 @@ func (rest Food) Edit(c *gin.Context) {
 	}
 
 	if useSkuInt == 1 {
+
+		//
+		var attrQuery []string
+		var attrQueryArgs []interface{}
+
+		var skuDelQuery []string
+		var skuDelQueryArgs []interface{}
 		// 解析多规格
 		var skuMap []skuJson
 		json.Unmarshal(skuBytes, &skuMap)
 
+		if len(skuMap) == 0 {
+			rest.rc.Error(c, "规格最少启用一项！", nil)
+			return
+		}
+		var skus []model.FoodSku
 		for _, v := range skuMap {
+
 			// 增加规格值
 			attrValue := model.FoodAttrValue{
 				AttrId:    v.AttrKeyId,
@@ -583,27 +601,20 @@ func (rest Food) Edit(c *gin.Context) {
 			// 获取规格唯一对应的键值id,多个用|分隔
 			attrPostId := strconv.Itoa(attrPost.AttrPostId)
 
+			skuDelQuery = append(skuDelQuery, "attr_post != ?")
+			skuDelQueryArgs = append(skuDelQueryArgs, attrPostId)
+
+			attrQuery = append(attrQuery, "attr_post_id != ?")
+			attrQueryArgs = append(attrQueryArgs, attrPostId)
+
 			// [1,2,3] [3,4,5] 删除4，5
 			var fSku []model.FoodSku
 			tx.Where("food_id = ?", food.Id).Find(&fSku)
 
-			// 删除多余的规格
-			bool := 0
-			for _, fv := range fSku {
-				// 如果被删除了
-				if !(fv.AttrPost == attrPostId) {
-					bool = fv.SkuId
-				}
-				bool = 0
-			}
-
-			if bool > 0 {
-				tx.Where("sku_id = ?", bool).Delete(&model.FoodSku{})
-			}
-
 			sku := model.FoodSku{
 				AttrPost:         attrPostId,
 				FoodId:           food.Id,
+				AttrValue:        v.AttrValue,
 				Code:             v.Code,
 				Inventory:        v.Inventory,
 				DefaultInventory: v.Inventory,
@@ -612,22 +623,50 @@ func (rest Food) Edit(c *gin.Context) {
 				OriginalPrice:    v.OriginalPrice,
 				Price:            v.Price,
 				Volume:           v.Volume,
+				Remark:           attrValue.AttrValue,
 				Db:               tx,
 			}
 
-			_, err := sku.FirstOrSave()
+			skus = append(skus, sku)
+		}
 
+		skuDelQuery = append(skuDelQuery, "food_id = ?")
+		skuDelQueryStr := strings.Join(skuDelQuery, " AND ")
+		skuDelQueryArgs = append(skuDelQueryArgs, food.Id)
+
+		tx.Where(skuDelQueryStr, skuDelQueryArgs...).Delete(&model.FoodSku{})
+
+		attrQuery = append(attrQuery, "food_id = ?")
+		attrQueryStr := strings.Join(attrQuery, " AND ")
+		attrQueryArgs = append(attrQueryArgs, food.Id)
+		tx.Where(attrQueryStr, attrQueryArgs...).Delete(&model.FoodAttrPost{})
+
+		for _, sku := range skus {
+			_, err := sku.FirstOrSave()
 			if err != nil {
 				tx.RollbackTo("sp1")
 				rest.rc.Error(c, err.Error(), nil)
 				return
 			}
-
 		}
+
 	}
 
 	tx.Commit()
 	rest.rc.Success(c, "更新成功！", food)
+}
+
+func (rest Food) inAttrKeys(attrKeys []string, key int) bool {
+
+	for _, v := range attrKeys {
+		k, _ := strconv.Atoi(v)
+		if k == key {
+			return true
+		}
+	}
+
+	return false
+
 }
 
 /**
@@ -681,6 +720,9 @@ func (rest Food) Store(c *gin.Context) {
 		return
 	}
 
+	// 摘要
+	excerpt := c.PostForm("excerpt")
+
 	// 所在门店
 	storeId := c.PostForm("store_id")
 	if storeId == "" {
@@ -703,24 +745,24 @@ func (rest Food) Store(c *gin.Context) {
 
 	// 菜品类型
 	dishType := c.PostForm("dish_type")
-	if dishType == "" {
+	/*if dishType == "" {
 		rest.rc.Error(c, "菜品类型不能为空！", nil)
 		return
-	}
+	}*/
 
 	// 口味
 	flavor := c.PostForm("flavor")
-	if flavor == "" {
+	/*if flavor == "" {
 		rest.rc.Error(c, "菜品口味不能为空！", nil)
 		return
-	}
+	}*/
 
 	// 做法
 	cookingMethod := c.PostForm("cooking_method")
-	if cookingMethod == "" {
+	/*if cookingMethod == "" {
 		rest.rc.Error(c, "菜品做法不能为空！", nil)
 		return
-	}
+	}*/
 
 	// 获取菜品的图片
 	thumbnail := c.PostForm("thumbnail")
@@ -921,6 +963,7 @@ func (rest Food) Store(c *gin.Context) {
 		FoodStoreHouse: model.FoodStoreHouse{
 			Mid:              midInt,
 			Name:             name,
+			Excerpt:          excerpt,
 			FoodCode:         foodCode,
 			DishType:         dishType,
 			Flavor:           flavor,
@@ -988,6 +1031,7 @@ func (rest Food) Store(c *gin.Context) {
 		for _, v := range materialMap {
 			materialPost := model.FoodMaterialPost{
 				FoodId:        food.Id,
+				Mid:           midInt,
 				MaterialName:  v.MaterialName,
 				MaterialPrice: v.MaterialPrice,
 			}
@@ -1012,6 +1056,8 @@ func (rest Food) Store(c *gin.Context) {
 		// 解析多规格
 		var skuMap []skuJson
 		json.Unmarshal(skuBytes, &skuMap)
+
+		fmt.Println("skuMap", skuMap)
 
 		for _, v := range skuMap {
 			// 增加规格值
@@ -1053,8 +1099,6 @@ func (rest Food) Store(c *gin.Context) {
 			var fSku []model.FoodSku
 			tx.Where("food_id = ?", food.Id).Find(&fSku)
 
-			fmt.Println("fsku", fSku)
-
 			for _, fv := range fSku {
 				// 如果被删除了
 				if !(fv.FoodId == v.FoodId && fv.AttrPost == attrPostId) {
@@ -1074,6 +1118,7 @@ func (rest Food) Store(c *gin.Context) {
 				OriginalPrice:    v.OriginalPrice,
 				Price:            v.Price,
 				Volume:           v.Volume,
+				Remark:           attrValue.AttrValue,
 				Db:               tx,
 			}
 

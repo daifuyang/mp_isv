@@ -26,7 +26,7 @@ func (rest *Level) Show(c *gin.Context) {
 
 	// 配置卡券基本配置
 	op := model.Option{}
-	vipResult := cmf.NewDb().Where("option_name = ? AND mid = ?", "vip_info",mid).First(&op)
+	vipResult := cmf.NewDb().Where("option_name = ? AND mid = ?", "vip_info", mid).First(&op)
 	if vipResult.Error != nil && !errors.Is(vipResult.Error, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, vipResult.Error.Error(), nil)
 		return
@@ -99,7 +99,7 @@ func (rest *Level) Edit(c *gin.Context) {
 
 	// 配置卡券基本配置
 	op := model.Option{}
-	vipResult := cmf.NewDb().Where("option_name = ? AND mid = ?", "vip_info",mid).First(&op)
+	vipResult := cmf.NewDb().Where("option_name = ? AND mid = ?", "vip_info", mid).First(&op)
 	if vipResult.Error != nil && !errors.Is(vipResult.Error, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, vipResult.Error.Error(), nil)
 		return

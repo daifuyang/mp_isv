@@ -9,11 +9,10 @@ import (
 	"gincmf/app/middleware"
 	"gincmf/app/migrate"
 	AliMiddle "gincmf/plugins/alipayPlugin/middleware"
-	"gincmf/plugins/restaurantPlugin"
-	resModel "gincmf/plugins/restaurantPlugin/model"
 	"gincmf/plugins/saasPlugin/controller/api/common"
 	"gincmf/plugins/saasPlugin/controller/api/tenant"
 	"gincmf/plugins/saasPlugin/controller/app"
+	saasMigrate "gincmf/plugins/saasPlugin/migrate"
 	"github.com/gin-gonic/gin"
 	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/model"
@@ -33,8 +32,11 @@ func ApiListenRouter() {
 		tenantGroup.Post("/mp/apps/:id", new(tenant.MpTheme).Edit)
 		tenantGroup.Delete("/mp/apps/:id", new(tenant.MpTheme).Delete)
 
+		// 根据mid获取主题首页
+		tenantGroup.Get("/mp/theme/home",middleware.ValidationMerchant,new(tenant.MpThemePage).Home)
+
 		// 小程序页面管理
-		tenantGroup.Rest("/mp/page", new(tenant.MpThemePageController))
+		tenantGroup.Rest("/mp/page", new(tenant.MpThemePage))
 		// 资源管理
 		tenantGroup.Rest("/assets", new(tenant.AssetsController))
 
@@ -42,9 +44,8 @@ func ApiListenRouter() {
 		tenantGroup.Get("/sync", func(c *gin.Context) {
 			new(migrate.AdminMenu).AutoMigrate()
 			migrate.StartTenantMigrate()
-			restaurantPlugin.AutoMigrate()
+			saasMigrate.AutoMigrate()
 			// 地址
-			cmf.NewDb().AutoMigrate(&resModel.Address{})
 			c.JSON(200, model.ReturnData{
 				Code: 1,
 				Data: nil,
@@ -57,9 +58,10 @@ func ApiListenRouter() {
 	common.RegisterTenantRouter()
 
 	// 小程序路由注册
-	appGroup := cmf.Group("api/v1/app", middleware.ValidationMp,middleware.ValidationUserId,AliMiddle.AppAuthToken)
+	appGroup := cmf.Group("api/v1/app", middleware.ValidationMp)
 	{
-		appGroup.Post("/user/detail",new(app.User).Show)
-		appGroup.Post("/user/edit",new(app.User).Edit)
+		appGroup.Post("/user/detail",middleware.ValidationUserId,AliMiddle.AppAuthToken,new(app.User).Show)
+		appGroup.Post("/user/edit",middleware.ValidationUserId,new(app.User).Edit)
+		appGroup.Post("/theme_file",new(tenant.MpThemePage).Detail)
 	}
 }

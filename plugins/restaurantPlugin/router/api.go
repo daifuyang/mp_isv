@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"gincmf/app/middleware"
 	AliMiddle "gincmf/plugins/alipayPlugin/middleware"
+	"gincmf/plugins/restaurantPlugin/controller/admin/action"
 	"gincmf/plugins/restaurantPlugin/controller/admin/card"
 	"gincmf/plugins/restaurantPlugin/controller/admin/desk"
 	"gincmf/plugins/restaurantPlugin/controller/admin/dishes"
@@ -64,6 +65,7 @@ func ApiListenRouter() {
 
 		// 订单管理
 		adminGroup.Get("/order/index", new(order.Index).Index)
+
 		// 确认订单
 		adminGroup.Post("/order/confirm", new(order.Index).Confirm)
 
@@ -109,6 +111,8 @@ func ApiListenRouter() {
 
 		// 打印机
 		adminGroup.Rest("/printer", new(printer.Printer))
+
+		adminGroup.Get("/voucher_list", new(voucher.Index).List)
 	}
 
 	// 小程序路由注册
@@ -116,7 +120,8 @@ func ApiListenRouter() {
 	{
 		// 获取小程序用户
 		appGroup.Get("/user/detail", middleware.ValidationUserId, new(rtUser.User).Show)
-		appGroup.Post("/user/save", middleware.ValidationUserId, new(rtUser.User).Save)
+		appGroup.Post("/user/save",middleware.ValidationOpenId, new(rtUser.User).Save)
+		appGroup.Post("/user/save/mobile",middleware.ValidationOpenId, new(rtUser.User).SaveMobile)
 
 		// 门店列表
 		appGroup.Get("/store", new(rtStore.Index).List)
@@ -132,6 +137,11 @@ func ApiListenRouter() {
 
 		// 获取订单列表
 		appGroup.Get("/order/list", middleware.ValidationUserId, new(rtOrder.Order).Get)
+		appGroup.Get("/order/detail/:id", middleware.ValidationUserId, new(rtOrder.Order).Show)
+
+		// 会员卡开通订单列表
+		appGroup.Get("/order/card", middleware.ValidationUserId, new(rtCard.Order).Get)
+
 		// 创建订单
 		appGroup.Post("/order/pre_create", middleware.ValidationUserId, AliMiddle.AppAuthToken, rtMiddle.ValidationStore, new(rtOrder.Order).PreCreate)
 		// 支付宝订单支付完成回调url
@@ -158,10 +168,17 @@ func ApiListenRouter() {
 		// 积分明细
 		appGroup.Get("/score/log", middleware.ValidationUserId, new(rtScore.Score).Score)
 
+		// 储值明细
+		appGroup.Get("/recharge/log",middleware.ValidationUserId,new(rtRecharge.Log).Get)
+
 		// 获取堂食预约
 		appGroup.Get("/appointment", rtMiddle.ValidationStore, new(common.Appointment).Show)
 
 	}
+
+	cmf.Get("api/v1/admin/action/options",middleware.ValidationBearerToken,middleware.ValidationMerchant, new(action.Page).Options)
+	cmf.Get("api/v1/admin/action/userinfo",middleware.ValidationBearerToken,middleware.ValidationMerchant, new(action.USerInfo).Options)
+
 
 	// 注册webSocket
 	cmf.Socket("/socket/v1/admin/order", new(order.Index).Order)

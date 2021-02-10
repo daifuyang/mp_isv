@@ -12,6 +12,7 @@ import (
 	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/pjebs/optimus-go"
 	"log"
+	"math"
 	"os"
 	"runtime"
 	"strconv"
@@ -230,4 +231,24 @@ func ResponseSign(params string, pk string) (sign string) {
 	sign = base64.StdEncoding.EncodeToString(s)
 
 	return sign
+}
+
+/**
+ * @Author return <1140444693@qq.com>
+ * @Description 计算两经纬度的位置
+ * @Date 2021/1/7 23:17:58
+ * @Param
+ * @return
+ **/
+
+func EarthDistance(lat1, lng1, lat2, lng2 float64) float64 {
+	radius :=6371000.0
+	rad := math.Pi / 180.0
+	lat1 = lat1 * rad
+	lng1 = lng1 * rad
+	lat2 = lat2 * rad
+	lng2 = lng2 * rad
+	theta := lng2 - lng1
+	dist := math.Acos(math.Sin(lat1)*math.Sin(lat2) + math.Cos(lat1)*math.Cos(lat2)*math.Cos(theta))
+	return dist * radius / 1000
 }

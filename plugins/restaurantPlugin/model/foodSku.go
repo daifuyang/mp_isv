@@ -15,19 +15,28 @@ import (
 type FoodSku struct {
 	SkuId            int      `gorm:"primaryKey;type:int(11) AUTO_INCREMENT;not null" json:"sku_id"`
 	FoodId           int      `gorm:"type:int(11)" json:"food_id"`
-	AttrPost         string   `gorm:"type:varchar(20);comment:对应的多选规格;not null" json:"attr_post"`
-	Code             string   `gorm:"type:varchar(20);comment:规格唯一编号;not null" json:"code"`
+	AttrValue        string   `gorm:"-" json:"attr_value"`
+	AttrPost         string   `gorm:"type:varchar(20);comment:对应的多选规格;index:idx_attr_post,unique;not null" json:"attr_post"`
+	Code             string   `gorm:"type:varchar(20);comment:规格唯一编号;index:idx_code,unique;not null" json:"code"`
 	Inventory        int      `gorm:"type:int(11);comment:库存" json:"inventory"`
 	DefaultInventory int      `gorm:"type:int(11);comment:默认库存" json:"default_inventory"`
 	UseMember        int      `gorm:"type:tinyint(3);comment:是否启用菜品会员价;not null" json:"use_member"`
 	MemberPrice      float64  `gorm:"type:decimal(9,2);comment:菜品会员价;not null" json:"member_price"`
 	OriginalPrice    float64  `gorm:"type:decimal(9,2);comment:菜品原价;not null" json:"original_price"`
 	Price            float64  `gorm:"type:decimal(9,2);comment:规格售价;not null" json:"price"`
-	Volume           int      `gorm:"type:int(11);comment:销量" json:"volume"` // 销量
+	Volume           int      `gorm:"type:int(11);comment:销量" json:"volume"`        // 销量
+	Remark           string   `gorm:"type:varchar(255);comment:规格备注" json:"remark"` // 销量
 	Db               *gorm.DB `gorm:"-" json:"-"`
 }
 
 func (model FoodSku) AutoMigrate() {
+
+	cmf.NewDb().Migrator().DropIndex(&FoodSku{}, "idx_attr_post")
+	cmf.NewDb().Migrator().DropIndex(&FoodSku{}, "idx_code")
+
+	cmf.NewDb().Migrator().CreateIndex(&FoodSku{}, "idx_attr_post")
+	cmf.NewDb().Migrator().CreateIndex(&FoodSku{}, "idx_code")
+
 	cmf.NewDb().AutoMigrate(&model)
 	cmf.NewDb().AutoMigrate(&FoodAttrKey{})
 	cmf.NewDb().AutoMigrate(&FoodAttrValue{})
@@ -53,7 +62,6 @@ func (model FoodSku) ListByFoodId(query []string, queryArgs []interface{}) ([]Fo
 	return foodSku, nil
 }
 
-
 func (model FoodSku) Show(query []string, queryArgs []interface{}) (FoodSku, error) {
 
 	if model.Db == nil {
@@ -69,7 +77,7 @@ func (model FoodSku) Show(query []string, queryArgs []interface{}) (FoodSku, err
 	return foodSku, nil
 }
 
-type SkuDetail struct{
+type SkuDetail struct {
 	FoodSku
 	SkuDetail string `json:"sku_detail"`
 }
@@ -137,12 +145,31 @@ func (model FoodSku) FirstOrSave() (FoodSku, error) {
 		return foodSku, err
 	}
 
+	// 查看编码是否为唯一
+	tx := model.Db.Where("code = ? && code != ''", model.Code).First(&Food{})
+	if tx.RowsAffected > 0 {
+		return foodSku, errors.New(model.AttrValue + "规格分类或编码已存在")
+	}
+
 	if foodSku.SkuId == 0 {
+
+		tx = model.Db.Where("attr_post = ? || (code = ? && code != '')", model.AttrPost, model.Code).First(&FoodSku{})
+		if tx.RowsAffected > 0 {
+			return foodSku, errors.New(model.AttrValue + "规格分类或编码已存在")
+		}
+
 		result := model.Db.Create(&model)
 		if result.Error != nil {
 			return foodSku, result.Error
 		}
 	} else {
+
+		// 查看编码是否为唯一
+		tx := model.Db.Debug().Where("(attr_post = ? || (code = ? && code != '')) AND  sku_id != ?", model.AttrPost, model.Code, foodSku.SkuId).First(&FoodSku{})
+		if tx.RowsAffected > 0 {
+			return foodSku, errors.New(model.AttrValue + "规格分类或编码已存在")
+		}
+
 		model.SkuId = foodSku.SkuId
 		result := model.Db.Save(&model)
 		if result.Error != nil {

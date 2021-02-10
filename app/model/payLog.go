@@ -13,6 +13,7 @@ type PayLog struct {
 	TradeNo        string  `gorm:"type:varchar(64);comment:第三方订单号;not null" json:"trade_no"`
 	Type           string  `gorm:"type:varchar(40);comment:支付类型;not null" json:"type"`
 	AppId          string  `gorm:"type:varchar(32);comment:小程序appId;not null" json:"app_id"`
+	UserId         int     `gorm:"type:int(11);comment:下单人信息" json:"user_id"`
 	BuyerId        string  `gorm:"type:varchar(16);comment:支付宝付款人id" json:"buyer_id"`
 	TotalAmount    float64 `gorm:"type:decimal(9,2);comment:本次交易支付的订单金额，单位为人民币（元）;not null" json:"total_amount"`
 	ReceiptAmount  float64 `gorm:"type:decimal(9,2);comment:商家在交易中实际收到的款项，单位为人民币（元）" json:"receipt_amount"`

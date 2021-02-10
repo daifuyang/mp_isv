@@ -14,6 +14,7 @@ import (
 	"github.com/gincmf/cmf/controller"
 	cmfLog "github.com/gincmf/cmf/log"
 	"log"
+	"net/http"
 	"strconv"
 	"strings"
 )
@@ -70,26 +71,24 @@ func ValidationMp(c *gin.Context) {
 	db := "tenant_" + strconv.Itoa(mpAuth.TenantId)
 	cmf.ManualDb(db)
 
-	mpJson,_ := json.Marshal(&mpAuth)
+	mpJson, _ := json.Marshal(&mpAuth)
 
 	appIdInt, _ := strconv.Atoi(appId)
 
 	mid := mpAuth.MpId
 
-	c.Set("mid",mid)
+	c.Set("mid", mid)
 	c.Set("app_id", appIdInt)
-	c.Set("mp_type",mpAuth.Type)
-	c.Set("mp_json",string(mpJson))
+	c.Set("mp_type", mpAuth.Type)
+	c.Set("mp_json", string(mpJson))
 	c.Next()
 }
 
-func ValidationUserId(c *gin.Context)  {
+func ValidationOpenId(c *gin.Context) {
 
 	r := c.Request
 	r.ParseForm()
 	openId := strings.Join(r.Form["open_id"], "")
-
-	fmt.Println("openId",openId)
 
 	if openId == "" {
 		controller.RestController{}.Error(c, "小程序open_id不能为空！", nil)
@@ -97,16 +96,46 @@ func ValidationUserId(c *gin.Context)  {
 		return
 	}
 
-	tp :=  model.ThirdPart{}
-	result :=  cmf.NewDb().Where("open_id",openId).First(&tp)
+	tp := model.ThirdPart{}
+	result := cmf.NewDb().Where("open_id", openId).First(&tp)
+	if result.RowsAffected == 0 {
+		controller.RestController{}.Error(c, "用户open_id不存在！", nil)
+		c.Abort()
+		return
+	}
+	c.Set("open_id", tp.OpenId)
+	c.Next()
+
+}
+
+func ValidationUserId(c *gin.Context) {
+
+	r := c.Request
+	r.ParseForm()
+	openId := strings.Join(r.Form["open_id"], "")
+
+	if openId == "" {
+		controller.RestController{}.Error(c, "小程序open_id不能为空！", nil)
+		c.Abort()
+		return
+	}
+
+	tp := model.ThirdPart{}
+	result := cmf.NewDb().Where("open_id", openId).First(&tp)
 	if result.RowsAffected == 0 {
 		controller.RestController{}.Error(c, "用户open_id不存在！", nil)
 		c.Abort()
 		return
 	}
 
-	c.Set("mp_user_id",tp.UserId)
-	c.Set("open_id",tp.OpenId)
+	if tp.UserId == 0 {
+		c.JSON(http.StatusOK, model.ReturnData{Code: 20000, Msg: "请先绑定手机号！"})
+		c.Abort()
+		return
+	}
+
+	c.Set("mp_user_id", tp.UserId)
+	c.Set("open_id", tp.OpenId)
 	c.Next()
 
 }

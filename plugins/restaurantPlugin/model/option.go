@@ -52,6 +52,10 @@ type TakeOut struct {
 	AutomaticOrder     int     `json:"automatic_order"`   // 自动接单
 	DeliveryDistance   float64 `json:"delivery_distance"` // 配送距离
 	StopBeforeMin      int     `json:"stop_before_min"`   //停止营业前停止接单
+	StartKm            float64 `json:"start_km"`          // 起步km
+	StartFee           float64 `json:"start_fee"`         // 起步价格
+	StepKm             float64 `json:"step_km"`           // 阶梯距离
+	StepFee            float64 `json:"step_fee"`          // 阶梯价格
 }
 
 type Recharge struct {
@@ -60,7 +64,7 @@ type Recharge struct {
 	Money          float64       `json:"money"`
 	EnabledPoint   int           `json:"enabled_point"`
 	Point          int           `json:"point"`
-	EnabledVoucher int           `json:"voucher_enabled"`
+	EnabledVoucher int           `json:"enabled_voucher"`
 	Voucher        []voucherItem `json:"voucher"`
 }
 
@@ -73,15 +77,15 @@ type Score struct {
 	ValidPeriod    int `json:"valid_period"`     // 有效期 （1年，永久）
 }
 
-func (model *EatIn) Show(storeId int,mid int) (*EatIn, error) {
+func (model *EatIn) Show(storeId int, mid int) (EatIn, error) {
 
 	op := Option{}
-	tx := cmf.NewDb().Where("option_name = ? AND store_id = ? AND mid = ?", "eat_in", storeId,mid).First(&op)
+	tx := cmf.NewDb().Where("option_name = ? AND store_id = ? AND mid = ?", "eat_in", storeId, mid).First(&op)
 	if tx.Error != nil {
 		if errors.Is(tx.Error, gorm.ErrRecordNotFound) {
-			return nil, errors.New("配置不存在！")
+			return EatIn{}, errors.New("配置不存在！")
 		}
-		return nil, tx.Error
+		return EatIn{}, tx.Error
 	}
 
 	val := op.OptionValue
@@ -89,6 +93,26 @@ func (model *EatIn) Show(storeId int,mid int) (*EatIn, error) {
 
 	_ = json.Unmarshal([]byte(val), &ei)
 
-	return &ei, nil
+	return ei, nil
+
+}
+
+func (model *TakeOut) Show(storeId int, mid int) (TakeOut, error) {
+
+	op := Option{}
+	tx := cmf.NewDb().Where("option_name = ? AND store_id = ? AND mid = ?", "take_out", storeId, mid).First(&op)
+	if tx.Error != nil {
+		if errors.Is(tx.Error, gorm.ErrRecordNotFound) {
+			return TakeOut{}, errors.New("配置不存在！")
+		}
+		return TakeOut{}, tx.Error
+	}
+
+	val := op.OptionValue
+	to := TakeOut{}
+
+	_ = json.Unmarshal([]byte(val), &to)
+
+	return to, nil
 
 }

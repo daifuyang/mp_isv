@@ -6,10 +6,13 @@
 package model
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	saasModel "gincmf/plugins/saasPlugin/model"
 	"github.com/gin-gonic/gin"
 	cmf "github.com/gincmf/cmf/bootstrap"
+	"github.com/gincmf/cmf/data"
 	cmfModel "github.com/gincmf/cmf/model"
 	"gorm.io/gorm"
 	"strconv"
@@ -19,39 +22,42 @@ import (
 
 // 门店信息表
 type Store struct {
-	Id             int               `json:"id"`
-	OrderId        string            `gorm:"type:varchar(64);comment:申请单id;not null" json:"order_id"`
-	Mid            int               `gorm:"type:bigint(20);comment:对应小程序id;not null" json:"mid"`
-	StoreNumber    int               `gorm:"type:int(11);comment:门店唯一编号;not null" json:"store_number"`
-	StoreName      string            `gorm:"type:varchar(32);comment:门店名称;not null" json:"store_name"`
-	StoreType      string            `gorm:"type:tinyint(3);comment:门店类型（1：直营，2：加盟）;not null" json:"store_type"`
-	TopCategory    string            `gorm:"type:varchar(10);comment:所属门店顶级id;not null" json:"top_category"`
-	ShopCategory   string            `gorm:"type:varchar(10);comment:所属门店id;not null" json:"shop_category"`
-	Phone          string            `gorm:"type:varchar(20);comment:联系电话;not null" json:"phone"`
-	ContactPerson  string            `gorm:"type:varchar(20);comment:联系人名称;not null" json:"contact_person"`
-	Province       int               `gorm:"type:int(11);comment:省份id;not null" json:"province"`
-	ProvinceName   string            `gorm:"type:varchar(20);comment:省份名称;not null" json:"province_name"`
-	City           int               `gorm:"type:int(11);comment:市区id;not null" json:"city"`
-	CityName       string            `gorm:"type:varchar(20);comment:市区名称;not null" json:"city_name"`
-	District       int               `gorm:"type:int(11);comment:县区id;not null" json:"district"`
-	DistrictName   string            `gorm:"type:varchar(20);comment:县区名称;not null" json:"district_name"`
-	Address        string            `gorm:"type:varchar(255);comment:详细地址;not null" json:"address"`
-	StoreThumbnail string            `gorm:"type:varchar(255);comment:门头照片" json:"store_thumbnail"`
-	Longitude      float64           `gorm:"type:decimal(10,7);comment:经度;not null" json:"longitude"`
-	Latitude       float64           `gorm:"type:decimal(10,7);comment:纬度;not null" json:"latitude"`
-	Scene          int               `gorm:"type:tinyint(3);comment:支持场景（0 =>全部；1=>堂食；2=>外卖）;default:0;not null" json:"scene"`
-	IsClosure      int               `gorm:"type:tinyint(3);comment:是否歇业;not null;default:0" json:"is_closure"`
-	Notice         string            `gorm:"type:varchar(255);comment:公告通知" json:"notice"`
-	CreateAt       int64             `gorm:"type:int(11)" json:"create_at"`
-	UpdateAt       int64             `gorm:"type:int(11)" json:"update_at"`
-	DeleteAt       int64             `gorm:"type:int(10);comment:删除时间;default:0" json:"delete_at"`
-	AuditStatus    string            `gorm:"type:varchar(20);comment:审核状态(passed:通过,rejected:拒绝,wait:审核中);default:wait;not null" json:"audit_status"`
-	Reason         string            `gorm:"type:varchar(255);comment:拒绝愿意" json:"reason"`
-	CreateTime     string            `gorm:"-" json:"create_time"`
-	UpdateTime     string            `gorm:"-" json:"update_time"`
-	Distance       float64           `gorm:"->" json:"distance"`
-	StoreHours     []sHours          `gorm:"-" json:"store_hours"`
-	paginate       cmfModel.Paginate `gorm:"-"`
+	Id               int               `json:"id,omitempty"`
+	OrderId          string            `gorm:"type:varchar(64);comment:申请单id;not null" json:"order_id"`
+	Mid              int               `gorm:"type:bigint(20);comment:对应小程序id;not null" json:"mid"`
+	StoreNumber      int               `gorm:"type:int(11);comment:门店唯一编号;not null" json:"store_number"`
+	StoreName        string            `gorm:"type:varchar(32);comment:门店名称;not null" json:"store_name"`
+	StoreType        string            `gorm:"type:tinyint(3);comment:门店类型（1：直营，2：加盟）;not null" json:"store_type"`
+	TopCategory      string            `gorm:"type:varchar(10);comment:所属门店顶级id;not null" json:"top_category"`
+	ShopCategory     string            `gorm:"type:varchar(10);comment:所属门店id;not null" json:"shop_category"`
+	Phone            string            `gorm:"type:varchar(20);comment:联系电话;not null" json:"phone"`
+	ContactPerson    string            `gorm:"type:varchar(20);comment:联系人名称;not null" json:"contact_person"`
+	Province         int               `gorm:"type:int(11);comment:省份id;not null" json:"province"`
+	ProvinceName     string            `gorm:"type:varchar(20);comment:省份名称;not null" json:"province_name"`
+	City             int               `gorm:"type:int(11);comment:市区id;not null" json:"city"`
+	CityName         string            `gorm:"type:varchar(20);comment:市区名称;not null" json:"city_name"`
+	District         int               `gorm:"type:int(11);comment:县区id;not null" json:"district"`
+	DistrictName     string            `gorm:"type:varchar(20);comment:县区名称;not null" json:"district_name"`
+	Address          string            `gorm:"type:varchar(255);comment:详细地址;not null" json:"address"`
+	StoreThumbnail   string            `gorm:"type:varchar(255);comment:门头照片" json:"store_thumbnail"`
+	Longitude        float64           `gorm:"type:decimal(10,7);comment:经度;not null" json:"longitude"`
+	Latitude         float64           `gorm:"type:decimal(10,7);comment:纬度;not null" json:"latitude"`
+	IsClosure        int               `gorm:"type:tinyint(3);comment:是否歇业;not null;default:0" json:"is_closure"`
+	Notice           string            `gorm:"type:varchar(255);comment:公告通知" json:"notice"`
+	CreateAt         int64             `gorm:"type:int(11)" json:"create_at"`
+	UpdateAt         int64             `gorm:"type:int(11)" json:"update_at"`
+	DeleteAt         int64             `gorm:"type:int(10);comment:删除时间;default:0" json:"delete_at"`
+	AuditStatus      string            `gorm:"type:varchar(20);comment:审核状态(passed:通过,rejected:拒绝,wait:审核中);default:wait;not null" json:"audit_status"`
+	Reason           string            `gorm:"type:varchar(255);comment:拒绝愿意" json:"reason"`
+	CreateTime       string            `gorm:"-" json:"create_time"`
+	UpdateTime       string            `gorm:"-" json:"update_time"`
+	DeliveryDistance float64           `gorm:"-" json:"delivery_distance"`
+	Distance         float64           `gorm:"->" json:"distance"`
+	OutRange         bool              `gorm:"-" json:"out_range"`
+	StoreHours       []sHours          `gorm:"-" json:"store_hours"`
+	EatIn            EatIn             `gorm:"-" json:"eat_in"`
+	TakeOut          TakeOut           `gorm:"-" json:"take_out"`
+	paginate         cmfModel.Paginate `gorm:"-"`
 }
 
 type sHours struct {
@@ -117,9 +123,25 @@ func (model *Store) Index(c *gin.Context, query []string, queryArgs []interface{
 		return cmfModel.Paginate{}, result.Error
 	}
 
-	for k, v := range store {
-		store[k].CreateTime = time.Unix(v.CreateAt, 0).Format("2006-01-02 15:04:05")
-		store[k].UpdateTime = time.Unix(v.UpdateAt, 0).Format("2006-01-02 15:04:05")
+	if len(store) > 0 {
+
+		// 获取当前堂食配置
+		takeJson := saasModel.Options("take_out", store[0].Mid)
+		var takeOut TakeOut
+
+		_ = json.Unmarshal([]byte(takeJson), &takeOut)
+
+		for k, v := range store {
+			store[k].CreateTime = time.Unix(v.CreateAt, 0).Format("2006-01-02 15:04:05")
+			store[k].UpdateTime = time.Unix(v.UpdateAt, 0).Format("2006-01-02 15:04:05")
+			store[k].DeliveryDistance = takeOut.DeliveryDistance
+			// 超出距离
+			if v.Distance > takeOut.DeliveryDistance {
+				store[k].OutRange = true
+			}
+
+		}
+
 	}
 
 	paginate := cmfModel.Paginate{Data: store, Current: current, PageSize: pageSize, Total: total}
@@ -252,7 +274,7 @@ func (model *Store) ListByDistance(query []string, queryArgs []interface{}) ([]S
 	// 合并参数合计
 	queryStr := strings.Join(query, " AND ")
 
-	var store []Store
+	var store = make([]Store, 0)
 	result := cmf.NewDb().Model(&Store{}).Select("*", "(st_distance (point (longitude,latitude),point ("+lon+","+lat+"))*111195/1000 ) as distance").
 		Where(queryStr, queryArgs...).Order("distance ASC").Scan(&store)
 
@@ -260,64 +282,78 @@ func (model *Store) ListByDistance(query []string, queryArgs []interface{}) ([]S
 		return store, result.Error
 	}
 
-	sHours := StoreHours{}
-	storeHours, err := sHours.AllHours()
+	if len(store) > 0 {
+		// 获取当前堂食配置
 
-	if err != nil {
-		return store, err
-	}
+		sHours := StoreHours{}
+		storeHours, err := sHours.AllHours()
 
-	for k, v := range store {
-
-		store[k].Id = 0
-
-		createTime := time.Unix(v.CreateAt, 0).Format("2006-01-02 15:04:05")
-		store[k].CreateTime = createTime
-
-		updateTime := time.Unix(v.UpdateAt, 0).Format("2006-01-02 15:04:05")
-		store[k].UpdateTime = updateTime
-
-		// 获取营业时间
-		hours := model.hoursInStore(v.Mid, v.Id, storeHours)
-		store[k].StoreHours = hours
-
-		// 歇业状态
-		if v.IsClosure == 0 {
-			// 获取当前时间戳
-
-			now := time.Now()
-			var todayEnd time.Time
-
-			year, month, day := now.Date()
-
-			for _, v := range hours {
-
-				t := strings.Split(v.EndTime, ":")
-				hour := 00
-				min := 00
-				if len(t) == 2 {
-					hour, _ = strconv.Atoi(t[0])
-					min, _ = strconv.Atoi(t[1])
-				}
-
-				end := time.Date(year, month, day, hour, min, 00, 00, time.Local)
-
-				fmt.Println("end", end)
-
-				// 更新最晚时间
-				if end.Sub(todayEnd) > 0 {
-					todayEnd = end
-				}
-			}
-
-			// 改为歇业状态
-
-			if todayEnd.Sub(now) < 0 {
-				store[k].IsClosure = 1
-			}
-
+		if err != nil {
+			return store, err
 		}
 
+		for k, v := range store {
+
+			store[k].Id = 0
+
+			createTime := time.Unix(v.CreateAt, 0).Format("2006-01-02 15:04:05")
+			store[k].CreateTime = createTime
+
+			updateTime := time.Unix(v.UpdateAt, 0).Format("2006-01-02 15:04:05")
+			store[k].UpdateTime = updateTime
+
+			// 获取营业时间
+			hours := model.hoursInStore(v.Mid, v.Id, storeHours)
+			store[k].StoreHours = hours
+
+			// 歇业状态
+			if v.IsClosure == 0 {
+				// 获取当前时间戳
+
+				now := time.Now()
+				var todayEnd time.Time
+
+				year, month, day := now.Date()
+
+				for _, v := range hours {
+
+					t := strings.Split(v.EndTime, ":")
+					hour := 00
+					min := 00
+					if len(t) == 2 {
+						hour, _ = strconv.Atoi(t[0])
+						min, _ = strconv.Atoi(t[1])
+					}
+
+					end := time.Date(year, month, day, hour, min, 00, 00, time.Local)
+
+					// 更新最晚时间
+					if end.Sub(todayEnd) > 0 {
+						todayEnd = end
+					}
+				}
+
+				// 改为歇业状态
+				if todayEnd.Sub(now) < 0 {
+					store[k].IsClosure = 1
+				}
+
+			}
+
+			eatIn, _ := new(EatIn).Show(v.Id, v.Mid)
+			takeOut, _ := new(TakeOut).Show(v.Id, v.Mid)
+
+			store[k].EatIn = eatIn
+			store[k].TakeOut = takeOut
+
+			// 超出距离
+			if v.Distance > takeOut.DeliveryDistance {
+				store[k].OutRange = true
+			}
+
+			store[k].DeliveryDistance = takeOut.DeliveryDistance
+
+		}
 	}
 
 	return store, nil
@@ -331,64 +367,68 @@ func (model *Store) hoursInStore(mid int, storeId int, storeHours []StoreHours) 
 		if mid == v.Mid && storeId == v.StoreId {
 
 			t := time.Now()
+			hourItem := sHours{}
+
 			switch int(t.Weekday()) {
 			case 0:
 				if v.Sun == 1 {
-					sh = append(sh, sHours{
+					hourItem = sHours{
 						StartTime: v.StartTime,
 						EndTime:   v.EndTime,
-					})
+					}
 				}
 			case 1:
 				if v.Mon == 1 {
-					sh = append(sh, sHours{
+					hourItem = sHours{
 						StartTime: v.StartTime,
 						EndTime:   v.EndTime,
-					})
+					}
 				}
 			case 2:
 				if v.Sun == 1 {
-					sh = append(sh, sHours{
+					hourItem = sHours{
 						StartTime: v.StartTime,
 						EndTime:   v.EndTime,
-					})
+					}
 				}
 			case 3:
 				if v.Wed == 1 {
-					sh = append(sh, sHours{
+					hourItem = sHours{
 						StartTime: v.StartTime,
 						EndTime:   v.EndTime,
-					})
+					}
 				}
 			case 4:
 				if v.Thur == 1 {
-					sh = append(sh, sHours{
+					hourItem = sHours{
 						StartTime: v.StartTime,
 						EndTime:   v.EndTime,
-					})
+					}
 				}
 			case 5:
 				if v.Fri == 1 {
-					sh = append(sh, sHours{
+					hourItem = sHours{
 						StartTime: v.StartTime,
 						EndTime:   v.EndTime,
-					})
+					}
 				}
 			case 6:
 				if v.Sat == 1 {
-					sh = append(sh, sHours{
+					hourItem = sHours{
 						StartTime: v.StartTime,
 						EndTime:   v.EndTime,
-					})
+					}
 				}
 			}
 
 			if v.AllTime == 1 {
-				sh = append(sh, sHours{
-					StartTime: v.StartTime,
-					EndTime:   v.EndTime,
-				})
+				hourItem = sHours{
+					StartTime: "00:00",
+					EndTime:   "23:59",
+				}
 			}
+
+			sh = append(sh, hourItem)
 
 		}
 	}
@@ -416,9 +456,22 @@ func (model Store) Show(query []string, queryArgs []interface{}) (Store, error) 
 	store := Store{}
 	queryStr := strings.Join(query, " AND ")
 	result := cmf.NewDb().Select("*", "(st_distance (point (longitude,latitude),point ("+lon+","+lat+"))*111195/1000 ) as distance").Where(queryStr, queryArgs...).First(&store)
+
 	if result.Error != nil {
 		return store, result.Error
 	}
+
+	// 获取当前堂食配置
+	eatIn, _ := new(EatIn).Show(store.Id, store.Mid)
+	takeOut, _ := new(TakeOut).Show(store.Id, store.Mid)
+
+	store.EatIn = eatIn
+	store.TakeOut = takeOut
+
+	store.DeliveryDistance = takeOut.DeliveryDistance
+	store.CreateTime = time.Unix(store.CreateAt, 0).Format(data.TimeLayout)
+	store.UpdateTime = time.Unix(store.UpdateAt, 0).Format(data.TimeLayout)
+
 	return store, nil
 }
 
@@ -464,8 +517,6 @@ func (model Store) AppShow(query []string, queryArgs []interface{}) (Store, erro
 
 			end := time.Date(year, month, day, hour, min, 00, 00, time.Local)
 
-			fmt.Println("end", end)
-
 			// 更新最晚时间
 			if end.Sub(todayEnd) > 0 {
 				todayEnd = end
@@ -482,9 +533,51 @@ func (model Store) AppShow(query []string, queryArgs []interface{}) (Store, erro
 		}
 	}
 
+	// 获取当前堂食配置
+	takeJson := saasModel.Options("take_out", store.Mid)
+
+	var takeOut TakeOut
+
+	_ = json.Unmarshal([]byte(takeJson), &takeOut)
+
+	store.DeliveryDistance = takeOut.DeliveryDistance
+
+	if store.Distance > store.DeliveryDistance {
+		store.OutRange = true
+	}
+
+	store.CreateTime = time.Unix(store.CreateAt, 0).Format(data.TimeLayout)
+	store.UpdateTime = time.Unix(store.UpdateAt, 0).Format(data.TimeLayout)
+
 	store.Id = 0
 
 	return store, nil
+}
+
+// 是否超距离
+func (model Store) OutRangeStatus() (bool, error) {
+
+	var query = []string{"id = ? AND mid = ? AND delete_at = ?"}
+	var queryArgs = []interface{}{model.Id, model.Mid, 0}
+
+	store, err := model.Show(query, queryArgs)
+	if err != nil {
+		return false, err
+	}
+
+	// 获取当前堂食配置
+	takeJson := saasModel.Options("take_out", store.Mid)
+
+	var takeOut TakeOut
+
+	_ = json.Unmarshal([]byte(takeJson), &takeOut)
+
+	store.DeliveryDistance = takeOut.DeliveryDistance
+
+	if store.Distance > store.DeliveryDistance {
+		return true, nil
+	}
+	return false, nil
 }
 
 /**

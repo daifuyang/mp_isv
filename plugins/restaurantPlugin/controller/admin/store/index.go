@@ -399,14 +399,6 @@ func (rest IndexController) Edit(c *gin.Context) {
 		return
 	}
 
-	// 支持场景
-	scene := c.DefaultPostForm("scene", "0")
-	sceneInt, err := strconv.Atoi(scene)
-	if err != nil {
-		rest.rc.Error(c, "场景参数非法！", nil)
-		return
-	}
-
 	// 是否歇业
 	isClosure := c.PostForm("is_closure")
 	isClosureInt, err := strconv.Atoi(isClosure)
@@ -454,7 +446,6 @@ func (rest IndexController) Edit(c *gin.Context) {
 		StoreThumbnail: storeThumbnail,
 		Longitude:      longitudeFloat,
 		Latitude:       latitudeFloat,
-		Scene:          sceneInt,
 		IsClosure:      isClosureInt,
 		Notice:         notice,
 		CreateAt:       time.Now().Unix(),
@@ -572,7 +563,7 @@ func (rest IndexController) Edit(c *gin.Context) {
 	if shopResult.Response.Code == "10000" {
 		result := new(merchant.Shop).Modify(bizContent)
 		if result.Response.Code != "10000" {
-			rest.rc.Error(c, "同步失败！"+result.Response.SubMsg, nil)
+			rest.rc.Error(c, "同步失败！"+result.Response.SubMsg, result)
 			return
 		}
 		store.OrderId = result.Response.OrderId
@@ -581,7 +572,7 @@ func (rest IndexController) Edit(c *gin.Context) {
 
 		result := new(merchant.Shop).Create(bizContent)
 		if result.Response.Code != "10000" {
-			rest.rc.Error(c, "同步失败！"+result.Response.SubMsg, nil)
+			rest.rc.Error(c, "同步失败！"+result.Response.SubMsg, result)
 			return
 		}
 
@@ -806,14 +797,6 @@ func (rest IndexController) Store(c *gin.Context) {
 		return
 	}
 
-	// 支持场景
-	scene := c.DefaultPostForm("scene", "0")
-	sceneInt, err := strconv.Atoi(scene)
-	if err != nil {
-		rest.rc.Error(c, "场景参数非法！", nil)
-		return
-	}
-
 	// 是否歇业
 	isClosure := c.PostForm("is_closure")
 	isClosureInt, err := strconv.Atoi(isClosure)
@@ -869,7 +852,6 @@ func (rest IndexController) Store(c *gin.Context) {
 		District:       districtInt,
 		DistrictName:   districtName,
 		Address:        address,
-		Scene:          sceneInt,
 		StoreThumbnail: storeThumbnail,
 		Longitude:      longitudeFloat,
 		Latitude:       latitudeFloat,
@@ -988,7 +970,7 @@ func (rest IndexController) Store(c *gin.Context) {
 
 	result := new(merchant.Shop).Create(bizContent)
 	if result.Response.Code != "10000" {
-		rest.rc.Error(c, "同步失败！"+result.Response.SubMsg, nil)
+		rest.rc.Error(c, "同步失败！"+result.Response.SubMsg, result)
 		return
 	}
 

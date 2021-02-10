@@ -32,8 +32,8 @@
         "list_order": 10000
       },
       {
-        "unique_name": "app/order/coupon",
-        "name": "卡券订单",
+        "unique_name": "app/order/recharge",
+        "name": "储值订单",
         "path": "/app/:mid/order/coupon",
         "icon": "",
         "hide_in_menu": 0,
@@ -134,14 +134,6 @@
         "icon": "",
         "hide_in_menu": 0,
         "list_order": 10000
-      },
-      {
-        "unique_name": "app/member/group",
-        "name": "用户分组",
-        "path": "/app/:mid/member/group",
-        "icon": "",
-        "hide_in_menu": 0,
-        "list_order": 10000
       }
     ]
   },
@@ -180,32 +172,6 @@
     ]
   },
   {
-    "unique_name": "app/statistics/default",
-    "name": "数据统计",
-    "path": "/app/:mid/statistics/default",
-    "icon": "iconlinechart",
-    "hide_in_menu": 0,
-    "list_order": 80,
-    "children": [
-      {
-        "unique_name": "app/statistics/summary",
-        "name": "店铺概况",
-        "path": "/app/:mid/statistics/summary",
-        "icon": "",
-        "list_order": 1,
-        "hide_in_menu": 0
-      },
-      {
-        "unique_name": "app/statistics/analyze",
-        "name": "经营分析",
-        "path": "/app/:mid/statistics/analyze",
-        "icon": "",
-        "list_order": 2,
-        "hide_in_menu": 0
-      }
-    ]
-  },
-  {
     "unique_name": "app/theme/default",
     "name": "主题管理",
     "path": "/app/:mid/theme/default",
@@ -220,14 +186,6 @@
         "icon": "",
         "hide_in_menu": 0,
         "list_order": 10
-      },
-      {
-        "unique_name": "app/theme/page",
-        "name": "微页面",
-        "path": "/app/:mid/theme/page",
-        "icon": "",
-        "hide_in_menu": 0,
-        "list_order": 20
       },
       {
         "unique_name": "app/theme/assets",
@@ -248,12 +206,52 @@
     ]
   },
   {
+    "unique_name": "portal/default",
+    "name": "门户管理",
+    "path": "/app/:mid/portal",
+    "icon": "iconfolder-add",
+    "hide_in_menu": 0,
+    "list_order": 91,
+    "children": [
+      {
+        "unique_name": "/app/portal/index",
+        "name": "文章管理",
+        "path": "/app/:mid/portal/index",
+        "icon": "",
+        "hide_in_menu": 0
+      },
+      {
+        "unique_name": "/app/portal/category",
+        "name": "分类管理",
+        "path": "/app/:mid/portal/category",
+        "icon": "",
+        "hide_in_menu": 0,
+        "children": [
+          {
+            "unique_name": "/app/portal/category/add",
+            "name": "添加分类",
+            "path": "/app/:mid/portal/category/add",
+            "icon": "",
+            "hide_in_menu": 1
+          },
+          {
+            "unique_name": "/app/portal/category/edit",
+            "name": "修改分类",
+            "path": "/app/:mid/portal/category/edit/:id",
+            "icon": "",
+            "hide_in_menu": 1
+          }
+        ]
+      }
+    ]
+  },
+  {
     "unique_name": "app/store",
     "name": "门店管理",
     "path": "/app/:mid/store",
     "icon": "iconshop",
     "hide_in_menu": 0,
-    "list_order": 91,
+    "list_order": 92,
     "children": [
       {
         "unique_name": "app/store/index",
@@ -280,14 +278,6 @@
             "list_order": 10000
           }
         ]
-      },
-      {
-        "unique_name": "app/store/tags",
-        "name": "门店标签",
-        "path": "/app/:mid/store/tags",
-        "icon": "",
-        "hide_in_menu": 0,
-        "list_order": 20
       },
       {
         "unique_name": "app/store/printer",

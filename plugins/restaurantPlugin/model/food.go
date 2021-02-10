@@ -48,6 +48,7 @@ type FoodStoreHouse struct {
 	Mid              int                      `gorm:"type:varchar(20);comment:对应小程序id;not null" json:"mid"`
 	FoodCode         string                   `gorm:"type:varchar(32);comment:菜品唯一编号;not null" json:"food_code"`
 	Name             string                   `gorm:"type:varchar(255);comment:菜品名称;not null" json:"name"`
+	Excerpt          string                   `gorm:"type:varchar(255);comment:菜品摘要;not null" json:"excerpt"`
 	UseSku           int                      `gorm:"type:tinyint(3);comment:启用规格;default:0;not null" json:"use_sku"`
 	SkuJson          map[string][]SpecPost    `gorm:"-" json:"sku_json"`
 	FoodSku          sSkuTemp                 `gorm:"-" json:"food_sku"`
@@ -137,6 +138,7 @@ type SpecPost struct {
 	AttrValueId int    `json:"attr_value_id"`
 	FoodId      int    `json:"food_id"`
 	Name        string `json:"name"`
+	AttrId      int    `json:"attr_id"`
 	AttrValue   string `json:"attr_value"`
 }
 
@@ -302,6 +304,7 @@ func (model Food) Detail(query []string, queryArgs []interface{}) (Food, error) 
 		return Food{}, err
 	}
 
+
 	if food.UseSku == 1 {
 
 		fap := FoodAttrPost{
@@ -312,7 +315,7 @@ func (model Food) Detail(query []string, queryArgs []interface{}) (Food, error) 
 		attrData, err := fap.attrPost()
 
 		if len(attrData) == 0 {
-			return Food{}, err
+			return Food{}, errors.New("规格错误，最少启用一项规格")
 		}
 
 		if err == nil {
@@ -322,6 +325,7 @@ func (model Food) Detail(query []string, queryArgs []interface{}) (Food, error) 
 					AttrValueId: v.AttrValueId,
 					FoodId:      v.FoodId,
 					Name:        v.Name,
+					AttrId:      v.AttrId,
 					AttrValue:   v.AttrValue,
 				}
 
@@ -334,6 +338,7 @@ func (model Food) Detail(query []string, queryArgs []interface{}) (Food, error) 
 
 			}
 		}
+
 		food.SkuJson = skuJson
 
 		sku := FoodSku{

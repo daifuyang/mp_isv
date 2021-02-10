@@ -1,0 +1,416 @@
+
+[
+  {
+    "unique_name": "app/dashboard",
+    "name": "工作台",
+    "path": "/app/:mid/dashboard",
+    "icon": "icondashboard",
+    "hide_in_menu": 0,
+    "list_order": 1
+  },
+  {
+    "unique_name": "app/order/default",
+    "name": "订单管理",
+    "path": "/app/:mid/order/default",
+    "icon": "icondetail",
+    "hide_in_menu": 0,
+    "list_order": 2,
+    "children": [
+      {
+        "unique_name": "app/order/business",
+        "name": "业务订单",
+        "path": "/app/:mid/order/business",
+        "icon": "",
+        "hide_in_menu": 0,
+        "list_order": 10000
+      },
+      {
+        "unique_name": "app/order/member",
+        "name": "会员订单",
+        "path": "/app/:mid/order/member",
+        "icon": "",
+        "hide_in_menu": 0,
+        "list_order": 10000
+      },
+      {
+        "unique_name": "app/order/coupon",
+        "name": "卡券订单",
+        "path": "/app/:mid/order/coupon",
+        "icon": "",
+        "hide_in_menu": 0,
+        "list_order": 10000
+      }
+    ]
+  },
+  {
+    "unique_name": "app/dishes",
+    "name": "菜单管理",
+    "path": "/app/:mid/dishes",
+    "icon": "iconappstore",
+    "hide_in_menu": 0,
+    "list_order": 3,
+    "children": [
+      {
+        "unique_name": "app/dishes/goods",
+        "name": "菜品管理",
+        "path": "/app/:mid/dishes/goods",
+        "icon": "",
+        "hide_in_menu": 0,
+        "list_order": 10000,
+        "children": [
+          {
+            "unique_name": "app/dishes/goods/index",
+            "name": "菜品列表",
+            "path": "/app/:mid/dishes/goods/index",
+            "icon": "",
+            "hide_in_menu": 1,
+            "list_order": 10000
+          },
+          {
+            "unique_name": "app/dishes/goods/add",
+            "name": "添加菜品",
+            "path": "/app/:mid/dishes/goods/add",
+            "icon": "",
+            "hide_in_menu": 1,
+            "list_order": 10000
+          },
+          {
+            "unique_name": "app/dishes/goods/edit",
+            "name": "编辑菜品",
+            "path": "/app/:mid/dishes/goods/edit",
+            "icon": "",
+            "hide_in_menu": 1,
+            "list_order": 10000
+          }
+        ]
+      },
+      {
+        "unique_name": "app/dishes/category",
+        "name": "分类管理",
+        "path": "/app/:mid/dishes/category",
+        "icon": "",
+        "hide_in_menu": 0,
+        "list_order": 10000
+      }
+    ]
+  },
+  {
+    "unique_name": "app/desk/default",
+    "name": "桌位管理",
+    "path": "/app/:mid/desk/default",
+    "icon": "iconapartment",
+    "hide_in_menu": 0,
+    "list_order": 4,
+    "children": [
+      {
+        "unique_name": "app/desk/index",
+        "name": "桌位管理",
+        "path": "/app/:mid/desk/index",
+        "icon": "",
+        "hide_in_menu": 0,
+        "list_order": 10000
+      },
+      {
+        "unique_name": "app/desk/category",
+        "name": "桌位类型",
+        "path": "/app/:mid/desk/category",
+        "icon": "",
+        "hide_in_menu": 0,
+        "list_order": 10000
+      }
+    ]
+  },
+  {
+    "unique_name": "app/member/default",
+    "name": "会员管理",
+    "path": "/app/:mid/member/default",
+    "icon": "iconcreditcard",
+    "hide_in_menu": 0,
+    "list_order": 5,
+    "children": [
+      {
+        "unique_name": "app/member/index",
+        "name": "用户列表",
+        "path": "/app/:mid/member/index",
+        "icon": "",
+        "hide_in_menu": 0,
+        "list_order": 10000
+      },
+      {
+        "unique_name": "app/member/group",
+        "name": "用户分组",
+        "path": "/app/:mid/member/group",
+        "icon": "",
+        "hide_in_menu": 0,
+        "list_order": 10000
+      }
+    ]
+  },
+  {
+    "unique_name": "app/marketing/default",
+    "name": "营销管理",
+    "path": "/app/:mid/marketing/default",
+    "icon": "icongift",
+    "hide_in_menu": 0,
+    "list_order": 70,
+    "children": [
+      {
+        "unique_name": "app/marketing/card",
+        "name": "会员卡设置",
+        "path": "/app/:mid/marketing/card",
+        "icon": "",
+        "hide_in_menu": 0,
+        "list_order": 10000
+      },
+      {
+        "unique_name": "app/marketing/coupon",
+        "name": "优惠券管理",
+        "path": "/app/:mid/marketing/coupon",
+        "icon": "",
+        "hide_in_menu": 0,
+        "list_order": 10000
+      },
+      {
+        "unique_name": "app/marketing/score",
+        "name": "积分设置",
+        "path": "/app/:mid/marketing/score",
+        "icon": "",
+        "hide_in_menu": 0,
+        "list_order": 10000
+      }
+    ]
+  },
+  {
+    "unique_name": "app/statistics/default",
+    "name": "数据统计",
+    "path": "/app/:mid/statistics/default",
+    "icon": "iconlinechart",
+    "hide_in_menu": 0,
+    "list_order": 80,
+    "children": [
+      {
+        "unique_name": "app/statistics/summary",
+        "name": "店铺概况",
+        "path": "/app/:mid/statistics/summary",
+        "icon": "",
+        "list_order": 1,
+        "hide_in_menu": 0
+      },
+      {
+        "unique_name": "app/statistics/analyze",
+        "name": "经营分析",
+        "path": "/app/:mid/statistics/analyze",
+        "icon": "",
+        "list_order": 2,
+        "hide_in_menu": 0
+      }
+    ]
+  },
+  {
+    "unique_name": "app/theme/default",
+    "name": "主题管理",
+    "path": "/app/:mid/theme/default",
+    "icon": "iconbg-colors",
+    "hide_in_menu": 0,
+    "list_order": 90,
+    "children": [
+      {
+        "unique_name": "app/theme/index",
+        "name": "主题设置",
+        "path": "/app/:mid/theme/index",
+        "icon": "",
+        "hide_in_menu": 0,
+        "list_order": 10
+      },
+      {
+        "unique_name": "app/theme/page",
+        "name": "微页面",
+        "path": "/app/:mid/theme/page",
+        "icon": "",
+        "hide_in_menu": 0,
+        "list_order": 20
+      },
+      {
+        "unique_name": "app/theme/assets",
+        "name": "素材中心",
+        "path": "/app/:mid/theme/assets",
+        "icon": "",
+        "hide_in_menu": 0,
+        "list_order": 10000
+      },
+      {
+        "unique_name": "app/theme/setting",
+        "name": "店铺设置",
+        "path": "/app/:mid/theme/setting",
+        "icon": "",
+        "hide_in_menu": 0,
+        "list_order": 10
+      }
+    ]
+  },
+  {
+    "unique_name": "app/store",
+    "name": "门店管理",
+    "path": "/app/:mid/store",
+    "icon": "iconshop",
+    "hide_in_menu": 0,
+    "list_order": 91,
+    "children": [
+      {
+        "unique_name": "app/store/index",
+        "name": "门店列表",
+        "path": "/app/:mid/store/index",
+        "icon": "",
+        "hide_in_menu": 0,
+        "list_order": 10,
+        "children": [
+          {
+            "unique_name": "app/store/add",
+            "name": "添加门店",
+            "path": "/app/:mid/store/add",
+            "icon": "",
+            "hide_in_menu": 1,
+            "list_order": 10000
+          },
+          {
+            "unique_name": "app/store/edit",
+            "name": "修改门店",
+            "path": "/app/:mid/store/edit/:id",
+            "icon": "",
+            "hide_in_menu": 1,
+            "list_order": 10000
+          }
+        ]
+      },
+      {
+        "unique_name": "app/store/tags",
+        "name": "门店标签",
+        "path": "/app/:mid/store/tags",
+        "icon": "",
+        "hide_in_menu": 0,
+        "list_order": 20
+      },
+      {
+        "unique_name": "app/store/printer",
+        "name": "打印机绑定",
+        "path": "/app/:mid/store/printer",
+        "icon": "",
+        "hide_in_menu": 0,
+        "list_order": 30
+      }
+    ]
+  },
+  {
+    "unique_name": "app/user/default",
+    "name": "用户管理",
+    "path": "/app/:mid/user/default",
+    "icon": "iconuser",
+    "hide_in_menu": 0,
+    "list_order": 100,
+    "children": [
+      {
+        "unique_name": "app/user/index",
+        "name": "账号设置",
+        "path": "/app/:mid/user/index",
+        "icon": "",
+        "hide_in_menu": 0,
+        "list_order": 1,
+        "children": [
+          {
+            "unique_name": "app/user/add",
+            "name": "添加管理员",
+            "path": "/app/:mid/user/add",
+            "icon": "",
+            "hide_in_menu": 1
+          },
+          {
+            "unique_name": "app/user/edit",
+            "name": "编辑管理员",
+            "path": "/app/:mid/user/edit/:id",
+            "icon": "",
+            "hide_in_menu": 1
+          }
+        ]
+      },
+      {
+        "unique_name": "app/role/default",
+        "name": "角色管理",
+        "path": "/app/:mid/role/default",
+        "icon": "",
+        "list_order": 10000,
+        "hide_in_menu": 0,
+        "children": [
+          {
+            "unique_name": "app/role/list",
+            "name": "角色列表",
+            "path": "",
+            "icon": "",
+            "hide_in_menu": 0
+          },
+          {
+            "unique_name": "app/role/edit",
+            "name": "角色编辑",
+            "path": "",
+            "icon": "",
+            "hide_in_menu": 0
+          },
+          {
+            "unique_name": "app/role/delete",
+            "name": "角色删除",
+            "path": "",
+            "icon": "",
+            "hide_in_menu": 0
+          },
+          {
+            "unique_name": "app/authorize/add",
+            "name": "角色权限添加",
+            "path": "/user_manage/authorize/add",
+            "icon": "",
+            "hide_in_menu": 1
+          },
+          {
+            "unique_name": "app/authorize/edit",
+            "name": "角色权限编辑",
+            "path": "/app/:mid/authorize/edit/:id",
+            "icon": "",
+            "hide_in_menu": 1
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "unique_name": "app/settings/default",
+    "name": "系统设置",
+    "path": "/app/:mid/settings/default",
+    "icon": "iconsetting",
+    "hide_in_menu": 0,
+    "list_order": 110,
+    "children": [
+      {
+        "unique_name": "app/settings/index",
+        "name": "通用设置",
+        "path": "/app/:mid/settings/index",
+        "icon": "",
+        "hide_in_menu": 0,
+        "list_order": 10000
+      },
+      {
+        "unique_name": "app/settings/logistics",
+        "name": "物流设置",
+        "path": "/app/:mid/settings/logistics",
+        "icon": "",
+        "hide_in_menu": 0,
+        "list_order": 10000
+      },
+      {
+        "unique_name": "app/settings/cashier",
+        "name": "收银配置",
+        "path": "/app/:mid/settings/cashier",
+        "icon": "",
+        "hide_in_menu": 0,
+        "list_order": 10000
+      }
+    ]
+  }
+]

@@ -34,4 +34,7 @@ func AutoMigrate () {
 	new(model.MemberCard).AutoMigrate()
 	new(model.RechargeOrder).AutoMigrate()
 	new(model.Printer).AutoMigrate()
+	// 地址
+	new(model.Address).AutoMigrate()
+
 }

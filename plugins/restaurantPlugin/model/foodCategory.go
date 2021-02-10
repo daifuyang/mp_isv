@@ -75,7 +75,7 @@ func (model FoodCategory) Index(c *gin.Context, query []string, queryArgs []inte
 
 	var foodCategory []FoodCategory
 	cmf.NewDb().Where(queryStr, queryArgs...).Find(&foodCategory).Count(&total)
-	result := cmf.NewDb().Debug().Where(queryStr, queryArgs...).Limit(pageSize).Offset((current - 1) * pageSize).Find(&foodCategory)
+	result := cmf.NewDb().Where(queryStr, queryArgs...).Limit(pageSize).Offset((current - 1) * pageSize).Find(&foodCategory)
 
 	if result.Error != nil {
 		return cmfModel.Paginate{}, result.Error

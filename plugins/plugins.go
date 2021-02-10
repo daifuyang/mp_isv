@@ -9,6 +9,7 @@ import (
 	"gincmf/plugins/alipayPlugin"
 	"gincmf/plugins/demoPlugin"
 	"gincmf/plugins/feiePlugin"
+	"gincmf/plugins/portalPlugin"
 	"gincmf/plugins/queuePlugin"
 	"gincmf/plugins/restaurantPlugin"
 	"gincmf/plugins/saasPlugin"
@@ -22,9 +23,5 @@ func AutoRegister() {
 	saasPlugin.Init()
 	queuePlugin.Init()
 	feiePlugin.Init()
-	AutoMigrate()
-}
-
-func AutoMigrate() {
-
+	portalPlugin.Init()
 }

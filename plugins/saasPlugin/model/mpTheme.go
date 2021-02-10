@@ -7,7 +7,7 @@ package model
 
 type MpTheme struct {
 	Id        int     `json:"id"`
-	Number    int     `gorm:"type:int(11);comment:小程序加密编号;not null" json:"number"`
+	Mid       int     `gorm:"type:int(11);comment:小程序加密编号;not null" json:"mid"`
 	Category  int     `gorm:"type:tinyint(3);comment:小程序类型分类;not null;default:0" json:"category"`
 	Name      string  `gorm:"type:varchar(40);comment:小程序主题名称;not null" json:"name"`
 	Version   string  `gorm:"type:varchar(10);comment:小程序版本;not null" json:"version"`
@@ -23,8 +23,10 @@ type MpTheme struct {
 type MpThemePage struct {
 	Id          int    `json:"id"`
 	ThemeId     int    `gorm:"type:int(11)" json:"theme_id"`
+	Mid         int    `gorm:"type:int(11);comment:小程序加密编号;not null" json:"mid"`
 	Home        int    `gorm:"type:tinyint(3);comment:是否为首页;not null;default:0" json:"home"`
 	Title       string `gorm:"type:varchar(20);comment:页面名称;not null" json:"title"`
+	File 		string `gorm:"type:varchar(20);comment:页面路径;not null" json:"file"`
 	Style       string `gorm:"type:text;comment:主题文件用户公共样式" json:"style"`
 	ConfigStyle string `gorm:"type:text;comment:主题文件默认公共样式" json:"global_style"`
 	More        string `gorm:"type:text;comment:主题文件用户配置文件" json:"more"`

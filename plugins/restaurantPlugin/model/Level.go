@@ -21,6 +21,7 @@ type voucher struct {
 
 type voucherItem struct {
 	SendType    string `json:"send_type"` //发放方式：once：发放1次 month：每月发放
+	Count       int    `json:"count"`
 	VoucherName string `json:"voucher_name"`
 	VoucherId   int    `json:"voucher_id"`
 	TemplateId  string `json:"template_id"`
@@ -49,17 +50,17 @@ type SLevel struct {
 
 type VipInfo struct {
 	EnabledRecharge int      `json:"enabled_recharge"` // 启用充值送
-	RechargePoint   int      `json:"recharge_score"`   // 经验值
+	RechargePoint   int      `json:"recharge_point"`   // 经验值
 	EnabledConsume  int      `json:"enabled_consume"`  // 启用消费送
-	ConsumePoint    int      `json:"consume_score"`    // 经验值
+	ConsumePoint    int      `json:"consume_point"`    // 经验值
 	ExpValidPeriod  int      `json:"exp_valid_period"`
 	Level           []SLevel `json:"level"`
 }
 
-func (model *Level) LevelDetail(vipLevel string,mid int) SLevel {
+func (model *Level) LevelDetail(vipLevel string, mid int) SLevel {
 
 	var vipInfo VipInfo
-	str := saasModel.Options("vip_info",mid)
+	str := saasModel.Options("vip_info", mid)
 
 	_ = json.Unmarshal([]byte(str), &vipInfo)
 

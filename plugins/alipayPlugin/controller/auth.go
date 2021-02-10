@@ -237,7 +237,7 @@ func (rest *Auth) Token (c *gin.Context) {
 	}
 
 	openId := data.Response.UserId
-	query := []string{"open_id = ? AND tp.mid = ?"}
+	query := []string{"tp.open_id = ? AND tp.mid = ?"}
 	queryArgs :=[]interface{}{openId,mid}
 
 	// 查询当前用户是否存在
@@ -248,9 +248,11 @@ func (rest *Auth) Token (c *gin.Context) {
 		return
 	}
 
+	fmt.Println("partData",partData)
+
 	// 当前三方关系不存在 新建第三方用户
-	if partData.Id == 0 {
-		cmf.NewDb().Create(&model.ThirdPart{
+	if partData.OpenId == "" {
+		cmf.NewDb().Where("open_id = ?",openId).FirstOrCreate(&model.ThirdPart{
 			Mid: mid.(int),
 			Type: "alipay-mp",
 			UserId: 0,
