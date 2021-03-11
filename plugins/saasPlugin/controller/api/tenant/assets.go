@@ -12,11 +12,13 @@ import (
 	"errors"
 	"fmt"
 	"gincmf/app/middleware"
-	"gincmf/app/model"
+	appModel "gincmf/app/model"
 	"gincmf/app/util"
+	"gincmf/plugins/saasPlugin/model"
 	"github.com/gin-gonic/gin"
 	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
+	cmfLog "github.com/gincmf/cmf/log"
 	cmfUtil "github.com/gincmf/cmf/util"
 	uuid "github.com/nu7hatch/gouuid"
 	"io"
@@ -28,28 +30,29 @@ import (
 	"time"
 )
 
-type AssetsController struct {
+type Assets struct {
 	rc controller.RestController
 }
 
-func (rest *AssetsController) Get(c *gin.Context) {
+func (rest *Assets) Get(c *gin.Context) {
 
 	userId := util.CurrentAdminId(c)
 
-	query := []string{"user_id = ?","status = ?"}
-	queryArgs := []interface{}{userId, "1"}
+	mid, _ := c.Get("mid")
+
+	query := []string{"mid = ?", "user_id = ?", "status = ?"}
+	queryArgs := []interface{}{mid, userId, "1"}
 
 	paramType := c.DefaultQuery("type", "0")
 
-	query = append(query,"type = ?")
+	query = append(query, "type = ?")
 	queryArgs = append(queryArgs, paramType)
 
-	assets := model.Asset{
-		GetFileUrl: util.GetFileUrl,
-	}
-	data,err := assets.Get(c,query,queryArgs)
+	assets := model.Asset{}
+
+	data, err := assets.Get(c, query, queryArgs)
 	if err != nil {
-		rest.rc.Error(c,err.Error(),nil)
+		rest.rc.Error(c, err.Error(), nil)
 		return
 	}
 
@@ -67,7 +70,7 @@ func (rest *AssetsController) Get(c *gin.Context) {
  *	   'status'		=> 1
  * )
  */
-func (rest *AssetsController) Show(c *gin.Context) {
+func (rest *Assets) Show(c *gin.Context) {
 	var rewrite struct {
 		id int `uri:"id"`
 	}
@@ -78,7 +81,7 @@ func (rest *AssetsController) Show(c *gin.Context) {
 	rest.rc.Success(c, "操作成功show", nil)
 }
 
-func (rest *AssetsController) Edit(c *gin.Context) {
+func (rest *Assets) Edit(c *gin.Context) {
 	rest.rc.Success(c, "操作成功Edit", nil)
 }
 
@@ -94,7 +97,7 @@ func (rest *AssetsController) Edit(c *gin.Context) {
  * )
  */
 
-func (rest *AssetsController) Store(c *gin.Context) {
+func (rest *Assets) Store(c *gin.Context) {
 
 	form, _ := c.MultipartForm()
 	files := form.File["file[]"]
@@ -139,7 +142,7 @@ func (rest *AssetsController) Store(c *gin.Context) {
  *	   'status'		=> 1
  * )
  */
-func (rest *AssetsController) Delete(c *gin.Context) {
+func (rest *Assets) Delete(c *gin.Context) {
 	var rewrite struct {
 		Id int `uri:"id"`
 	}
@@ -149,9 +152,10 @@ func (rest *AssetsController) Delete(c *gin.Context) {
 		return
 	}
 
+	mid, _ := c.Get("mid")
+
 	ids := c.QueryArray("ids")
 
-	fmt.Println("first_ids", ids)
 	asset := &model.Asset{}
 
 	if len(ids) == 0 {
@@ -160,9 +164,7 @@ func (rest *AssetsController) Delete(c *gin.Context) {
 			return
 		}
 
-		fmt.Println("Id", rewrite.Id)
-
-		result := cmf.NewDb().First(&asset, rewrite.Id)
+		result := cmf.NewDb().Where("id = ? AND  mid = ?", rewrite.Id, mid).First(&asset)
 		if result.RowsAffected == 0 {
 			rest.rc.Error(c, "该内容不存在！", nil)
 			return
@@ -177,7 +179,7 @@ func (rest *AssetsController) Delete(c *gin.Context) {
 		}
 	} else {
 		fmt.Println("ids", ids)
-		if err := cmf.NewDb().Model(&asset).Where("id IN (?)", ids).Updates(map[string]interface{}{"status": 0}).Error; err != nil {
+		if err := cmf.NewDb().Model(&asset).Where("id IN (?) AND mid = ?", ids, mid).Updates(map[string]interface{}{"status": 0}).Error; err != nil {
 			rest.rc.Error(c, "删除失败！", nil)
 			return
 		}
@@ -189,6 +191,9 @@ func (rest *AssetsController) Delete(c *gin.Context) {
 // 根据文件处理上传逻辑
 // 1.判断上传类型，验证后缀合理性 type [0 => "图片" 1 => "视频" 2 => "文件"]
 func handleUpload(c *gin.Context, file *multipart.FileHeader, fileType string) (map[string]string, error) {
+
+	mid, _ := c.Get("mid")
+
 	tempFile, tempErr := file.Open()
 	defer tempFile.Close()
 
@@ -216,7 +221,7 @@ func handleUpload(c *gin.Context, file *multipart.FileHeader, fileType string) (
 
 	//获取后缀列表
 	middleware.MainDb(c)
-	uploadSetting := model.GetUploadSetting(c)
+	uploadSetting := appModel.GetUploadSetting(c)
 	middleware.TenantDb(c)
 
 	switch fileType {
@@ -266,6 +271,9 @@ func handleUpload(c *gin.Context, file *multipart.FileHeader, fileType string) (
 	}
 
 	temPath := "default"
+	if mid.(int) > 0 {
+		temPath = "tenant/" + strconv.Itoa(mid.(int))
+	}
 
 	fileUuid, err := uuid.NewV4()
 
@@ -312,21 +320,33 @@ func handleUpload(c *gin.Context, file *multipart.FileHeader, fileType string) (
 
 	fileTypeInt, _ := strconv.Atoi(fileType)
 	//保存到数据库
-	result := cmf.NewDb().Create(&model.Asset{
-		UserId:     userIdInt,
-		FileSize:   fileSize,
-		CreateAt:   time.Now().Unix(),
-		FileKey:    fileUuid.String(),
-		RemarkName: remarkName,
-		FileName:   fileNameSuffix,
-		FilePath:   filePath,
-		Suffix:     suffix,
-		AssetType:  fileTypeInt,
-	})
+
+	// 同步到七牛云
+	key, err := new(cmf.QiNiu).UploadFile(filePath, util.GetAbsPath(filePath))
+
+	fmt.Println("key", key)
+	fmt.Println("err", err)
+
+	assets := model.Asset{
+		Mid: mid.(int),
+		Asset: appModel.Asset{
+			UserId:     userIdInt,
+			FileSize:   fileSize,
+			CreateAt:   time.Now().Unix(),
+			FileKey:    fileUuid.String(),
+			RemarkName: remarkName,
+			FileName:   fileNameSuffix,
+			FilePath:   filePath,
+			Suffix:     suffix,
+			AssetType:  fileTypeInt,
+		},
+	}
+	result := cmf.NewDb().Debug().Create(&assets)
 
 	tempMap := make(map[string]string, 0)
 
 	if result.Error != nil {
+		cmfLog.Error(result.Error.Error())
 		return tempMap, errors.New(result.Error.Error())
 	}
 

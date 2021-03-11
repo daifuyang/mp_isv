@@ -37,7 +37,7 @@ func (rest *User) Register(c *gin.Context) {
 		return
 	}
 
-	uRes := cmf.NewDb().Where("mobile", mobile).First(&saasModel.Tenant{})
+	uRes := cmf.Db().Where("mobile", mobile).First(&saasModel.Tenant{})
 	if uRes.RowsAffected > 0 {
 		rest.rc.Error(c, "该手机号已经被绑定注册！", nil)
 		return
@@ -56,9 +56,9 @@ func (rest *User) Register(c *gin.Context) {
 		return
 	}
 
-	err = util.ValidateSms(mobileInt,smsCode)
+	err = util.ValidateSms(mobileInt, smsCode)
 	if err != nil {
-		rest.rc.Error(c,err.Error(),nil)
+		rest.rc.Error(c, err.Error(), nil)
 		return
 	}
 
@@ -80,23 +80,13 @@ func (rest *User) Register(c *gin.Context) {
 	}
 
 	password = cmfUtil.GetMd5(password)
+
 	yearStr, monthStr, dayStr := util.CurrentDate()
+	date := yearStr + monthStr + dayStr
+	insertKey := "mp_isv:user" + yearStr + monthStr + dayStr
 
-	/*
-	 ** 唯一uid编号生成逻辑
-	 ** 日期 + 当天排号数量
-	 */
-	insertKey := "mp_isv:user:" + yearStr + monthStr + dayStr
-
-	// 设置当天失效时间
-	year, month, day := time.Now().Date()
-	today := time.Date(year, month, day, 23, 59, 59, 59, time.Local)
-	cmf.NewRedisDb().ExpireAt(insertKey, today)
-	val := util.SetIncr(insertKey)
-
-	nStr := yearStr + monthStr + dayStr + strconv.FormatInt(val, 10)
-	n, _ := strconv.Atoi(nStr)
-	tenantId := util.EncodeId(uint64(n))
+	number := util.EncryptUuid(insertKey, date, 0)
+	tenantId, _ := strconv.Atoi(number)
 
 	// 存入当前租户
 	tenant := saasModel.Tenant{
@@ -107,7 +97,7 @@ func (rest *User) Register(c *gin.Context) {
 		CreateAt:  time.Now().Unix(),
 	}
 
-	result := cmf.NewDb().Create(&tenant)
+	result := cmf.Db().Create(&tenant)
 
 	if result.RowsAffected > 0 {
 		go func() {
@@ -116,9 +106,11 @@ func (rest *User) Register(c *gin.Context) {
 			cmfModel.CreateTable(dbName, cmf.Conf())
 
 			cmf.ManualDb(dbName)
+
 			// 调用saas初始化
 			migrate.AutoMigrate()
 
+			// 创建当前租户的七牛云空间
 		}()
 
 		rest.rc.Success(c, "注册成功！", nil)

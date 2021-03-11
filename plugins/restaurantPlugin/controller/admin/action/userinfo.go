@@ -21,10 +21,10 @@ func (rest USerInfo) Options(c *gin.Context) {
 	options = []map[string]string{{
 		"label": "我的积分",
 		"value": "score",
-	},{
+	}, {
 		"label": "我的优惠券",
 		"value": "voucher",
-	},{
+	}, {
 		"label": "我的余额",
 		"value": "balance",
 	}}

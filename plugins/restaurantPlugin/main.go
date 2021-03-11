@@ -10,7 +10,7 @@ import (
 	"gincmf/plugins/restaurantPlugin/router"
 )
 
-func Init()  {
+func Init() {
 	regRouter()
 }
 
@@ -18,7 +18,6 @@ func regRouter() {
 	router.ApiListenRouter()
 }
 
-func AutoMigrate()  {
+func AutoMigrate() {
 	migrate.AutoMigrate()
 }
-

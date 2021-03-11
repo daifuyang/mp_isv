@@ -42,6 +42,7 @@ func ValidationBearerToken(c *gin.Context) {
 
 //验证是否为管理员
 func ValidationAdmin(c *gin.Context) {
+
 	currentUser := model.CurrentUser(c)
 	userType := currentUser.UserType
 	c.Set("userType", userType)

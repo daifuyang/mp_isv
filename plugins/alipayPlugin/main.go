@@ -8,6 +8,7 @@ package alipayPlugin
 import (
 	"gincmf/plugins/alipayPlugin/router"
 	"github.com/gincmf/alipayEasySdk"
+	cmf "github.com/gincmf/cmf/bootstrap"
 )
 
 /**
@@ -20,6 +21,13 @@ import (
 
 func Init() {
 	regRouter()
+
+	host := cmf.Conf().App.Domain
+
+	if cmf.Conf().App.AppDebug {
+		host = "https://www.codecloud.ltd"
+	}
+
 	op := map[string]string{
 		"protocol":    "https",
 		"gatewayHost": "openapi.alipay.com/gateway.do",
@@ -27,9 +35,11 @@ func Init() {
 		"appId":       "2021001192664075",
 		"version":     "1.0",
 		"charset":     "utf-8",
-		"notifyUrl":   "https://www.codecloud.ltd/api/v1/app/alipay/receive_notify",
+		"notifyUrl":   host + "/api/v1/app/alipay/receive_notify",
 		"AppCertPath": "./data/pem",
 		"AliCertPath": "./data/pem",
+		"encryptType": "AES",
+		"encryptKey":  "aPhwK45wyiS3sABRv+BseA==",
 	}
 	alipayEasySdk.NewOptions(op)
 }

@@ -7,6 +7,7 @@ package desk
 
 import (
 	"errors"
+	"gincmf/app/util"
 	"gincmf/plugins/restaurantPlugin/model"
 	"github.com/gin-gonic/gin"
 	cmf "github.com/gincmf/cmf/bootstrap"
@@ -57,7 +58,7 @@ func (rest *IndexController) Get(c *gin.Context) {
 
 	desk := model.Desk{}
 
-	data, err := desk.Index(c,query,queryArgs)
+	data, err := desk.Index(c, query, queryArgs)
 
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)
@@ -101,15 +102,15 @@ func (rest *IndexController) Show(c *gin.Context) {
 	mid, _ := c.Get("mid")
 
 	query = append(query, "d.id = ? AND d.mid = ?")
-	queryArgs = append(queryArgs, rewrite.Id,mid)
+	queryArgs = append(queryArgs, rewrite.Id, mid)
 
-	data,err := desk.Show(query,queryArgs)
+	data, err := desk.Show(query, queryArgs)
 	if err != nil {
-		if errors.Is(err,gorm.ErrRecordNotFound) {
-			rest.rc.Error(c,"该桌位不存在！",nil)
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			rest.rc.Error(c, "该桌位不存在！", nil)
 			return
 		}
-		rest.rc.Error(c,err.Error(),nil)
+		rest.rc.Error(c, err.Error(), nil)
 		return
 	}
 
@@ -151,43 +152,43 @@ func (rest *IndexController) Edit(c *gin.Context) {
 
 	name := c.PostForm("name")
 	if name == "" {
-		rest.rc.Error(c,"座位名称不能为空！",nil)
+		rest.rc.Error(c, "座位名称不能为空！", nil)
 		return
 	}
 
 	storeId := c.PostForm("store_id")
 	if storeId == "" {
-		rest.rc.Error(c,"所属门店不能为空！",nil)
+		rest.rc.Error(c, "所属门店不能为空！", nil)
 		return
 	}
 
-	storeIdInt ,err := strconv.Atoi(storeId)
+	storeIdInt, err := strconv.Atoi(storeId)
 	if err != nil {
-		rest.rc.Error(c,"门店id不能为空！",nil)
+		rest.rc.Error(c, "门店id不能为空！", nil)
 		return
 	}
 
 	categoryId := c.PostForm("category_id")
 	if categoryId == "" {
-		rest.rc.Error(c,"所属分类不能为空！",nil)
+		rest.rc.Error(c, "所属分类不能为空！", nil)
 		return
 	}
 
-	categoryIdInt ,err := strconv.Atoi(categoryId)
+	categoryIdInt, err := strconv.Atoi(categoryId)
 	if err != nil {
-		rest.rc.Error(c,"门店id不能为空！",nil)
+		rest.rc.Error(c, "门店id不能为空！", nil)
 		return
 	}
 
 	desk := model.Desk{
-		Id: rewrite.Id,
-		Mid: mid.(int),
-		StoreId: storeIdInt,
-		Name: name,
+		Id:         rewrite.Id,
+		Mid:        mid.(int),
+		StoreId:    storeIdInt,
+		Name:       name,
 		CategoryId: categoryIdInt,
 	}
 
-	data,err := desk.Update()
+	data, err := desk.Update()
 
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)
@@ -218,47 +219,57 @@ func (rest *IndexController) Store(c *gin.Context) {
 
 	mid, _ := c.Get("mid")
 
+	// midInt := mid.(int)
+
 	name := c.PostForm("name")
 	if name == "" {
-		rest.rc.Error(c,"桌位名称不能为空！",nil)
+		rest.rc.Error(c, "桌位名称不能为空！", nil)
 		return
 	}
 
 	storeId := c.PostForm("store_id")
 	if storeId == "" {
-		rest.rc.Error(c,"所属门店不能为空！",nil)
+		rest.rc.Error(c, "所属门店不能为空！", nil)
 		return
 	}
 
-	storeIdInt ,err := strconv.Atoi(storeId)
+	storeIdInt, err := strconv.Atoi(storeId)
 	if err != nil {
-		rest.rc.Error(c,"门店id不能为空！",nil)
+		rest.rc.Error(c, "门店id参数非法！", nil)
 		return
 	}
 
 	categoryId := c.PostForm("category_id")
 	if categoryId == "" {
-		rest.rc.Error(c,"所属分类不能为空！",nil)
+		rest.rc.Error(c, "所属分类不能为空！", nil)
 		return
 	}
 
-	categoryIdInt ,err := strconv.Atoi(categoryId)
+	categoryIdInt, err := strconv.Atoi(categoryId)
 	if err != nil {
-		rest.rc.Error(c,"门店id参数非法！",nil)
+		rest.rc.Error(c, "门店id参数非法！", nil)
 		return
 	}
+
+	// 桌位号
+	yearStr, monthStr, dayStr := util.CurrentDate()
+	date := yearStr + monthStr + dayStr
+	insertKey := "mp_isv" + strconv.Itoa(mid.(int)) + ":desk" + yearStr + monthStr + dayStr
+	number := util.EncryptUuid(insertKey, date, mid.(int))
+	deskNumber, _ := strconv.Atoi(number)
 
 	desk := model.Desk{
-		Mid: mid.(int),
-		StoreId: storeIdInt,
-		Name: name,
+		Mid:        mid.(int),
+		StoreId:    storeIdInt,
+		Name:       name,
+		DeskNumber: deskNumber,
 		CategoryId: categoryIdInt,
 	}
 
-	data,err := desk.Store()
+	data, err := desk.Store()
 
 	if err != nil {
-		rest.rc.Error(c,err.Error(),nil)
+		rest.rc.Error(c, err.Error(), nil)
 		return
 	}
 
@@ -296,10 +307,10 @@ func (rest *IndexController) Delete(c *gin.Context) {
 	midInt := mid.(int)
 	desk := model.Desk{}
 
-	result := cmf.NewDb().Where("mid = ? AND id = ?",midInt,rewrite.Id).Delete(&desk)
+	result := cmf.NewDb().Where("mid = ? AND id = ?", midInt, rewrite.Id).Delete(&desk)
 
 	if result.Error != nil {
-		rest.rc.Error(c,result.Error.Error(),nil)
+		rest.rc.Error(c, result.Error.Error(), nil)
 	}
 
 	rest.rc.Success(c, "删除成功！", nil)

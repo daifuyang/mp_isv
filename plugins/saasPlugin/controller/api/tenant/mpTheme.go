@@ -6,16 +6,17 @@
 package tenant
 
 import (
-	"fmt"
-	cmfModel "gincmf/app/model"
-	"gincmf/plugins/saasPlugin/model"
-
+	"encoding/json"
+	"errors"
+	appModel "gincmf/app/model"
 	"gincmf/app/util"
+	resModel "gincmf/plugins/restaurantPlugin/model"
+	"gincmf/plugins/saasPlugin/model"
+	saasModel "gincmf/plugins/saasPlugin/model"
 	"github.com/gin-gonic/gin"
 	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
 	"gorm.io/gorm"
-	"runtime"
 	"strconv"
 	"time"
 )
@@ -55,6 +56,14 @@ func (rest *MpTheme) Get(c *gin.Context) {
 	var temp []tempStruct
 	for _, v := range mpTheme {
 
+		createTime := time.Unix(v.CreateAt, 0).Format("2006-01-02 15:04:05")
+		v.CreateTime = createTime
+
+		updateTime := time.Unix(v.UpdateAt, 0).Format("2006-01-02 15:04:05")
+		v.UpdateTime = updateTime
+
+		v.AppLogoPrev = util.GetFileUrl(v.AppLogo)
+
 		mpThemeFile := model.MpThemePage{}
 		result := cmf.NewDb().Where("theme_id = ? and home = 1", v.Id).First(&mpThemeFile)
 
@@ -86,7 +95,7 @@ func (rest *MpTheme) Get(c *gin.Context) {
 		return
 	}
 
-	paginationData := cmfModel.Paginate{Data: temp, Current: intCurrent, PageSize: intPageSize, Total: total}
+	paginationData := appModel.Paginate{Data: temp, Current: intCurrent, PageSize: intPageSize, Total: total}
 	if len(temp) == 0 {
 		paginationData.Data = make([]string, 0)
 	}
@@ -111,6 +120,17 @@ func (rest *MpTheme) Show(c *gin.Context) {
 
 }
 
+func (rest *MpTheme) ShowByMid(c *gin.Context) {
+
+	mid, _ := c.Get("mid")
+
+	mp := model.MpTheme{}
+	cmf.NewDb().Debug().Where("mid = ?", mid).First(&mp)
+
+	rest.rc.Success(c, "获取成功！", mp)
+
+}
+
 func (rest *MpTheme) Edit(c *gin.Context) {
 
 	var rewrite struct {
@@ -127,6 +147,12 @@ func (rest *MpTheme) Edit(c *gin.Context) {
 		return
 	}
 
+	appLogo := c.PostForm("app_logo")
+	if appLogo == "" {
+		rest.rc.Error(c, "logo图标不能为空！", nil)
+		return
+	}
+
 	mp := model.MpTheme{}
 	tx := cmf.NewDb().Where("id = ?", rewrite.Id).First(&mp)
 
@@ -136,6 +162,7 @@ func (rest *MpTheme) Edit(c *gin.Context) {
 	}
 
 	mp.Name = name
+	mp.AppLogo = appLogo
 
 	cmf.NewDb().Save(&mp)
 
@@ -150,6 +177,19 @@ func (rest *MpTheme) Store(c *gin.Context) {
 		rest.rc.Error(c, "name不能为空！", nil)
 		return
 	}
+
+	appLogo := c.PostForm("app_logo")
+	if appLogo == "" {
+		rest.rc.Error(c, "logo图标不能为空！", nil)
+		return
+	}
+
+	miniCategoryIds := c.PostForm("mini_category_ids")
+	if miniCategoryIds == "" {
+		rest.rc.Error(c, "小程序分类不能为空", nil)
+		return
+	}
+
 	themeIdStr := c.PostForm("theme_id")
 	themeId, _ := strconv.Atoi(themeIdStr)
 	tenantIdStr, _ := c.Get("user_id")
@@ -169,38 +209,31 @@ func (rest *MpTheme) Store(c *gin.Context) {
 	 ** 日期 + 当天排号数量
 	 */
 
-	year, month, day := time.Now().Date()
-	yearStr := strconv.Itoa(year)
-	monthStr := strconv.Itoa(int(month))
-	if month < 10 {
-		monthStr = "0" + monthStr
-	}
-	dayStr := strconv.Itoa(day)
-	if day < 10 {
-		dayStr = "0" + dayStr
-	}
+	year, month, day := util.CurrentDate()
+	date := year + month + day
+	insertKey := "mp_isv:mp_theme" + date
+	number := util.EncryptUuid(insertKey, date, 0)
+	mid, _ := strconv.Atoi(number)
 
-	insertKey := "mp_isv:mp_theme:" + yearStr + monthStr + dayStr
-	val, err := cmf.NewRedisDb().Incr(insertKey).Result()
+	businessInfo := resModel.BusinessInfo{}
+	businessInfo.BrandName = name
+	businessInfo.BrandLogo = appLogo
+	businessInfo.MiniCategoryIds = miniCategoryIds
 
-	// 设置当天失效时间
-	today := time.Date(year, month, day, 23, 59, 59, 59, time.Local)
-	cmf.NewRedisDb().ExpireAt(insertKey, today)
+	op := resModel.Option{Mid: mid}
+	_, err := op.Updates(businessInfo)
 
 	if err != nil {
-		_, _, line, _ := runtime.Caller(0)
-		fmt.Println("redis err"+strconv.Itoa(line), err.Error())
+		rest.rc.Error(c, err.Error(), nil)
+		return
 	}
-
-	nStr := yearStr + monthStr + dayStr + strconv.FormatInt(val, 10)
-	n, _ := strconv.Atoi(nStr)
-	mid := util.EncodeId(uint64(n))
 
 	mpTheme := model.MpTheme{
 		Mid:      mid,
 		Name:     name,
 		ThemeId:  themeId,
 		TenantId: tenantId,
+		AppLogo:  appLogo,
 		CreateAt: time.Now().Unix(),
 	}
 
@@ -215,9 +248,9 @@ func (rest *MpTheme) Store(c *gin.Context) {
 		if themeId == 0 {
 			mpThemeFile = append(mpThemeFile, model.MpThemePage{
 				ThemeId:  mpTheme.Id,
-				Mid: mid,
+				Mid:      mid,
 				Title:    "首页",
-				File: "home",
+				File:     "home",
 				Home:     1,
 				CreateAt: time.Now().Unix(),
 			})
@@ -257,5 +290,70 @@ func (rest *MpTheme) Delete(c *gin.Context) {
 	cmf.NewDb().Updates(&mp)
 
 	rest.rc.Success(c, "删除成功！", nil)
+
+}
+
+/**
+ * @Author return <1140444693@qq.com>
+ * @Description 修改小程序类目信息
+ * @Date 2021/3/2 10:26:12
+ * @Param
+ * @return
+ **/
+
+func (rest *MpTheme) UpdateCategory(c *gin.Context) {
+
+	mid, _ := c.Get("mid")
+
+	miniCategoryIds := c.Query("mini_category_ids")
+	if miniCategoryIds == "" {
+		rest.rc.Error(c, "小程序分类不能为空", nil)
+		return
+	}
+
+	businessJson := saasModel.Options("business_info", mid.(int))
+	bi := resModel.BusinessInfo{}
+	json.Unmarshal([]byte(businessJson), &bi)
+
+	rest.rc.Success(c, "更新成功", bi)
+
+}
+
+// 解绑小程序授权关系
+func (rest *MpTheme) UnOauth(c *gin.Context) {
+
+	mid, _ := c.Get("mid")
+
+	var rewrite struct {
+		Id int `uri:"id"`
+	}
+	if err := c.ShouldBindUri(&rewrite); err != nil {
+		c.JSON(400, gin.H{"msg": err.Error()})
+		return
+	}
+
+	tenant := model.CurrentTenant(c)
+
+	oauth := appModel.MpIsvAuth{}
+
+	tx := cmf.NewDb().Where("tenant_id = ? AND mp_id = ?", tenant.TenantId, mid).First(&oauth)
+
+	if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
+		rest.rc.Error(c, tx.Error.Error(), nil)
+		return
+	}
+
+	if tx.RowsAffected == 0 {
+		rest.rc.Error(c, "授权信息不存在或已删除", nil)
+		return
+	}
+
+	tx = cmf.NewDb().Where("tenant_id = ? AND mp_id = ?", tenant.TenantId, mid).Delete(&oauth)
+	if tx.Error != nil {
+		rest.rc.Error(c, tx.Error.Error(), nil)
+		return
+	}
+
+	rest.rc.Success(c, "解绑成功！", nil)
 
 }

@@ -26,20 +26,20 @@ func ValidationBearerToken(token string) error {
 	}
 
 	// 增加时间
-	s.SetAccessTokenExpHandler(func(w http.ResponseWriter, r *http.Request) (td time.Duration, err error){
+	s.SetAccessTokenExpHandler(func(w http.ResponseWriter, r *http.Request) (td time.Duration, err error) {
 		tokenExp := "24"
 		exp, _ := strconv.Atoi(tokenExp)
 		duration := time.Duration(exp) * time.Hour
-		return duration,nil
+		return duration, nil
 	})
 
-	UserId,_ = strconv.Atoi(t.GetUserID())
+	UserId, _ = strconv.Atoi(t.GetUserID())
 
-	fmt.Println("userid",UserId)
+	fmt.Println("userid", UserId)
 
 	tenant := model.Tenant{}
 
-	if err := cmf.Db().Where("id = ?",UserId).First(&tenant).Error; err != nil  {
+	if err := cmf.Db().Where("id = ?", UserId).First(&tenant).Error; err != nil {
 		return err
 	}
 

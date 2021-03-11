@@ -100,7 +100,7 @@ func (model *PortalCategory) Index(c *gin.Context, query []string, queryArgs []i
 func (model *PortalCategory) List() ([]PortalCategory, error) {
 
 	query := []string{"mid = ? AND delete_at = ?"}
-	queryArgs := []interface{}{model.Mid,"0"}
+	queryArgs := []interface{}{model.Mid, "0"}
 	queryStr := strings.Join(query, " AND ")
 
 	var category []PortalCategory

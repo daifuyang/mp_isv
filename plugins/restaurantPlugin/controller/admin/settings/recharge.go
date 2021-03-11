@@ -32,14 +32,14 @@ func (rest *Recharge) Show(c *gin.Context) {
 	mid, _ := c.Get("mid")
 
 	op := model.Option{}
-	result := cmf.NewDb().Where("option_name = ? AND mid = ?", "recharge",mid).First(&op)
+	result := cmf.NewDb().Where("option_name = ? AND mid = ?", "recharge", mid).First(&op)
 	if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, result.Error.Error(), nil)
 		return
 	}
 	var recharge []model.Recharge
-	json.Unmarshal([]byte(op.OptionValue),&recharge)
-	rest.rc.Success(c,"获取成功！",recharge)
+	json.Unmarshal([]byte(op.OptionValue), &recharge)
+	rest.rc.Success(c, "获取成功！", recharge)
 
 }
 
@@ -62,9 +62,9 @@ func (rest *Recharge) Edit(c *gin.Context) {
 		return
 	}
 
-	jsonStr,err := json.Marshal(form)
+	jsonStr, err := json.Marshal(form)
 	if err != nil {
-		rest.rc.Error(c,err.Error(),nil)
+		rest.rc.Error(c, err.Error(), nil)
 		return
 	}
 
@@ -72,7 +72,7 @@ func (rest *Recharge) Edit(c *gin.Context) {
 	op.Mid = mid.(int)
 	op.AutoLoad = 1
 	op.OptionName = "recharge"
-	result := cmf.NewDb().Where("option_name = ? AND mid = ?", "recharge",mid).First(&op)
+	result := cmf.NewDb().Where("option_name = ? AND mid = ?", "recharge", mid).First(&op)
 	if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, result.Error.Error(), nil)
 		return
@@ -81,10 +81,10 @@ func (rest *Recharge) Edit(c *gin.Context) {
 	op.OptionValue = string(jsonStr)
 	if result.RowsAffected == 0 {
 		cmf.NewDb().Create(&op)
-	}else{
+	} else {
 		cmf.NewDb().Save(&op)
 	}
 
-	rest.rc.Success(c,"修改成功！",form)
+	rest.rc.Success(c, "修改成功！", form)
 
 }

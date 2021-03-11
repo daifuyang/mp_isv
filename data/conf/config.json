@@ -38,8 +38,8 @@
     "accessKey": "RUJBQZ7AnKFbt1PJi2-HStPJUBrUc3JYWKHH6HmY",
     "secretKey": "HYG1t6wxGOggKyNrmroKEcFnQyAqxANqPTXFGcTq",
     "isHttps": false,
-    "domain": "v.hji5.com",
-    "bucket": "vlog",
+    "domain": "cdn.mashangdian.cn",
+    "bucket": "mp-isv",
     "zone": "huadong",
     "isCdn": false
   }

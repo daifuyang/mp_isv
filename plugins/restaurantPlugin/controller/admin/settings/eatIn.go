@@ -34,7 +34,7 @@ func (rest *EatIn) Show(c *gin.Context) {
 
 	op := model.Option{}
 
-	result := cmf.NewDb().Where("option_name = ? AND store_id = ? AND mid = ?", "eat_in", rewrite.Id,mid).First(&op)
+	result := cmf.NewDb().Where("option_name = ? AND store_id = ? AND mid = ?", "eatin", rewrite.Id, mid).First(&op)
 	if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, result.Error.Error(), nil)
 		return
@@ -81,7 +81,7 @@ func (rest *EatIn) Edit(c *gin.Context) {
 	}
 
 	op := model.Option{}
-	result := cmf.NewDb().Where("option_name = ? AND store_id = ? AND mid =?", "eat_in", form.StoreId,mid).First(&op)
+	result := cmf.NewDb().Where("option_name = ? AND store_id = ? AND mid =?", "eatin", form.StoreId, mid).First(&op)
 	if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, result.Error.Error(), nil)
 		return
@@ -143,7 +143,7 @@ func (rest *EatIn) Edit(c *gin.Context) {
 	op.Mid = mid.(int)
 	op.StoreId = form.StoreId
 	op.AutoLoad = 1
-	op.OptionName = "eat_in"
+	op.OptionName = "eatin"
 	ei := model.EatIn{
 		Status:             status,
 		EnabledSellClear:   enabledSellClear,

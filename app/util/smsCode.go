@@ -18,7 +18,6 @@ type smsCode struct {
 	Expire int64
 }
 
-
 var SmsCodeArr map[int]*smsCode
 
 func SmsCode(mobile int) (*smsCode, error) {
@@ -57,14 +56,14 @@ func SmsCode(mobile int) (*smsCode, error) {
 	return SmsCodeArr[mobile], nil
 }
 
-func ValidateSms(mobile int,code string) error {
+func ValidateSms(mobile int, code string) error {
 	smsArr := SmsCodeArr[mobile]
 	if smsArr == nil {
-		return errors.New( "请先获取短信验证码！")
+		return errors.New("请先获取短信验证码！")
 	}
 
 	if smsArr.Expire < time.Now().Unix() {
-		return errors.New(  "该短信验证码已经失效！请重新获取")
+		return errors.New("该短信验证码已经失效！请重新获取")
 	}
 
 	if code == "" {
@@ -75,7 +74,7 @@ func ValidateSms(mobile int,code string) error {
 		return errors.New("短信验证码验证出错！请检查您的验证码是否正确")
 	}
 
-	delete(SmsCodeArr,mobile)
+	delete(SmsCodeArr, mobile)
 
 	return nil
 }

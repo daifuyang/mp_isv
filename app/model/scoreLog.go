@@ -23,7 +23,7 @@ type ScoreLog struct {
 	Score      int    `gorm:"type:int(11);comment:增加积分;not null" json:"score"`
 	Fee        string `gorm:"type:varchar(11);comment:合计金额;default:0;not null" json:"fee"`
 	Remark     string `gorm:"type:varchar(255);comment:备注" json:"remark"`
-	CreateAt   int64  `gorm:"type:int(11);not nul" json:"create_at"`
+	CreateAt   int64  `gorm:"type:bigint(20);not nul" json:"create_at"`
 	CreateTime string `gorm:"-" json:"create_time"`
 	paginate   cmfModel.Paginate
 }
@@ -58,7 +58,7 @@ func (model *ScoreLog) Index(c *gin.Context, query []string, queryArgs []interfa
 
 	var log []ScoreLog
 	cmf.NewDb().Where(queryStr, queryArgs...).Find(&log).Count(&total)
-	tx := cmf.NewDb().Where(queryStr, queryArgs...).Limit(pageSize).Offset((current - 1) * pageSize).Find(&log)
+	tx := cmf.NewDb().Where(queryStr, queryArgs...).Limit(pageSize).Offset((current - 1) * pageSize).Order("id desc").Find(&log)
 	if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 		return cmfModel.Paginate{}, tx.Error
 	}

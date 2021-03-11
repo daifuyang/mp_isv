@@ -8,6 +8,40 @@
     "list_order": 1
   },
   {
+    "unique_name": "app/published",
+    "name": "小程序",
+    "path": "/app/:mid/published",
+    "icon": "iconmp",
+    "hide_in_menu": 0,
+    "list_order": 1,
+    "children": [
+      {
+        "unique_name": "app/published/dashboard",
+        "name": "小程序总览",
+        "path": "/app/:mid/published/dashboard",
+        "icon": "",
+        "hide_in_menu": 0,
+        "list_order": 1
+      },
+      {
+        "unique_name": "app/published/weixin",
+        "name": "微信小程序",
+        "path": "/app/:mid/published/weixin",
+        "icon": "",
+        "hide_in_menu": 0,
+        "list_order": 2
+      },
+      {
+        "unique_name": "app/published/alipay",
+        "name": "支付宝小程序",
+        "path": "/app/:mid/published/alipay",
+        "icon": "",
+        "hide_in_menu": 0,
+        "list_order": 3
+      }
+    ]
+  },
+  {
     "unique_name": "app/order/default",
     "name": "订单管理",
     "path": "/app/:mid/order/default",
@@ -138,9 +172,9 @@
     ]
   },
   {
-    "unique_name": "app/marketing/default",
+    "unique_name": "app/marketing",
     "name": "营销管理",
-    "path": "/app/:mid/marketing/default",
+    "path": "/app/:mid/marketing",
     "icon": "icongift",
     "hide_in_menu": 0,
     "list_order": 70,
@@ -157,6 +191,14 @@
         "unique_name": "app/marketing/coupon",
         "name": "优惠券管理",
         "path": "/app/:mid/marketing/coupon",
+        "icon": "",
+        "hide_in_menu": 0,
+        "list_order": 10000
+      },
+      {
+        "unique_name": "app/marketing/recharge",
+        "name": "储值管理",
+        "path": "/app/:mid/marketing/recharge",
         "icon": "",
         "hide_in_menu": 0,
         "list_order": 10000
@@ -194,14 +236,6 @@
         "icon": "",
         "hide_in_menu": 0,
         "list_order": 10000
-      },
-      {
-        "unique_name": "app/theme/setting",
-        "name": "店铺设置",
-        "path": "/app/:mid/theme/setting",
-        "icon": "",
-        "hide_in_menu": 0,
-        "list_order": 10
       }
     ]
   },
@@ -290,9 +324,9 @@
     ]
   },
   {
-    "unique_name": "app/user/default",
-    "name": "用户管理",
-    "path": "/app/:mid/user/default",
+    "unique_name": "app/user",
+    "name": "账号管理",
+    "path": "/app/:mid/user",
     "icon": "iconuser",
     "hide_in_menu": 0,
     "list_order": 100,
@@ -322,45 +356,45 @@
         ]
       },
       {
-        "unique_name": "app/role/default",
-        "name": "角色管理",
-        "path": "/app/:mid/role/default",
+        "unique_name": "app/user/role",
+        "name": "角色设置",
+        "path": "/app/:mid/user/role",
         "icon": "",
         "list_order": 10000,
         "hide_in_menu": 0,
         "children": [
           {
-            "unique_name": "app/role/list",
+            "unique_name": "app/user/role/list",
             "name": "角色列表",
             "path": "",
             "icon": "",
             "hide_in_menu": 0
           },
           {
-            "unique_name": "app/role/edit",
+            "unique_name": "app/user/role/edit",
             "name": "角色编辑",
             "path": "",
             "icon": "",
             "hide_in_menu": 0
           },
           {
-            "unique_name": "app/role/delete",
+            "unique_name": "app/user/role/delete",
             "name": "角色删除",
             "path": "",
             "icon": "",
             "hide_in_menu": 0
           },
           {
-            "unique_name": "app/authorize/add",
+            "unique_name": "app/user/authorize/add",
             "name": "角色权限添加",
-            "path": "/user_manage/authorize/add",
+            "path": "app/:mid/user/authorize/add",
             "icon": "",
             "hide_in_menu": 1
           },
           {
-            "unique_name": "app/authorize/edit",
+            "unique_name": "app/user/authorize/edit",
             "name": "角色权限编辑",
-            "path": "/app/:mid/authorize/edit/:id",
+            "path": "/app/:mid/user/authorize/edit/:id",
             "icon": "",
             "hide_in_menu": 1
           }

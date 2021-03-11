@@ -15,7 +15,6 @@ import (
 	"testing"
 )
 
-
 func Test_attr(t *testing.T) {
 
 	cmf.Initialize("../../../data/conf/config.json")
@@ -34,6 +33,6 @@ func Test_attr(t *testing.T) {
 	if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		log.Fatal(result.Error)
 	}
-	
+
 	fmt.Println(tempAttr)
 }

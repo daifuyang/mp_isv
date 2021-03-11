@@ -26,11 +26,11 @@ type Category struct {
  **/
 func (rest *Category) List(c *gin.Context) {
 
-	mid,_ := c.Get("mid")
-	midInt ,_ := mid.(int)
+	mid, _ := c.Get("mid")
+	midInt, _ := mid.(int)
 
 	category := model.PortalCategory{
-		Mid:midInt,
+		Mid: midInt,
 	}
 	data, err := category.ListWithTree()
 	if err != nil {
@@ -43,15 +43,15 @@ func (rest *Category) List(c *gin.Context) {
 
 func (rest *Category) Options(c *gin.Context) {
 
-	mid,_ := c.Get("mid")
-	midInt ,_ := mid.(int)
+	mid, _ := c.Get("mid")
+	midInt, _ := mid.(int)
 
 	category := model.PortalCategory{}
 
 	var query = []string{"mid = ? AND delete_at  = ?"}
-	var queryArgs = []interface{}{midInt,0}
+	var queryArgs = []interface{}{midInt, 0}
 
-	data ,err := category.ListWithOptions(query,queryArgs)
+	data, err := category.ListWithOptions(query, queryArgs)
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)
 		return
@@ -64,8 +64,8 @@ func (rest *Category) Options(c *gin.Context) {
  * @Author return <1140444693@qq.com>
  * @Description 门户分类查询
  * @Date 2020/11/7 19:58:25
- * @Param 
- * @return 
+ * @Param
+ * @return
  **/
 func (rest *Category) Get(c *gin.Context) {
 
@@ -74,8 +74,8 @@ func (rest *Category) Get(c *gin.Context) {
 
 	name := c.Query("name")
 	if name != "" {
-		query = append(query,"name like ?")
-		queryArgs = append(queryArgs,"%"+name+"%")
+		query = append(query, "name like ?")
+		queryArgs = append(queryArgs, "%"+name+"%")
 	}
 
 	category := model.PortalCategory{}
@@ -92,8 +92,8 @@ func (rest *Category) Get(c *gin.Context) {
  * @Author return <1140444693@qq.com>
  * @Description 查询单个门户分类
  * @Date 2020/11/7 21:14:53
- * @Param 
- * @return 
+ * @Param
+ * @return
  **/
 func (rest *Category) Show(c *gin.Context) {
 
@@ -109,9 +109,9 @@ func (rest *Category) Show(c *gin.Context) {
 		Id: rewrite.Id,
 	}
 
-	data,err := portalCategory.Show()
+	data, err := portalCategory.Show()
 	if err != nil {
-		rest.rc.Error(c,err.Error(),nil)
+		rest.rc.Error(c, err.Error(), nil)
 		return
 	}
 
@@ -135,25 +135,25 @@ func (rest *Category) Edit(c *gin.Context) {
 	name := c.PostForm("name")
 
 	if name == "" {
-		rest.rc.Error(c,"分类名称不能为空！",nil)
+		rest.rc.Error(c, "分类名称不能为空！", nil)
 	}
 
 	portalCategory := model.PortalCategory{
-		Id: rewrite.Id,
-		Mid: midInt,
+		Id:   rewrite.Id,
+		Mid:  midInt,
 		Name: name,
 	}
 
-	pid := c.DefaultPostForm("parent_id","")
+	pid := c.DefaultPostForm("parent_id", "")
 	if pid != "" {
-		parentId,_ := strconv.Atoi(pid)
+		parentId, _ := strconv.Atoi(pid)
 		portalCategory.ParentId = parentId
 	}
 
 	status := c.PostForm("status")
 	statusInt := 1
 	if status != "" {
-		statusInt,_ = strconv.Atoi(status)
+		statusInt, _ = strconv.Atoi(status)
 	}
 	portalCategory.Status = statusInt
 
@@ -190,9 +190,9 @@ func (rest *Category) Edit(c *gin.Context) {
 		portalCategory.OneTpl = oneTpl
 	}
 
-	data,err := portalCategory.Edit()
+	data, err := portalCategory.Edit()
 	if err != nil {
-		rest.rc.Error(c,err.Error(),nil)
+		rest.rc.Error(c, err.Error(), nil)
 		return
 	}
 
@@ -207,22 +207,22 @@ func (rest *Category) Store(c *gin.Context) {
 
 	name := c.PostForm("name")
 	if name == "" {
-		rest.rc.Error(c,"分类名称不能为空！",nil)
+		rest.rc.Error(c, "分类名称不能为空！", nil)
 		return
 	}
 
-	pid := c.DefaultPostForm("parent_id","0")
-	parentId,_ := strconv.Atoi(pid)
+	pid := c.DefaultPostForm("parent_id", "0")
+	parentId, _ := strconv.Atoi(pid)
 
 	portalCategory := model.PortalCategory{
-		Mid: midInt,
+		Mid:      midInt,
 		ParentId: parentId,
-		Name: name,
+		Name:     name,
 	}
 	status := c.PostForm("status")
 	statusInt := 1
 	if status != "" {
-		statusInt,_ = strconv.Atoi(status)
+		statusInt, _ = strconv.Atoi(status)
 	}
 	portalCategory.Status = statusInt
 	alias := c.PostForm("alias")
@@ -259,10 +259,10 @@ func (rest *Category) Store(c *gin.Context) {
 		portalCategory.OneTpl = oneTpl
 	}
 
-	 result,err := portalCategory.Save()
+	result, err := portalCategory.Save()
 
 	if err != nil {
-		rest.rc.Error(c,err.Error(),nil)
+		rest.rc.Error(c, err.Error(), nil)
 		return
 	}
 
@@ -277,11 +277,11 @@ func (rest *Category) Delete(c *gin.Context) {
 
 	ids := c.QueryArray("ids")
 
-	fmt.Println("ids",ids)
+	fmt.Println("ids", ids)
 
 	var (
 		result interface{}
-		err error
+		err    error
 	)
 
 	// 软删除
@@ -294,7 +294,7 @@ func (rest *Category) Delete(c *gin.Context) {
 		}
 		portalCategory.Id = rewrite.Id
 		result, err = portalCategory.Delete()
-	}else {
+	} else {
 		result, err = portalCategory.BatchDelete(ids)
 	}
 

@@ -30,8 +30,8 @@ type PortalPost struct {
 	PostFavorites       int               `gorm:"type:int(11);comment:收藏数;default:0;NOT NULL" json:"post_favorites"`
 	PostLike            int               `gorm:"type:int(11);comment:点赞数;default:0;NOT NULL" json:"post_like"`
 	CommentCount        int               `gorm:"type:int(11);comment:评论数;default:0;NOT NULL" json:"comment_count"`
-	CreateAt            int64             `gorm:"type:int(11);NOT NULL" json:"create_at"`
-	UpdateAt            int64             `gorm:"type:int(11);NOT NULL" json:"update_at"`
+	CreateAt            int64             `gorm:"type:bigint(20);NOT NULL" json:"create_at"`
+	UpdateAt            int64             `gorm:"type:bigint(20);NOT NULL" json:"update_at"`
 	PublishedAt         int64             `gorm:"type:int(11);comment:发布时间;NOT NULL" json:"published_at"`
 	DeleteAt            int64             `gorm:"type:int(11);comment:删除实际;NOT NULL" json:"delete_at"`
 	CreateTime          string            `gorm:"-" json:"create_time"`

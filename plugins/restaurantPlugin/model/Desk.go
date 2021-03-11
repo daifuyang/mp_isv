@@ -19,6 +19,7 @@ type Desk struct {
 	Id           int               `json:"id"`
 	Mid          int               `gorm:"type:bigint(20);comment:对应小程序id;not null" json:"mid"`
 	StoreId      int               `gorm:"type:int(11);comment:门店id;not null" json:"store_id"`
+	DeskNumber   int               `gorm:"type:bigint(20);comment:桌位编号;not null" json:"desk_number"`
 	Name         string            `gorm:"type:varchar(20);comment:座位名称;not null" json:"name"`
 	CategoryId   int               `gorm:"type:int(11);comment:对应小程序id;not null" json:"category_id"`
 	CategoryName string            `gorm:"type:varchar(20);comment:对应小程序id;not null" json:"category_name"`
@@ -194,7 +195,7 @@ func (model Desk) Update() (Desk, error) {
 	}
 
 	model.CategoryName = cateData.CategoryName
-	result := cmf.NewDb().Debug().Save(&model)
+	result := cmf.NewDb().Save(&model)
 	if result.Error != nil {
 		return desk, result.Error
 	}

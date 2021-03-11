@@ -15,11 +15,11 @@ import (
 	"time"
 )
 
-type AuthAccessController struct {
+type AuthAccess struct {
 	rc controller.RestController
 }
 
-func (rest *AuthAccessController) Show(c *gin.Context) {
+func (rest *AuthAccess) Show(c *gin.Context) {
 	var rewrite struct {
 		Id int `uri:"id"`
 	}
@@ -63,7 +63,7 @@ func (rest *AuthAccessController) Show(c *gin.Context) {
 
 }
 
-func (rest *AuthAccessController) Edit(c *gin.Context) {
+func (rest *AuthAccess) Edit(c *gin.Context) {
 
 	var rewrite struct {
 		Id int `uri:"id"`
@@ -149,7 +149,7 @@ func inArray(search interface{}, arr []interface{}) bool {
 	return false
 }
 
-func (rest *AuthAccessController) Store(c *gin.Context) {
+func (rest *AuthAccess) Store(c *gin.Context) {
 
 	// 角色名称
 	name := c.PostForm("name")

@@ -25,8 +25,8 @@ type Category struct {
  **/
 func (rest *Category) List(c *gin.Context) {
 
-	pid := c.DefaultQuery("pid","0")
-	parentId,_ := strconv.Atoi(pid)
+	pid := c.DefaultQuery("pid", "0")
+	parentId, _ := strconv.Atoi(pid)
 	category := model.PortalCategory{
 		ParentId: parentId,
 	}
@@ -57,14 +57,14 @@ func (rest *Category) GetTopId(c *gin.Context) {
 		return
 	}
 
-	topId,err := new(model.PortalCategory).GetTopId(rewrite.Id)
+	topId, err := new(model.PortalCategory).GetTopId(rewrite.Id)
 
 	if err != nil {
-		rest.rc.Error(c,err.Error(),nil)
+		rest.rc.Error(c, err.Error(), nil)
 		return
 	}
 
-	rest.rc.Success(c,"获取成功！",gin.H{"top_id":topId})
+	rest.rc.Success(c, "获取成功！", gin.H{"top_id": topId})
 
 }
 
@@ -89,9 +89,9 @@ func (rest *Category) Show(c *gin.Context) {
 		Id: rewrite.Id,
 	}
 
-	data,err := portalCategory.Show()
+	data, err := portalCategory.Show()
 	if err != nil {
-		rest.rc.Error(c,err.Error(),nil)
+		rest.rc.Error(c, err.Error(), nil)
 		return
 	}
 

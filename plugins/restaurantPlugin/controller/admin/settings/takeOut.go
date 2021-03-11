@@ -34,7 +34,7 @@ func (rest *TakeOut) Show(c *gin.Context) {
 
 	op := model.Option{}
 
-	result := cmf.NewDb().Where("option_name = ? AND store_id = ? AND mid = ?", "take_out", rewrite.Id, mid).First(&op)
+	result := cmf.NewDb().Where("option_name = ? AND store_id = ? AND mid = ?", "takeout", rewrite.Id, mid).First(&op)
 	if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, result.Error.Error(), nil)
 		return
@@ -81,7 +81,7 @@ func (rest *TakeOut) Edit(c *gin.Context) {
 
 	op := model.Option{}
 
-	result := cmf.NewDb().Where("option_name = ? AND store_id = ?", "take_out", form.StoreId).First(&op)
+	result := cmf.NewDb().Where("option_name = ? AND store_id = ?", "takeout", form.StoreId).First(&op)
 	if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, result.Error.Error(), nil)
 		return
@@ -129,7 +129,7 @@ func (rest *TakeOut) Edit(c *gin.Context) {
 	op.Mid = mid.(int)
 	op.StoreId = form.StoreId
 	op.AutoLoad = 1
-	op.OptionName = "take_out"
+	op.OptionName = "takeout"
 	ei := model.TakeOut{
 		Status:             status,
 		ImmediateDelivery:  immediateDelivery,

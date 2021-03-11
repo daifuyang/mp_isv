@@ -24,16 +24,16 @@ type User struct {
 	Coin              int     `gorm:"type:bigint(20);comment:金币;default:0;not null" json:"coin"`
 	Exp               int     `gorm:"type:bigint(20);comment:经验;default:0;not null" json:"exp"`
 	Balance           float64 `gorm:"type:decimal(10,2);comment:余额;not null" json:"balance"`
-	CreateAt          int64   `gorm:"type:int(11)" json:"create_at"`
-	UpdateAt          int64   `gorm:"type:int(11)" json:"update_at"`
-	DeleteAt          int64   `gorm:"type:int(11)" json:"delete_at"`
+	CreateAt          int64   `gorm:"type:bigint(20)" json:"create_at"`
+	UpdateAt          int64   `gorm:"type:bigint(20)" json:"update_at"`
+	DeleteAt          int64   `gorm:"type:bigint(20)" json:"delete_at"`
 	UserStatus        int     `gorm:"type:tinyint(3);not null;default:1" json:"user_status"`
-	UserLogin         string  `gorm:"type:varchar(60);not null" json:"user_login"`
-	UserPass          string  `gorm:"type:varchar(64);not null" json:"-"`
-	UserNickname      string  `gorm:"type:varchar(50);not null" json:"user_nickname"`
-	UserRealName      string  `gorm:"type:varchar(50);not null" json:"user_realname"`
-	UserEmail         string  `gorm:"type:varchar(100);not null" json:"user_email"`
-	UserUrl           string  `gorm:"type:varchar(100);not null" json:"user_url"`
+	UserLogin         string  `gorm:"type:varchar(60)" json:"user_login"`
+	UserPass          string  `gorm:"type:varchar(64)" json:"-"`
+	UserNickname      string  `gorm:"type:varchar(50)" json:"user_nickname"`
+	UserRealName      string  `gorm:"type:varchar(50)" json:"user_realname"`
+	UserEmail         string  `gorm:"type:varchar(100)" json:"user_email"`
+	UserUrl           string  `gorm:"type:varchar(100)" json:"user_url"`
 	Avatar            string  `json:"avatar"`
 	Signature         string  `json:"signature"`
 	LastLoginIp       string  `json:"last_loginip"`
@@ -128,8 +128,8 @@ func (model *User) Show(query []string, queryArgs []interface{}) (User, error) {
 
 type UserPart struct {
 	User
-	Type   string `json:"type"`
-	OpenId string `json:"open_id"`
+	Type   string `gorm:"->" json:"type"`
+	OpenId string `gorm:"->" json:"open_id"`
 }
 
 /**
@@ -155,7 +155,7 @@ func (model UserPart) Show(query []string, queryArgs []interface{}) (*UserPart, 
 
 	prefix := cmf.Conf().Database.Prefix
 
-	result := cmf.NewDb().Table(prefix+"third_part tp").Select("tp.type,tp.open_id,u.*").
+	result := cmf.NewDb().Debug().Table(prefix+"third_part tp").Select("u.*,tp.type,tp.open_id").
 		Joins("LEFT JOIN "+prefix+"user u ON tp.user_id = u.id").
 		Where(queryStr, queryArgs...).Order("tp.id desc").Scan(&up)
 	if result.Error != nil {

@@ -6,14 +6,13 @@
 package middleware
 
 import (
-	"encoding/json"
-	"gincmf/app/model"
 	saasModel "gincmf/plugins/saasPlugin/model"
 	"github.com/gin-gonic/gin"
 	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
 /**
@@ -38,29 +37,52 @@ func ValidationMerchant(c *gin.Context) {
 
 	mid := midMap[0]
 
-	mpIsv := model.MpIsvAuth{}
-	tx := cmf.Db().Where("mp_id = ?",mid).Order("id desc").First(&mpIsv)
-
-	if tx.RowsAffected == 0 {
-		controller.RestController{}.ErrorCode(c, 20001,"小程序编号不正确！", nil)
-		c.Abort()
-	}
-
-	mpJson,_ := json.Marshal(&mpIsv)
-	c.Set("mp_json",string(mpJson))
-
-	c.Set("alipay_user_id",mpIsv.UserId)
-
 	// 验证当前小程序是否存在
 	result := cmf.NewDb().Where("mid = ?", mid).First(&saasModel.MpTheme{})
 
 	if result.RowsAffected == 0 {
-		controller.RestController{}.ErrorCode(c, 20001,"小程序编号不正确！", nil)
+		controller.RestController{}.ErrorCode(c, 20001, "小程序编号不正确！", nil)
 		c.Abort()
+		return
 	}
 
 	midInt, _ := strconv.Atoi(mid)
 	c.Set("mid", midInt)
+	c.Next()
+
+}
+
+func UseMerchant(c *gin.Context) {
+
+	// 获取小程序mid
+	r := c.Request
+	r.ParseForm()
+	midMap := r.Form["mid"]
+	mid := strings.Join(midMap, "")
+
+	midInt, err := strconv.Atoi(mid)
+
+	if err != nil {
+		midInt = 0
+	}
+
+	if midInt > 0 {
+
+		mid := midMap[0]
+		// 验证当前小程序是否存在
+		result := cmf.NewDb().Where("mid = ?", mid).First(&saasModel.MpTheme{})
+
+		if result.RowsAffected == 0 {
+			controller.RestController{}.ErrorCode(c, 20001, "小程序编号不正确！", nil)
+			c.Abort()
+			return
+		}
+		midInt, _ = strconv.Atoi(mid)
+
+	}
+
+	c.Set("mid", midInt)
+
 	c.Next()
 
 }

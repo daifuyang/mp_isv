@@ -15,19 +15,19 @@ type Order struct {
 	rc controller.RestController
 }
 
-func (rest Order) Get(c *gin.Context)  {
+func (rest Order) Get(c *gin.Context) {
 
 	mpUserId, _ := c.Get("mp_user_id")
 	mid, _ := c.Get("mid")
 
-	var query = []string{"user_id = ? AND mid = ? AND order_status = ?"}
-	var queryArgs = []interface{}{mpUserId,mid,"TRADE_FINISHED"}
+	var query = []string{"user_id = ? AND co.mid = ? AND order_status = ?"}
+	var queryArgs = []interface{}{mpUserId, mid, "TRADE_FINISHED"}
 
-	data,err := new(model.MemberCardOrder).Index(c,query,queryArgs)
+	data, err := new(model.MemberCardOrder).Index(c, query, queryArgs)
 	if err != nil {
-		rest.rc.Error(c,err.Error(),nil)
+		rest.rc.Error(c, err.Error(), nil)
 		return
 	}
-	rest.rc.Success(c,"获取成功！",data)
+	rest.rc.Success(c, "获取成功！", data)
 
 }

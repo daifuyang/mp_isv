@@ -23,21 +23,21 @@ type Index struct {
 // @Success 200 {object} model.Paginate{data=[]model.User} "code:1 => 获取成功，code:0 => 获取失败"
 // @Failure 400 {object} model.ReturnData "{"code":400,"msg":"登录状态已失效！"}"
 // @Router /admin/member [get]
-func (rest *Index) Get (c *gin.Context) {
+func (rest *Index) Get(c *gin.Context) {
 
 	mid, _ := c.Get("mid")
 
-	var query = []string{"u.mid = ?","u.delete_at = ?"}
-	var queryArgs = []interface{}{mid,0}
+	var query = []string{"u.mid = ?", "u.delete_at = ?"}
+	var queryArgs = []interface{}{mid, 0}
 
 	u := model.User{}
-	data ,err := u.ThirdPartIndex(c,query,queryArgs)
+	data, err := u.ThirdPartIndex(c, query, queryArgs)
 	if err != nil {
-		rest.rc.Error(c,err.Error(),nil)
+		rest.rc.Error(c, err.Error(), nil)
 		return
 	}
 
-	rest.rc.Success(c,"获取成功！",data)
+	rest.rc.Success(c, "获取成功！", data)
 
 }
 

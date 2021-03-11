@@ -44,9 +44,9 @@ func (rest *User) Get(c *gin.Context) {
 	}
 
 	user := model.User{}
-	data,err := user.Get(c,query,queryArgs)
+	data, err := user.Get(c, query, queryArgs)
 	if err != nil {
-		rest.rc.Error(c,err.Error(),nil)
+		rest.rc.Error(c, err.Error(), nil)
 		return
 	}
 
@@ -235,7 +235,6 @@ func (rest *User) Store(c *gin.Context) {
 func (rest *User) Delete(c *gin.Context) {
 	rest.rc.Success(c, "操作成功Delete", nil)
 }
-
 
 func (rest *User) CurrentUser(c *gin.Context) {
 	// 获取当前用户

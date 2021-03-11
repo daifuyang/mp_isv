@@ -20,7 +20,7 @@ type AdminNotice struct {
 	Id         int    `json:"id"`
 	Title      string `gorm:"type:varchar(40);comment:通知标题;not null" json:"title"`
 	Desc       string `gorm:"type:varchar(255);comment:通知描述" json:"desc"`
-	CreateAt   int64  `gorm:"type:int(10);comment:创建时间;default:0" json:"create_at"`
+	CreateAt   int64  `gorm:"type:bigint(20);comment:创建时间;default:0" json:"create_at"`
 	CreateTime string `gorm:"-" json:"create_time"`
 	Type       int    `gorm:"type:tinyint(3);comment:类型（0 => 订单）;default:0" json:"type"`
 	Status     int    `gorm:"type:tinyint(3);comment:状态（0 => 未读，1 => 已读）;default:0" json:"status"`
@@ -42,12 +42,12 @@ func (model *AdminNotice) Get(c *gin.Context, query []string, queryArgs []interf
 		return cmfModel.Paginate{}, err
 	}
 
-	paginationData ,err := model.PaginateGet(current,pageSize,query,queryArgs)
+	paginationData, err := model.PaginateGet(current, pageSize, query, queryArgs)
 	return paginationData, err
 
 }
 
-func  (model *AdminNotice) PaginateGet(current int,pageSize int, query []string, queryArgs []interface{})  (cmfModel.Paginate, error) {
+func (model *AdminNotice) PaginateGet(current int, pageSize int, query []string, queryArgs []interface{}) (cmfModel.Paginate, error) {
 
 	var notice []AdminNotice
 
@@ -72,7 +72,6 @@ func  (model *AdminNotice) PaginateGet(current int,pageSize int, query []string,
 	}
 
 	return paginationData, nil
-
 
 }
 

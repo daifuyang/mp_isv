@@ -6,16 +6,11 @@
 package controller
 
 import (
-	"encoding/json"
-	"errors"
-	"fmt"
-	"gincmf/plugins/restaurantPlugin/model"
+	"gincmf/plugins/alipayPlugin/controller/getway"
 	"github.com/gin-gonic/gin"
 	easyUtil "github.com/gincmf/alipayEasySdk/util"
-	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
 	cmfLog "github.com/gincmf/cmf/log"
-	"gorm.io/gorm"
 	"strings"
 )
 
@@ -23,7 +18,7 @@ type GetWay struct {
 	rc controller.RestController
 }
 
-func (rest *GetWay) GetWay (c *gin.Context) {
+func (rest *GetWay) GetWay(c *gin.Context) {
 
 	req := c.Request
 	req.ParseForm()
@@ -59,70 +54,31 @@ func (rest *GetWay) GetWay (c *gin.Context) {
 		return
 	}
 
-	method := strings.Join(param["msg_method"],"")
-	bizContent := strings.Join(param["biz_content"],"")
-
-	reason := strings.Join(param["reason"],"")
-
-	fmt.Println(bizContent)
+	method := strings.Join(param["msg_method"], "")
 
 	switch method {
 	case "ant.merchant.expand.shop.save.passed":
 
-		var biz struct{
-			ShopId   string `json:"shop_id"`
-			ShopName string `json:"shop_name"`
-			OrderId  string `json:"order_id"`
-			StoreId  string `json:"store_id"`
-		}
+		// 主动通知
+		err := new(getway.Merchant).Passed(param)
 
-		_ = json.Unmarshal([]byte(bizContent),&biz)
-
-		store := model.Store{}
-		tx := cmf.NewDb().Where("id = ?",biz.StoreId).First(&store)
-
-		if tx.Error != nil && !errors.Is(tx.Error,gorm.ErrRecordNotFound) {
-			rest.rc.Error(c,tx.Error.Error(),nil)
-			return
-		}
-
-		// 更新门店状态
-		tx = cmf.NewDb().Where("id = ?",biz.StoreId).Updates(map[string]string{"audit_status":"passed","reason":reason})
-		if tx.Error != nil {
-			rest.rc.Error(c,tx.Error.Error(),nil)
+		if err != nil {
+			rest.rc.Error(c, err.Error(), nil)
 			return
 		}
 
 		// 同意门店审核
 	case "ant.merchant.expand.shop.save.rejected":
+
 		// 拒绝
-
-		var biz struct{
-			ShopId   string `json:"shop_id"`
-			ShopName string `json:"shop_name"`
-			OrderId  string `json:"order_id"`
-			StoreId  string `json:"store_id"`
-		}
-
-		_ = json.Unmarshal([]byte(bizContent),&biz)
-
-		store := model.Store{}
-		tx := cmf.NewDb().Where("id = ?",biz.StoreId).First(&store)
-
-		if tx.Error != nil && !errors.Is(tx.Error,gorm.ErrRecordNotFound) {
-			rest.rc.Error(c,tx.Error.Error(),nil)
-			return
-		}
-
-		// 更新门店状态
-		tx = cmf.NewDb().Where("id = ?",biz.StoreId).Updates(map[string]string{"audit_status":"passed","reason":reason})
-		if tx.Error != nil {
-			rest.rc.Error(c,tx.Error.Error(),nil)
+		err := new(getway.Merchant).Rejected(param)
+		if err != nil {
+			rest.rc.Error(c, err.Error(), nil)
 			return
 		}
 
 	}
 
-	rest.rc.Success(c,"回调成功！",nil)
+	rest.rc.Success(c, "回调成功！", nil)
 
 }

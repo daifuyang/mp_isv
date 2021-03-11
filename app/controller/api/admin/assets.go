@@ -27,7 +27,7 @@ import (
 	"time"
 )
 
-type AssetsController struct {
+type Assets struct {
 	rc controller.RestController
 }
 
@@ -43,8 +43,7 @@ type AssetsController struct {
  * )
  */
 
-
-func (rest *AssetsController) Get(c *gin.Context) {
+func (rest *Assets) Get(c *gin.Context) {
 
 	userId := util.CurrentAdminId(c)
 
@@ -53,13 +52,13 @@ func (rest *AssetsController) Get(c *gin.Context) {
 
 	paramType := c.DefaultQuery("type", "0")
 
-	query = append(query," AND type = ?")
+	query = append(query, "type = ?")
 	queryArgs = append(queryArgs, paramType)
 
 	assets := model.Asset{}
-	data,err := assets.Get(c,query,queryArgs)
+	data, err := assets.Get(c, query, queryArgs)
 	if err != nil {
-		rest.rc.Error(c,err.Error(),nil)
+		rest.rc.Error(c, err.Error(), nil)
 		return
 	}
 
@@ -77,7 +76,7 @@ func (rest *AssetsController) Get(c *gin.Context) {
  *	   'status'		=> 1
  * )
  */
-func (rest *AssetsController) Show(c *gin.Context) {
+func (rest *Assets) Show(c *gin.Context) {
 	var rewrite struct {
 		id int `uri:"id"`
 	}
@@ -88,7 +87,7 @@ func (rest *AssetsController) Show(c *gin.Context) {
 	rest.rc.Success(c, "操作成功show", nil)
 }
 
-func (rest *AssetsController) Edit(c *gin.Context) {
+func (rest *Assets) Edit(c *gin.Context) {
 	rest.rc.Success(c, "操作成功Edit", nil)
 }
 
@@ -103,7 +102,7 @@ func (rest *AssetsController) Edit(c *gin.Context) {
  *	   'status'		=> 1
  * )
  */
-func (rest *AssetsController) Store(c *gin.Context) {
+func (rest *Assets) Store(c *gin.Context) {
 
 	form, _ := c.MultipartForm()
 	files := form.File["file[]"]
@@ -148,7 +147,7 @@ func (rest *AssetsController) Store(c *gin.Context) {
  *	   'status'		=> 1
  * )
  */
-func (rest *AssetsController) Delete(c *gin.Context) {
+func (rest *Assets) Delete(c *gin.Context) {
 	var rewrite struct {
 		Id int `uri:"id"`
 	}
@@ -320,6 +319,13 @@ func handleUpload(c *gin.Context, file *multipart.FileHeader, fileType string) (
 	userIdInt, _ := strconv.Atoi(userId.(string))
 
 	fileTypeInt, _ := strconv.Atoi(fileType)
+
+	// 同步到七牛云
+	key, err := new(cmf.QiNiu).UploadFile(filePath, util.GetAbsPath(filePath))
+
+	fmt.Println("key", key)
+	fmt.Println("err", err)
+
 	//保存到数据库
 	cmf.NewDb().Create(&model.Asset{
 		UserId:     userIdInt,

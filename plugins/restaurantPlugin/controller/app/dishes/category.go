@@ -19,20 +19,20 @@ func (rest *Category) List(c *gin.Context) {
 
 	mid, _ := c.Get("mid")
 
-	storeId,_ := c.Get("store_id")
+	storeId, _ := c.Get("store_id")
 
 	category := model.FoodCategory{}
 
 	var query []string
 	var queryArgs []interface{}
 
-	query = append(query,"mid = ? AND store_id = ? AND delete_at = ? AND status = ?")
-	queryArgs = append(queryArgs,mid,storeId,0,1)
+	query = append(query, "mid = ? AND store_id = ? AND delete_at = ? AND status = ?")
+	queryArgs = append(queryArgs, mid, storeId, 0, 1)
 
-	data ,err :=  category.ListByStore(query,queryArgs)
+	data, err := category.ListByStore(query, queryArgs)
 
 	if err != nil {
-		rest.rc.Error(c,"获取失败！",err.Error())
+		rest.rc.Error(c, "获取失败！", err.Error())
 		return
 	}
 	rest.rc.Success(c, "获取成功！", data)

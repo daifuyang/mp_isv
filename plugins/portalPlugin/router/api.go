@@ -22,7 +22,7 @@ func ApiListenRouter() {
 		adminGroup.Rest("/portal/article", new(admin.PortalPost))
 	}
 
-	appGroup := cmf.Group("api/v1/app",middleware.ValidationMerchant, middleware.ApiBaseController)
+	appGroup := cmf.Group("api/v1/app", middleware.ValidationMerchant, middleware.ApiBaseController)
 	{
 		appGroup.Get("/portal/category", new(app.Category).List)
 		appGroup.Get("/portal/category/:id", new(app.Category).Show)
@@ -35,8 +35,7 @@ func ApiListenRouter() {
 
 	}
 
-
-	appGroup = cmf.Group("api/v1/mp",middleware.ValidationMp, middleware.ApiBaseController)
+	appGroup = cmf.Group("api/v1/mp", middleware.ValidationMp, middleware.ApiBaseController)
 	{
 		appGroup.Get("/portal/list/:id", new(app.Post).Get) // 根据id获取分页列表
 		appGroup.Get("/portal/article/:id", new(app.Post).Show)

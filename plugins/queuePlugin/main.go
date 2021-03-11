@@ -9,7 +9,7 @@ import (
 	"gincmf/plugins/queuePlugin/controller"
 )
 
-func Init()  {
+func Init() {
 	queue := controller.Queue{}
 	queue.Init()
 	queue.Queue()

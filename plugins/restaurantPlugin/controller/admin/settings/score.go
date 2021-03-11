@@ -24,20 +24,20 @@ func (rest *Score) Show(c *gin.Context) {
 	mid, _ := c.Get("mid")
 
 	op := model.Option{}
-	result := cmf.NewDb().Where("option_name = ? AND mid = ?", "score",mid).First(&op)
+	result := cmf.NewDb().Where("option_name = ? AND mid = ?", "score", mid).First(&op)
 	if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, result.Error.Error(), nil)
 		return
 	}
 	var score model.Score
-	json.Unmarshal([]byte(op.OptionValue),&score)
+	json.Unmarshal([]byte(op.OptionValue), &score)
 
-	rest.rc.Success(c,"获取成功！",score)
+	rest.rc.Success(c, "获取成功！", score)
 
 }
 
 // 编辑
-func (rest *Score) Edit (c *gin.Context) {
+func (rest *Score) Edit(c *gin.Context) {
 
 	mid, _ := c.Get("mid")
 
@@ -48,15 +48,15 @@ func (rest *Score) Edit (c *gin.Context) {
 		return
 	}
 
-	jsonStr,err := json.Marshal(form)
+	jsonStr, err := json.Marshal(form)
 	if err != nil {
-		rest.rc.Error(c,err.Error(),nil)
+		rest.rc.Error(c, err.Error(), nil)
 		return
 	}
 
 	op := model.Option{}
 
-	result := cmf.NewDb().Where("option_name = ? AND mid = ?", "score",mid).First(&op)
+	result := cmf.NewDb().Where("option_name = ? AND mid = ?", "score", mid).First(&op)
 	if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, result.Error.Error(), nil)
 		return
@@ -68,11 +68,10 @@ func (rest *Score) Edit (c *gin.Context) {
 	op.OptionValue = string(jsonStr)
 	if result.RowsAffected == 0 {
 		cmf.NewDb().Create(&op)
-	}else{
+	} else {
 		cmf.NewDb().Save(&op)
 	}
 
-	rest.rc.Success(c,"修改成功！",form)
-
+	rest.rc.Success(c, "修改成功！", form)
 
 }

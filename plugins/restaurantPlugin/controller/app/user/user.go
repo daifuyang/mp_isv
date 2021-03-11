@@ -7,10 +7,13 @@ package user
 
 import (
 	"errors"
+	"fmt"
 	appModel "gincmf/app/model"
 	"gincmf/app/util"
 	"gincmf/plugins/restaurantPlugin/model"
+	saasModel "gincmf/plugins/saasPlugin/model"
 	"github.com/gin-gonic/gin"
+	"github.com/gincmf/alipayEasySdk/base"
 	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
 	"gorm.io/gorm"
@@ -29,7 +32,7 @@ func (rest *User) Show(c *gin.Context) {
 	mpType, _ := c.Get("mp_type")
 
 	u := model.User{}
-	data, err := u.Show([]string{"u.id = ?"}, []interface{}{userId})
+	data, err := u.Show([]string{"u.id = ? AND u.user_type = 0"}, []interface{}{userId})
 
 	data.OpenId = Openid.(string)
 	data.Type = mpType.(string)
@@ -109,14 +112,14 @@ func (rest *User) Save(c *gin.Context) {
 	}
 
 	if u.Mobile == "" && form.Mobile == "" {
-		rest.rc.Error(c,"手机号不能为空！",nil)
+		rest.rc.Error(c, "手机号不能为空！", nil)
 		return
 	}
 
 	if u.Mobile != form.Mobile {
 
 		if form.Code == "" {
-			rest.rc.Error(c,"验证码不能为空！！",nil)
+			rest.rc.Error(c, "验证码不能为空！！", nil)
 			return
 		}
 
@@ -127,10 +130,10 @@ func (rest *User) Save(c *gin.Context) {
 			return
 		}
 
-		err = util.ValidateSms(mobileInt,form.Code)
+		err = util.ValidateSms(mobileInt, form.Code)
 
 		if err != nil {
-			rest.rc.Error(c,err.Error(),nil)
+			rest.rc.Error(c, err.Error(), nil)
 			return
 		}
 	}
@@ -173,8 +176,8 @@ func (rest *User) SaveMobile(c *gin.Context) {
 	mid, _ := c.Get("mid")
 
 	var form struct {
-		Mobile   string `json:"mobile"`
-		Code     string `json:"code"`
+		Mobile string `json:"mobile"`
+		Code   string `json:"code"`
 	}
 
 	if err := c.ShouldBindJSON(&form); err != nil {
@@ -192,7 +195,7 @@ func (rest *User) SaveMobile(c *gin.Context) {
 	}
 
 	if form.Code == "" {
-		rest.rc.Error(c,"验证码不能为空！",nil)
+		rest.rc.Error(c, "验证码不能为空！", nil)
 		return
 	}
 
@@ -203,10 +206,10 @@ func (rest *User) SaveMobile(c *gin.Context) {
 		return
 	}
 
-	err = util.ValidateSms(mobileInt,form.Code)
+	err = util.ValidateSms(mobileInt, form.Code)
 
 	if err != nil {
-		rest.rc.Error(c,err.Error(),nil)
+		rest.rc.Error(c, err.Error(), nil)
 		return
 	}
 
@@ -216,7 +219,7 @@ func (rest *User) SaveMobile(c *gin.Context) {
 	// 保存
 	if u.Id == 0 {
 		tx = cmf.NewDb().Create(&u)
-	}else{
+	} else {
 		tx = cmf.NewDb().Save(&u)
 	}
 
@@ -229,5 +232,86 @@ func (rest *User) SaveMobile(c *gin.Context) {
 
 	rest.rc.Success(c, "更新成功！", u)
 
+}
+
+// 一键绑定手机号
+func (rest *User) BindMpMobile(c *gin.Context) {
+
+	openid, _ := c.Get("open_id")
+	appId, _ := c.Get("app_id")
+	mid, _ := c.Get("mid")
+	mpType, _ := c.Get("mp_type")
+	encryptedData := c.PostForm("encrypted_data")
+	if encryptedData == "" {
+		rest.rc.Error(c, "绑定数据不能为空！", nil)
+		return
+	}
+
+	fmt.Println("encryptedData", encryptedData)
+
+	mobile := ""
+
+	theme := saasModel.MpTheme{}
+
+	tx := cmf.NewDb().Where("mid = ?", mid).First(&theme)
+	if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
+		rest.rc.Error(c, tx.Error.Error(), nil)
+		return
+	}
+
+	if tx.RowsAffected == 0 {
+		rest.rc.Error(c, "非法请求，小程序不存在", nil)
+	}
+
+	if mpType == "alipay" {
+		// 解析手机号
+		key := theme.EncryptKey
+		if appId.(string) == "2021001192675085" {
+			key = "VowK99nI+9IwZrJYDly1PA=="
+		}
+
+		fmt.Println("key", key)
+
+		enResult := new(base.Oauth).AesDeCrypt(encryptedData, key)
+		if enResult.Code == "10000" {
+			mobile = enResult.Mobile
+		} else {
+			rest.rc.Error(c, "绑定失败！"+enResult.SubMsg, enResult)
+			return
+		}
+	}
+
+	if mobile == "" {
+		rest.rc.Error(c, "非法绑定！", nil)
+		return
+	}
+
+	u := model.User{}
+
+	// 查询当前手机号用户是否存在
+	tx = cmf.NewDb().Where("mobile = ?", mobile).First(&u)
+	if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
+		rest.rc.Error(c, tx.Error.Error(), nil)
+		return
+	}
+
+	u.Mid = mid.(int)
+	u.Mobile = mobile
+
+	// 保存
+	if u.Id == 0 {
+		tx = cmf.NewDb().Debug().Create(&u)
+	} else {
+		tx = cmf.NewDb().Debug().Updates(&u)
+	}
+
+	// 更新三方关联
+	tx = cmf.NewDb().Model(&model.ThirdPart{}).Where("open_id = ? AND mid = ?", openid, mid).Update("user_id", u.Id)
+	if tx.Error != nil {
+		rest.rc.Error(c, tx.Error.Error(), nil)
+		return
+	}
+
+	rest.rc.Success(c, "绑定成功！", u)
 
 }

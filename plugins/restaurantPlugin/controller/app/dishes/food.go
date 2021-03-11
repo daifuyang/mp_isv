@@ -16,9 +16,10 @@ type Food struct {
 }
 
 type foodCate struct {
-	CategoryId int          `json:"category_id"`
-	Name       string       `json:"name"`
-	Food       []model.Food `json:"food"`
+	CategoryId int    `json:"category_id"`
+	Name       string `json:"name"`
+	IsRequired int    `json:"is_required"`
+	Food []model.Food `json:"food"`
 }
 
 /**
@@ -66,6 +67,7 @@ func (rest *Food) List(c *gin.Context) {
 		fc := foodCate{
 			CategoryId: v.FoodCategory.Id,
 			Name:       v.FoodCategory.Name,
+			IsRequired: v.FoodCategory.IsRequired,
 		}
 
 		// 当前菜品项

@@ -82,6 +82,7 @@ func (rest *Index) List(c *gin.Context) {
 }
 
 func (rest *Index) Show(c *gin.Context) {
+
 	var rewrite struct {
 		Id int `uri:"id"`
 	}
@@ -122,7 +123,7 @@ func (rest *Index) Show(c *gin.Context) {
 	mid, _ := c.Get("mid")
 
 	query := []string{"mid = ? AND store_number = ? AND delete_at = ?"}
-	queryArgs := []interface{}{mid,rewrite.Id, 0}
+	queryArgs := []interface{}{mid, rewrite.Id, 0}
 
 	storeData, err := store.AppShow(query, queryArgs)
 

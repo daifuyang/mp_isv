@@ -1,5 +1,12 @@
 package model
 
+import (
+	"encoding/json"
+	"errors"
+	cmf "github.com/gincmf/cmf/bootstrap"
+	"gorm.io/gorm"
+)
+
 type Option struct {
 	Id          int    `json:"id"`
 	AutoLoad    int    `gorm:"type:tinyint(3);default:1;not null" json:"autoload"`
@@ -38,4 +45,89 @@ type FileTypes struct {
 type TypeValues struct {
 	UploadMaxFileSize int    `json:"upload_max_file_size"`
 	Extensions        string `json:"extensions"`
+}
+
+//
+type AlipayIsvApp struct {
+	AppId         string `json:"app_id"`
+	TemplateAppId string `json:"template_app_id"`
+	Version       string `json:"version"`
+}
+
+func (app AlipayIsvApp) Show() (AlipayIsvApp, error) {
+
+	isvApp := AlipayIsvApp{}
+	op := Option{}
+	result := cmf.Db().Where("option_name = ?", "alipay_isv_app").First(&op)
+	if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		return isvApp, result.Error
+	}
+
+	json.Unmarshal([]byte(op.OptionValue), &isvApp)
+
+	return isvApp, nil
+
+}
+
+func (app AlipayIsvApp) Edit() (AlipayIsvApp, error) {
+
+	isvApp := AlipayIsvApp{}
+	op := Option{}
+	result := cmf.Db().Where("option_name = ?", "alipay_isv_app").First(&op)
+	if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		return isvApp, result.Error
+	}
+
+	json.Unmarshal([]byte(op.OptionValue), &isvApp)
+
+	isvApp.AppId = "2021001192664075"
+	isvApp.TemplateAppId = "2021001192675085"
+	isvApp.Version = app.Version
+
+	v, _ := json.Marshal(&isvApp)
+
+	op.OptionValue = string(v)
+
+	var tx *gorm.DB
+	if op.Id == 0 {
+		op.OptionName = "alipay_isv_app"
+		tx = cmf.Db().Debug().Create(&op)
+	} else {
+		tx = cmf.Db().Debug().Updates(&op)
+	}
+	if tx.Error != nil {
+		return isvApp, tx.Error
+	}
+
+	return isvApp, nil
+
+}
+
+// 测试appId
+type TestAppId struct {
+	Name  string `json:"name"`
+	AppId string `json:"template_app_id"`
+}
+
+func (app TestAppId) List() (appId []TestAppId) {
+	appId = []TestAppId{
+		{
+			Name:  "码上点模板",
+			AppId: "2021001192675085",
+		},
+	}
+	return
+}
+
+func (app TestAppId) InList(appId string) (result bool) {
+
+	ids := app.List()
+	for _, v := range ids {
+		if v.AppId == appId {
+			result = true
+			return
+		}
+	}
+	result = false
+	return
 }

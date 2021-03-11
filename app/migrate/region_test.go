@@ -7,6 +7,8 @@ package migrate
 
 import (
 	"fmt"
+	"gincmf/app/model"
+	cmf "github.com/gincmf/cmf/bootstrap"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -14,11 +16,26 @@ import (
 )
 
 func Test_Region(t *testing.T) {
-	f, err := os.Open("./region.sql")
+
+	cmf.Initialize("../../data/conf/config.json")
+
+	// cmf.Db().Migrator().DropTable(&model.Region{})
+	cmf.Db().AutoMigrate(&model.Region{})
+
+	f, err := os.Open("../../data/region.sql")
 	if err != nil {
 		fmt.Println("err", err)
 	}
 	bytes, _ := ioutil.ReadAll(f)
 	result := string(bytes)
-	result = strings.ReplaceAll(result, "{prefix}", "test")
+	result = strings.ReplaceAll(result, "{prefix}", "cmf_")
+
+	sqlArr := strings.Split(result, ";")
+
+	// fmt.Println("sqlArr", sqlArr)
+
+	for _, sql := range sqlArr {
+		cmf.Db().Debug().Exec(sql)
+	}
+
 }

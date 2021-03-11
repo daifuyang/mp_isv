@@ -22,12 +22,16 @@ type RechargeOrder struct {
 	Mid          int               `gorm:"type:bigint(20);comment:对应小程序id;not null" json:"mid"`
 	OrderId      string            `gorm:"type:varchar(40);comment:订单号;not null" json:"order_id"`
 	TradeNo      string            `gorm:"type:varchar(60);comment:支付宝订单号;not null" json:"trade_no"`
-	UserId       int               `gorm:"type:int(11);comment:下单人信息" json:"user_id"`
+	UserId       int               `gorm:"type:bigint(20);comment:用户所属id;not null" json:"user_id"`
+	Avatar       string            `gorm:"->" json:"avatar"`
+	UserLogin    string            `gorm:"->" json:"user_login"`
+	UserNickname string            `gorm:"->" json:"user_nickname"`
+	UserRealName string            `gorm:"->" json:"user_realname"`
 	PayType      string            `gorm:"type:varchar(10);comment:第三方支付类型;not null" json:"pay_type"`
 	Fee          float64           `gorm:"type:decimal(7,2);comment:支付金额;default:0;not null" json:"fee"`
 	ActualFee    float64           `gorm:"type:decimal(7,2);comment:实际金额;default:0;not null" json:"actual_fee"`
 	SendFee      float64           `gorm:"type:decimal(7,2);comment:赠送金额;default:0;not null" json:"send_fee"`
-	CreateAt     int64             `gorm:"type:int(11)" json:"create_at"`
+	CreateAt     int64             `gorm:"type:bigint(20)" json:"create_at"`
 	FinishedAt   int64             `gorm:"type:int(11)" json:"finished_at"`
 	CreateTime   string            `gorm:"-" json:"create_time"`
 	FinishedTime string            `gorm:"-" json:"finished_time"`
@@ -53,8 +57,21 @@ func (model *RechargeOrder) Index(c *gin.Context, query []string, queryArgs []in
 	var total int64 = 0
 
 	var ro []RechargeOrder
-	cmf.NewDb().Where(queryStr, queryArgs...).Find(&ro).Count(&total)
-	tx := cmf.NewDb().Where(queryStr, queryArgs...).Limit(pageSize).Offset((current - 1) * pageSize).Find(&ro)
+
+	prefix := cmf.Conf().Database.Prefix
+
+	cmf.NewDb().Table(prefix+"recharge_order ro").
+		Select("ro.*,u.id as user_id,u.user_login,u.user_nickname,u.user_realname").
+		Joins("INNER JOIN "+prefix+"user u ON ro.user_id = u.id").
+		Where(queryStr, queryArgs...).
+		Scan(&ro).Count(&total)
+
+	tx := cmf.NewDb().Table(prefix+"recharge_order ro").
+		Select("ro.*,u.id as user_id,u.user_login,u.user_nickname,u.user_realname").
+		Joins("INNER JOIN "+prefix+"user u ON ro.user_id = u.id").
+		Where(queryStr, queryArgs...).
+		Limit(pageSize).Offset((current - 1) * pageSize).Scan(&ro)
+
 	if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 		return cmfModel.Paginate{}, tx.Error
 	}

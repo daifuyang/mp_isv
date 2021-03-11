@@ -111,7 +111,7 @@ func recursionAddMenu(menus []tempAdminMenu, parentId int) {
 
 		// 保存菜单
 		if v.Path != "" {
-			result := cmf.Db().Create(&adminMenu)
+			result := cmf.NewDb().Create(&adminMenu)
 			if result.RowsAffected > 0 {
 				if len(v.Children) > 0 {
 					recursionAddMenu(v.Children, adminMenu.Id)

@@ -7,6 +7,6 @@ package demoPlugin
 
 import "gincmf/plugins/demoPlugin/router"
 
-func Init()  {
+func Init() {
 	router.ApiListenRouter()
 }

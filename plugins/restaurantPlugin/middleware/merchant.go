@@ -21,33 +21,40 @@ import (
  * @Param
  * @return
  **/
-func ValidationStore(c *gin.Context)  {
+func ValidationStore(c *gin.Context) {
 
 	r := c.Request
 	r.ParseForm()
 	storeNumber := strings.Join(r.Form["store_number"], "")
 
+	mid, exist := c.Get("mid")
+	if !exist {
+		controller.RestController{}.Error(c, "小程序唯一mid不能为空！", nil)
+		c.Abort()
+		return
+	}
+
 	if storeNumber == "" {
-		controller.RestController{}.Error(c,"门店不能为空！",nil)
+		controller.RestController{}.Error(c, "门店不能为空！", nil)
 		c.Abort()
 		return
 	}
 
 	store := model.Store{}
-	store,err := store.Show([]string{"store_number = ? AND delete_at = ?"},[]interface{}{storeNumber,0})
+	store, err := store.Show([]string{"store_number = ? AND mid = ? AND delete_at = ?"}, []interface{}{storeNumber, mid, 0})
 
 	if err != nil {
-		if errors.Is(err,gorm.ErrRecordNotFound) {
-			controller.RestController{}.Error(c,"当前门店不存在！",nil)
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			controller.RestController{}.Error(c, "当前门店不存在！", nil)
 			c.Abort()
 			return
 		}
 
-		controller.RestController{}.Error(c,err.Error(),nil)
+		controller.RestController{}.Error(c, err.Error(), nil)
 		c.Abort()
 		return
 	}
 
-	c.Set("store_id",store.Id)
+	c.Set("store_id", store.Id)
 	c.Next()
 }

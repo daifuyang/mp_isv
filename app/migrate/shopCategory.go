@@ -15,13 +15,13 @@ import (
 	"strings"
 )
 
-type ShopCategory struct {
+type shopCategory struct {
 	Migrate
 }
 
-func (migrate ShopCategory) AutoMigrate() {
+func (migrate shopCategory) AutoMigrate() {
 
-	cmf.Db().AutoMigrate(&model.Region{})
+	cmf.Db().AutoMigrate(&model.ShopCategory{})
 
 	f, err := os.Open(util.CurrentPath() + "/data/shop_category.sql")
 	if err != nil {

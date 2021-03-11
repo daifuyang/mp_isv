@@ -22,9 +22,9 @@ type CardTemplate struct {
 	ValidPeriod        int                             `gorm:"type:int(11);comment:有效期;not null" json:"valid_period"`
 	BenefitInfo        string                          `gorm:"type:json;comment:权益说明" json:"benefit_info"`
 	BenefitInfoJson    []marketing.TemplateBenefitInfo `gorm:"-" json:"benefit_info_json"`
-	CreateAt           int64                           `gorm:"type:int(11)" json:"create_at"`
-	UpdateAt           int64                           `gorm:"type:int(11)" json:"update_at"`
-	DeleteAt           int64                           `gorm:"type:int(10);comment:'删除时间';default:0" json:"delete_at"`
+	CreateAt           int64                           `gorm:"type:bigint(20)" json:"create_at"`
+	UpdateAt           int64                           `gorm:"type:bigint(20)" json:"update_at"`
+	DeleteAt           int64                           `gorm:"type:bigint(20);comment:'删除时间';default:0" json:"delete_at"`
 	CreateTime         string                          `gorm:"-" json:"create_time"`
 	UpdateTime         string                          `gorm:"-" json:"update_time"`
 	TemplateId         string                          `gorm:"type:varchar(32);comment:模板ID;" json:"template_id"`

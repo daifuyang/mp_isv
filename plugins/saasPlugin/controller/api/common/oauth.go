@@ -84,8 +84,8 @@ func RegisterTenantRouter(handlers ...gin.HandlerFunc) {
 				Mobile    string `gorm:"type:varchar(20);not null" json:"mobile"`
 				UserPass  string `gorm:"type:varchar(64);not null" json:"user_pass"`
 				Avatar    string `json:"avatar"`
-				CreateAt  int64  `gorm:"type:int(11)" json:"create_at"`
-				UpdateAt  int64  `gorm:"type:int(11)" json:"update_at"`
+				CreateAt  int64  `gorm:"type:bigint(20)" json:"create_at"`
+				UpdateAt  int64  `gorm:"type:bigint(20)" json:"update_at"`
 			}
 
 			t := Tenant{}
@@ -101,6 +101,7 @@ func RegisterTenantRouter(handlers ...gin.HandlerFunc) {
 					session.Save()
 
 					userID = strconv.Itoa(t.Id)
+
 					return userID, nil
 				}
 				return "", errors.New("账号密码不正确！")
@@ -111,8 +112,6 @@ func RegisterTenantRouter(handlers ...gin.HandlerFunc) {
 		username := c.PostForm("username")
 		password := c.PostForm("password")
 		autoLogin := c.DefaultPostForm("autoLogin", "false")
-
-		fmt.Println(username, password)
 
 		tokenExp := "24"
 		if autoLogin == "true" {
@@ -132,13 +131,13 @@ func RegisterTenantRouter(handlers ...gin.HandlerFunc) {
 		if err != nil {
 			rc.Error(c, err.Error(), nil)
 			return
-		} else{
+		} else {
 			// 更新最后登录记录
 			u := model.User{
 				LastLoginIp: c.ClientIP(),
 				LastLoginAt: time.Now().Unix(),
 			}
-			cmf.NewDb().Where("id = ?",userID).Updates(u)
+			cmf.NewDb().Where("id = ?", userID).Updates(u)
 		}
 
 		duration := time.Duration(exp) * time.Hour

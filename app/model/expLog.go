@@ -16,7 +16,7 @@ type ExpLog struct {
 	Exp        int    `gorm:"type:int(11);comment:增加积分;not null" json:"exp"`
 	Fee        string `gorm:"type:varchar(11);comment:合计金额;default:0;not null" json:"fee"`
 	Remark     string `gorm:"type:varchar(255);comment:备注" json:"remark"`
-	CreateAt   int64  `gorm:"type:int(11);not nul" json:"create_at"`
+	CreateAt   int64  `gorm:"type:bigint(20);not nul" json:"create_at"`
 	CreateTime string `gorm:"-" json:"create_time"`
 }
 

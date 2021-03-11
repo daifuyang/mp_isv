@@ -19,23 +19,28 @@ import (
 	"time"
 )
 
+type MigrateUser struct {
+	model.User
+	Mid          int     `gorm:"type:bigint(20);comment:对应小程序id;not null" json:"mid"`
+}
+
 type User struct {
 	model.User
-	Mid          int    `gorm:"type:bigint(20);comment:对应小程序id;not null" json:"mid"`
-	BirthdayTime string `gorm:"-" json:"birthday_time,omitempty"`
-	VipNum       string `gorm:"-" json:"vip_num,omitempty"`
-	VipLevel     string `gorm:"-" json:"vip_level,omitempty"`
-	VipName      string `gorm:"-" json:"vip_name,omitempty"`
-	StartAt      int64  `gorm:"-" json:"start_at,omitempty"`
-	EndAt        int64  `gorm:"-" json:"end_at,omitempty"`
+	Mid          int     `gorm:"type:bigint(20);comment:对应小程序id;not null" json:"mid"`
+	BirthdayTime string  `gorm:"-" json:"birthday_time,omitempty"`
+	VipNum       string  `gorm:"->" json:"vip_num,omitempty"`
+	VipLevel     string  `gorm:"->" json:"vip_level,omitempty"`
+	VipName      string  `gorm:"->" json:"vip_name,omitempty"`
+	StartAt      int64   `gorm:"->" json:"start_at,omitempty"`
+	EndAt        int64   `gorm:"->" json:"end_at,omitempty"`
 	Level        *SLevel `gorm:"-" json:"level,omitempty"`
-	ExpRangeEnd  int    `gorm:"-" json:"exp_range_end,omitempty"`
-	StartTime    string `gorm:"-" json:"start_time,omitempty"`
-	EndTime      string `gorm:"-" json:"end_time,omitempty"`
-	VipCanOpen   bool   `gorm:"-" json:"vip_can_open"`
-	Type         string `gorm:"-" json:"type"`
-	OpenId       string `gorm:"-" json:"open_id"`
-	MemberStatus int    `gorm:"-" json:"member_status"`
+	ExpRangeEnd  int     `gorm:"-" json:"exp_range_end,omitempty"`
+	StartTime    string  `gorm:"-" json:"start_time,omitempty"`
+	EndTime      string  `gorm:"-" json:"end_time,omitempty"`
+	VipCanOpen   bool    `gorm:"-" json:"vip_can_open"`
+	Type         string  `gorm:"->" json:"type"`
+	OpenId       string  `gorm:"->" json:"open_id"`
+	MemberStatus int     `gorm:"->" json:"member_status"`
 	paginate     cmfModel.Paginate
 }
 
@@ -48,7 +53,7 @@ type ThirdPart struct {
 }
 
 func (model *User) AutoMigrate() {
-	cmf.NewDb().AutoMigrate(&model)
+	cmf.NewDb().AutoMigrate(&MigrateUser{})
 	cmf.NewDb().AutoMigrate(&ThirdPart{})
 }
 

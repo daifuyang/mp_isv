@@ -134,8 +134,8 @@ func (rest *MpThemePage) Detail(c *gin.Context) {
 	}
 
 	result.MpThemePage = mpThemePage
-	json.Unmarshal([]byte(mpThemePage.Style),&result.StyleJson)
-	json.Unmarshal([]byte(mpThemePage.More),&result.MoreJson)
+	json.Unmarshal([]byte(mpThemePage.Style), &result.StyleJson)
+	json.Unmarshal([]byte(mpThemePage.More), &result.MoreJson)
 
 	rest.rc.Success(c, "获取成功！", result)
 }
@@ -162,7 +162,7 @@ func (rest *MpThemePage) Home(c *gin.Context) {
 
 	homeId := util.EncodeId(uint64(mpThemePage.Id))
 
-	var data struct{
+	var data struct {
 		model.MpThemePage
 		HomeId int `json:"home_id"`
 	}

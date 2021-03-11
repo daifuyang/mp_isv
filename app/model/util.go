@@ -107,12 +107,13 @@ func GetAuthAccess(c *gin.Context) []AuthAccessRule {
 
 func CurrentUser(c *gin.Context) User {
 	u := User{}
-	session :=sessions.Default(c)
+	session := sessions.Default(c)
 	user := session.Get("user")
 	userId, _ := c.Get("user_id")
 	userIdInt, _ := strconv.Atoi(userId.(string))
+
 	if user == nil {
-		cmf.NewDb().First(&u, "id = ?", userId)
+		cmf.Db().First(&u, "id = ?", userId)
 		jsonBytes, _ := json.Marshal(u)
 		session.Set("user", string(jsonBytes))
 		session.Save()
@@ -121,7 +122,7 @@ func CurrentUser(c *gin.Context) User {
 		json.Unmarshal([]byte(jsonBytes), &u)
 		if u.Id == 0 || u.Id != userIdInt {
 			u = User{}
-			cmf.NewDb().Where("id = ?", userId).First(&u)
+			cmf.Db().Where("id = ?", userId).First(&u)
 			jsonBytes, _ := json.Marshal(u)
 			session.Set("user", string(jsonBytes))
 			session.Save()
@@ -133,7 +134,7 @@ func CurrentUser(c *gin.Context) User {
 
 func CurrentMpUser(c *gin.Context) User {
 	u := User{}
-	session :=sessions.Default(c)
+	session := sessions.Default(c)
 	user := session.Get("mp_user")
 	userId, _ := c.Get("mp_user_id")
 	userIdInt, _ := userId.(int)

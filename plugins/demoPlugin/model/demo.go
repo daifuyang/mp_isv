@@ -8,7 +8,7 @@ package model
 import cmf "github.com/gincmf/cmf/bootstrap"
 
 type Demo struct {
-	Id int `json:"id"`
+	Id   int    `json:"id"`
 	Name string `gorm:"varchar(100)" json:"name"`
 }
 

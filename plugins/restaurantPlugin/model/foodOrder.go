@@ -45,6 +45,7 @@ type FoodOrder struct {
 	BoxFee          float64           `gorm:"type:decimal(3,2);comment:餐盒费;default:0;not null" json:"box_fee"`
 	DeliveryFee     float64           `gorm:"type:decimal(3,2);comment:配送费;default:0;not null" json:"delivery_fee"`
 	CouponFee       float64           `gorm:"type:decimal(7,2);comment:优惠金额;default:0;not null" json:"coupon_fee"`
+	VoucherId       int               `gorm:"type:int(11);comment:优惠券id" json:"voucher_id"`
 	Remark          string            `gorm:"type:varchar(255);comment:备注" json:"remark"`
 	Fee             float64           `gorm:"type:decimal(7,2);comment:合计金额;default:0;not null" json:"fee"`
 	TotalAmount     float64           `gorm:"-" json:"total_amount"`
@@ -55,7 +56,7 @@ type FoodOrder struct {
 	Mobile          string            `gorm:"type:varchar(11);comment:用户预留手机号;not null" json:"mobile"`
 	Address         string            `gorm:"type:varchar(255);comment:用户预留收货地址" json:"address"`
 	AddressId       int               `gorm:"type:int(11);comment:选择地址id" json:"address_id"`
-	CreateAt        int64             `gorm:"type:int(11)" json:"create_at"`
+	CreateAt        int64             `gorm:"type:bigint(20)" json:"create_at"`
 	FinishedAt      int64             `gorm:"type:int(11)" json:"finished_at"`
 	CreateTime      string            `gorm:"-" json:"create_time"`
 	FinishedTime    string            `gorm:"-" json:"finished_time"`
@@ -76,6 +77,7 @@ type FoodOrderDetail struct {
 	FoodName          string  `gorm:"type:varchar(255);comment:菜品名称;not null" json:"food_name"`
 	SkuId             int     `gorm:"type:int(11);comment:所属食物规格id;not null" json:"sku_id"`
 	SkuDetail         string  `gorm:"type:varchar(255);comment:规格详情;not null" json:"sku_detail"`
+	FoodRemark        string  `gorm:"type:varchar(255);comment:最终拼接详情;not null" json:"food_remark"`
 	UseMember         int     `gorm:"type:tinyint(3);comment:是否启用菜品会员价;not null" json:"use_member"`
 	MemberPrice       float64 `gorm:"type:decimal(9,2);comment:菜品会员价;not null" json:"member_price"`
 	Count             int     `gorm:"type:int(11);comment:购买数量;not null" json:"count"`
@@ -84,12 +86,29 @@ type FoodOrderDetail struct {
 	DishType          string  `gorm:"type:varchar(40);comment:菜品类型;" json:"dish_type"`
 	Flavor            string  `gorm:"type:varchar(40);comment:菜品口味;" json:"flavor"`
 	CookingMethod     string  `gorm:"type:varchar(40);comment:菜品做法;" json:"cooking_method"`
-	Fee               float64 `gorm:"type:decimal(9,2);comment:菜品单价;not null" json:"fee"`
+	Price             float64 `gorm:"type:decimal(9,2);comment:菜品单价;not null" json:"price"`
+	Total             float64 `gorm:"type:decimal(9,2);comment:菜品总价;not null" json:"total"`
+	BoxFee            float64 `gorm:"type:decimal(9,2);comment:餐盒费;not null" json:"box_fee"`
 }
 
 func (model *FoodOrder) AutoMigrate() {
 	cmf.NewDb().AutoMigrate(&model)
 	cmf.NewDb().AutoMigrate(&FoodOrderDetail{})
+
+	prefix := cmf.Conf().Database.Prefix
+
+	cmf.NewDb().Exec("drop event if exists orderCloseStatus")
+	cmf.NewDb().Exec("drop event if exists orderFinishStatus")
+
+	// 超时未支付和订单自动完成
+	sql := "CREATE EVENT orderCloseStatus ON SCHEDULE EVERY 1 SECOND DO " +
+		"UPDATE " + prefix + "food_order SET order_status = 'TRADE_CLOSED' WHERE order_status = 'WAIT_BUYER_PAY' AND UNIX_TIMESTAMP(NOW()) > create_at + 600;"
+	cmf.NewDb().Exec(sql)
+
+	sql = "CREATE EVENT orderFinishStatus ON SCHEDULE EVERY 1 SECOND DO " +
+		"UPDATE " + prefix + "food_order SET order_status = 'TRADE_FINISHED',finished_at = UNIX_TIMESTAMP( NOW() ) WHERE order_status = 'TRADE_SUCCESS' AND UNIX_TIMESTAMP(NOW()) > create_at + 43200;"
+	cmf.NewDb().Exec(sql)
+
 }
 
 func (model FoodOrder) IndexByStore(c *gin.Context, query []string, queryArgs []interface{}) (cmfModel.Paginate, error) {
@@ -122,8 +141,11 @@ func (model FoodOrder) IndexByStore(c *gin.Context, query []string, queryArgs []
 	}
 
 	for k, v := range fo {
+
 		count := 0
-		v.CreateTime = time.Unix(v.CreateAt, 0).Format(data.TimeLayout)
+		fo[k].CreateTime = time.Unix(v.CreateAt, 0).Format(data.TimeLayout)
+		fo[k].FinishedTime = time.Unix(v.FinishedAt, 0).Format(data.TimeLayout)
+
 		var fod []FoodOrderDetail
 		tx := cmf.NewDb().Where("order_id = ?", v.OrderId).Find(&fod)
 		if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {

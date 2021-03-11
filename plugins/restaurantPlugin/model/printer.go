@@ -25,8 +25,8 @@ type Printer struct {
 	Brand      string `gorm:"type:varchar(20);comment:设备品牌（feie：品牌）;not null" json:"brand"`
 	Sn         string `gorm:"type:varchar(20);comment:设备SN号;not null" json:"sn"`
 	Key        string `gorm:"type:varchar(20);comment:设备Key;not null" json:"key"`
-	CreateAt   int64  `gorm:"type:int(11)" json:"create_at"`
-	UpdateAt   int64  `gorm:"type:int(11)" json:"update_at"`
+	CreateAt   int64  `gorm:"type:bigint(20)" json:"create_at"`
+	UpdateAt   int64  `gorm:"type:bigint(20)" json:"update_at"`
 	DeleteAt   int64  `gorm:"type:int(11)" json:"delete_at"`
 	CreateTime string `gorm:"-" json:"create_time"`
 	UpdateTime string `gorm:"-" json:"update_time"`
@@ -97,14 +97,14 @@ func (model *Printer) Save() (Printer, error) {
 	mid := model.Mid
 
 	query := []string{"id = ? AND mid = ?"}
-	queryArgs := []interface{}{id,mid}
+	queryArgs := []interface{}{id, mid}
 
 	tempPrinter, err := new(Printer).Show(query, queryArgs)
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return Printer{}, err
 	}
 
-	exist, err := new(Printer).Show([]string{"`sn` = ? AND `key` = ? AND mid = ?"}, []interface{}{model.Sn, model.Key,mid})
+	exist, err := new(Printer).Show([]string{"`sn` = ? AND `key` = ? AND mid = ?"}, []interface{}{model.Sn, model.Key, mid})
 
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return Printer{}, err

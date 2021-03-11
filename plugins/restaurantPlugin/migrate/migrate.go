@@ -9,7 +9,7 @@ import (
 	"gincmf/plugins/restaurantPlugin/model"
 )
 
-func AutoMigrate () {
+func AutoMigrate() {
 
 	// 指定数据库
 	food := new(model.Food)
@@ -17,7 +17,7 @@ func AutoMigrate () {
 	foodSku := new(model.FoodSku)
 	store := new(model.Store)
 	desk := new(model.Desk)
-	deskCategory:= new(model.DeskCategory)
+	deskCategory := new(model.DeskCategory)
 
 	food.AutoMigrate()
 	foodCategory.AutoMigrate()

@@ -85,7 +85,7 @@ func CurrentPath() string {
 }
 
 // 获取文件是否存在
-func ExistPath(path string) (bool,error) {
+func ExistPath(path string) (bool, error) {
 	_, err := os.Stat(path)
 	if err == nil {
 		return true, nil
@@ -106,7 +106,29 @@ func GetFileUrl(path string) string {
 	}
 
 	domain := cmf.Conf().App.Domain
+
 	prevPath := domain + "/uploads/" + path
+
+	protocol := "http://"
+
+	style := "clipper"
+
+	if cmf.QiuNiuConf().Enabled {
+
+		if cmf.QiuNiuConf().IsHttps {
+			protocol = "https://"
+		}
+
+		domain = protocol + cmf.QiuNiuConf().Domain + "/"
+
+		prevPath = domain + path
+
+		if style != "" {
+			prevPath += "!" + style
+		}
+
+	}
+
 	return prevPath
 }
 
@@ -182,9 +204,10 @@ func SetIncr(key string) int64 {
 	}
 	return val
 }
+
 // redis 原子性UUID生成
 
-func DateUuid(ident string,insertKey string,date string) string {
+func DateUuid(ident string, insertKey string, date string, salt int) string {
 	/*
 	 ** 唯一uid编号生成逻辑
 	 ** 日期 + 当天排号数量
@@ -196,7 +219,13 @@ func DateUuid(ident string,insertKey string,date string) string {
 	val := SetIncr(insertKey)
 
 	now := time.Unix(time.Now().Unix(), 0).Format("20060102")
-	nStr := date + strconv.FormatInt(val, 10)
+
+	saltStr := ""
+	if salt > 0 {
+		saltStr = strconv.Itoa(salt)
+	}
+
+	nStr := saltStr + date + strconv.FormatInt(val, 10)
 
 	t1 := time.Now()
 	todayUnix := 86400 - today.Sub(t1).Seconds()
@@ -206,6 +235,35 @@ func DateUuid(ident string,insertKey string,date string) string {
 
 	nEncrypt := strconv.Itoa(EncodeId(uint64(n)))
 	uid := ident + now + nEncrypt
+	return uid
+}
+
+func EncryptUuid(insertKey string, date string, salt int) string {
+	/*
+	 ** 唯一uid编号生成逻辑
+	 ** 日期 + 当天排号数量
+	 */
+	// 设置当天失效时间
+	year, month, day := time.Now().Date()
+	today := time.Date(year, month, day, 23, 59, 59, 59, time.Local)
+	cmf.NewRedisDb().ExpireAt(insertKey, today)
+	val := SetIncr(insertKey)
+
+	saltStr := ""
+	if salt > 0 {
+		saltStr = strconv.Itoa(salt)
+	}
+
+	nStr := saltStr + date + strconv.FormatInt(val, 10)
+
+	t1 := time.Now()
+	todayUnix := 86400 - today.Sub(t1).Seconds()
+	n, _ := strconv.Atoi(nStr)
+
+	n += int(todayUnix)
+
+	nEncrypt := strconv.Itoa(EncodeId(uint64(n)))
+	uid := nEncrypt
 	return uid
 }
 
@@ -242,7 +300,7 @@ func ResponseSign(params string, pk string) (sign string) {
  **/
 
 func EarthDistance(lat1, lng1, lat2, lng2 float64) float64 {
-	radius :=6371000.0
+	radius := 6371000.0
 	rad := math.Pi / 180.0
 	lat1 = lat1 * rad
 	lng1 = lng1 * rad
@@ -251,4 +309,42 @@ func EarthDistance(lat1, lng1, lat2, lng2 float64) float64 {
 	theta := lng2 - lng1
 	dist := math.Acos(math.Sin(lat1)*math.Sin(lat2) + math.Cos(lat1)*math.Cos(lat2)*math.Cos(theta))
 	return dist * radius / 1000
+}
+
+func MonthCount(year int, month int) (days int) {
+
+	if month != 2 {
+		if month == 4 || month == 6 || month == 9 || month == 11 {
+			days = 30
+
+		} else {
+			days = 31
+		}
+	} else {
+		if isLeapYear(year) {
+			days = 29
+		} else {
+			days = 28
+		}
+	}
+
+	return
+}
+
+func YearCount(year int) (days int) {
+	if isLeapYear(year) {
+		days = 366
+	} else {
+		days = 365
+	}
+	return
+}
+
+func isLeapYear(year int) bool { //y == 2000, 2004
+	//判断是否为闰年
+	if year%4 == 0 && year%100 != 0 || year%400 == 0 {
+		return true
+	}
+
+	return false
 }

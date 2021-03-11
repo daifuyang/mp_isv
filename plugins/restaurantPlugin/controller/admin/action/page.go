@@ -31,21 +31,21 @@ func (rest Page) Options(c *gin.Context) {
 
 	if t == "func" {
 		options = []map[string]string{{
-			"label": "到店取餐",
-			"value": "pages/store/index?scene=pack",
-			"method":"switchTab",
+			"label":  "到店取餐",
+			"value":  "pages/store/index?scene=pack",
+			"method": "switchTab",
 		}, {
-			"label": "外卖送餐",
-			"value": "pages/store/index?scene=takeout",
-			"method":"switchTab",
+			"label":  "外卖送餐",
+			"value":  "pages/store/index?scene=takeout",
+			"method": "switchTab",
 		}, {
-			"label": "扫码点餐",
-			"value": "func/scan",
-			"method":"func/scan",
+			"label":  "扫码点餐",
+			"value":  "func/scan",
+			"method": "func/scan",
 		}, {
-			"label": "我的",
-			"value": "pages/mine/index",
-			"method":"switchTab",
+			"label":  "我的",
+			"value":  "pages/mine/index",
+			"method": "switchTab",
 		}, {
 			"label": "开通会员",
 			"value": "pages/order/vip/index",
@@ -59,9 +59,9 @@ func (rest Page) Options(c *gin.Context) {
 			"label": "余额储值",
 			"value": "pages/mine/money/index",
 		}, {
-			"label": "堂食/外卖订单",
-			"value": "pages/order/index",
-			"method":"switchTab",
+			"label":  "堂食/外卖订单",
+			"value":  "pages/order/index",
+			"method": "switchTab",
 		}, {
 			"label": "会员开卡订单",
 			"value": "pages/order/vip/index",
@@ -76,9 +76,9 @@ func (rest Page) Options(c *gin.Context) {
 
 	if t == "page" {
 		options = []map[string]string{{
-			"label": "首页",
-			"value": "page/index/index",
-			"method":"switchTab",
+			"label":  "首页",
+			"value":  "page/index/index",
+			"method": "switchTab",
 		}}
 	}
 

@@ -457,10 +457,10 @@ paths:
   /:
     get:
       consumes:
-      - multipart/form-data
+        - multipart/form-data
       description: 预览接口可访问
       produces:
-      - multipart/form-data
+        - multipart/form-data
       responses:
         "200":
           description: 获取成功！
@@ -468,81 +468,81 @@ paths:
             $ref: '#/definitions/gincmf_app_model.ReturnData'
       summary: 入口文件
       tags:
-      - index
+        - index
   /admin/desk:
     get:
       consumes:
-      - multipart/form-data
+        - multipart/form-data
       description: 查看全部桌位列表
       parameters:
-      - description: 桌位名称
-        in: formData
-        name: name
-        required: true
-        type: string
+        - description: 桌位名称
+          in: formData
+          name: name
+          required: true
+          type: string
       produces:
-      - multipart/form-data
+        - multipart/form-data
       responses:
         "200":
           description: code:1 => 获取成功，code:0 => 获取失败
           schema:
             allOf:
-            - $ref: '#/definitions/model.Paginate'
-            - properties:
-                data:
-                  items:
-                    $ref: '#/definitions/model.Desk'
-                  type: array
-              type: object
+              - $ref: '#/definitions/model.Paginate'
+              - properties:
+                  data:
+                    items:
+                      $ref: '#/definitions/model.Desk'
+                    type: array
+                type: object
         "400":
           description: '{"code":400,"msg":"登录状态已失效！"}'
           schema:
             $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
       summary: 桌位管理
       tags:
-      - restaurant 桌位管理
+        - restaurant 桌位管理
     post:
       consumes:
-      - multipart/form-data
+        - multipart/form-data
       description: 提交删除单个桌位
       parameters:
-      - description: 单个菜单类型id
-        in: path
-        name: id
-        required: true
-        type: string
+        - description: 单个菜单类型id
+          in: path
+          name: id
+          required: true
+          type: string
       produces:
-      - multipart/form-data
+        - multipart/form-data
       responses:
         "200":
           description: code:1 => 删除成功，code:0 => 删除失败
           schema:
             allOf:
-            - $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
-            - properties:
-                data:
-                  $ref: '#/definitions/model.Desk'
-              type: object
+              - $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
+              - properties:
+                  data:
+                    $ref: '#/definitions/model.Desk'
+                type: object
         "400":
           description: '{"code":400,"msg":"登录状态已失效！"}'
           schema:
             $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
       summary: 提交删除桌位
       tags:
-      - restaurant 桌位管理
+        - restaurant 桌位管理
   /admin/desk/{id}:
     delete:
       consumes:
-      - multipart/form-data
+        - multipart/form-data
       description: 提交删除桌位
       parameters:
-      - description: 单个桌位id
-        in: path
-        name: id
-        required: true
-        type: string
+        - description: 单个桌位id
+          in: path
+          name: id
+          required: true
+          type: string
       produces:
-      - multipart/form-data
+        - multipart/form-data
       responses:
         "200":
           description: code:1 => 删除成功，code:0 => 删除失败
@@ -554,406 +554,406 @@ paths:
             $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
       summary: 提交删除桌位
       tags:
-      - restaurant 桌位管理
+        - restaurant 桌位管理
     get:
       consumes:
-      - multipart/form-data
+        - multipart/form-data
       description: 查看单个桌位
       parameters:
-      - description: 单个桌位id
-        in: path
-        name: id
-        required: true
-        type: string
+        - description: 单个桌位id
+          in: path
+          name: id
+          required: true
+          type: string
       produces:
-      - multipart/form-data
+        - multipart/form-data
       responses:
         "200":
           description: code:1 => 获取成功，code:0 => 获取失败
           schema:
             allOf:
-            - $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
-            - properties:
-                data:
-                  $ref: '#/definitions/model.Desk'
-              type: object
+              - $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
+              - properties:
+                  data:
+                    $ref: '#/definitions/model.Desk'
+                type: object
         "400":
           description: '{"code":400,"msg":"登录状态已失效！"}'
           schema:
             $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
       summary: 单个桌位详情
       tags:
-      - restaurant 桌位管理
+        - restaurant 桌位管理
     post:
       consumes:
-      - multipart/form-data
+        - multipart/form-data
       description: 提交修改单个桌位
       parameters:
-      - description: 单个桌位id
-        in: path
-        name: id
-        required: true
-        type: string
-      - description: 单个桌位id
-        in: path
-        name: id
-        required: true
-        type: string
-      - description: 小程序唯一编号
-        in: query
-        name: mid
-        required: true
-        type: string
-      - description: 桌位名称
-        in: formData
-        name: name
-        required: true
-        type: string
-      - description: 所属门店
-        in: formData
-        name: store_id
-        required: true
-        type: string
-      - description: 所属分类
-        in: formData
-        name: category_id
-        required: true
-        type: string
+        - description: 单个桌位id
+          in: path
+          name: id
+          required: true
+          type: string
+        - description: 单个桌位id
+          in: path
+          name: id
+          required: true
+          type: string
+        - description: 小程序唯一编号
+          in: query
+          name: mid
+          required: true
+          type: string
+        - description: 桌位名称
+          in: formData
+          name: name
+          required: true
+          type: string
+        - description: 所属门店
+          in: formData
+          name: store_id
+          required: true
+          type: string
+        - description: 所属分类
+          in: formData
+          name: category_id
+          required: true
+          type: string
       produces:
-      - multipart/form-data
+        - multipart/form-data
       responses:
         "200":
           description: code:1 => 获取成功，code:0 => 获取失败
           schema:
             allOf:
-            - $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
-            - properties:
-                data:
-                  $ref: '#/definitions/model.Desk'
-              type: object
+              - $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
+              - properties:
+                  data:
+                    $ref: '#/definitions/model.Desk'
+                type: object
         "400":
           description: '{"code":400,"msg":"登录状态已失效！"}'
           schema:
             $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
       summary: 提交修改单个桌位
       tags:
-      - restaurant 桌位管理
+        - restaurant 桌位管理
   /admin/desk/category:
     get:
       consumes:
-      - multipart/form-data
+        - multipart/form-data
       description: 查看全部桌位类型列表
       produces:
-      - multipart/form-data
+        - multipart/form-data
       responses:
         "200":
           description: code:1 => 获取成功，code:0 => 获取失败
           schema:
             allOf:
-            - $ref: '#/definitions/model.Paginate'
-            - properties:
-                data:
-                  items:
-                    $ref: '#/definitions/model.DeskCategory'
-                  type: array
-              type: object
+              - $ref: '#/definitions/model.Paginate'
+              - properties:
+                  data:
+                    items:
+                      $ref: '#/definitions/model.DeskCategory'
+                    type: array
+                type: object
         "400":
           description: '{"code":400,"msg":"登录状态已失效！"}'
           schema:
             $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
       summary: 桌位类型管理
       tags:
-      - restaurant 桌位分类管理
+        - restaurant 桌位分类管理
     post:
       consumes:
-      - multipart/form-data
+        - multipart/form-data
       description: 提交新增单个菜单类型
       parameters:
-      - description: 小程序唯一编号
-        in: query
-        name: mid
-        required: true
-        type: string
-      - description: 分类名称
-        in: formData
-        name: category_name
-        required: true
-        type: string
-      - description: 最少座位人数
-        in: formData
-        name: least_seats
-        required: true
-        type: string
-      - description: 最多座位人数
-        in: formData
-        name: maximum_seats
-        required: true
-        type: string
+        - description: 小程序唯一编号
+          in: query
+          name: mid
+          required: true
+          type: string
+        - description: 分类名称
+          in: formData
+          name: category_name
+          required: true
+          type: string
+        - description: 最少座位人数
+          in: formData
+          name: least_seats
+          required: true
+          type: string
+        - description: 最多座位人数
+          in: formData
+          name: maximum_seats
+          required: true
+          type: string
       produces:
-      - multipart/form-data
+        - multipart/form-data
       responses:
         "200":
           description: code:1 => 新增成功！，code:0 => 新增失败
           schema:
             allOf:
-            - $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
-            - properties:
-                data:
-                  $ref: '#/definitions/model.DeskCategory'
-              type: object
+              - $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
+              - properties:
+                  data:
+                    $ref: '#/definitions/model.DeskCategory'
+                type: object
         "400":
           description: '{"code":400,"msg":"登录状态已失效！"}'
           schema:
             $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
       summary: 提交新增单个菜单类型
       tags:
-      - restaurant 桌位分类管理
+        - restaurant 桌位分类管理
   /admin/desk/category/{id}:
     delete:
       consumes:
-      - multipart/form-data
+        - multipart/form-data
       description: 提交删除单个菜单类型
       parameters:
-      - description: 单个菜单类型id
-        in: path
-        name: id
-        required: true
-        type: string
+        - description: 单个菜单类型id
+          in: path
+          name: id
+          required: true
+          type: string
       produces:
-      - multipart/form-data
+        - multipart/form-data
       responses:
         "200":
           description: code:1 => 删除成功，code:0 => 删除失败
           schema:
             allOf:
-            - $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
-            - properties:
-                data:
-                  $ref: '#/definitions/model.DeskCategory'
-              type: object
+              - $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
+              - properties:
+                  data:
+                    $ref: '#/definitions/model.DeskCategory'
+                type: object
         "400":
           description: '{"code":400,"msg":"登录状态已失效！"}'
           schema:
             $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
       summary: 提交删除菜单类型
       tags:
-      - restaurant 桌位分类管理
+        - restaurant 桌位分类管理
     get:
       consumes:
-      - multipart/form-data
+        - multipart/form-data
       description: 查看单个菜单类型
       parameters:
-      - description: 单个桌位菜单id
-        in: path
-        name: id
-        required: true
-        type: string
+        - description: 单个桌位菜单id
+          in: path
+          name: id
+          required: true
+          type: string
       produces:
-      - multipart/form-data
+        - multipart/form-data
       responses:
         "200":
           description: code:1 => 获取成功，code:0 => 获取异常
           schema:
             allOf:
-            - $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
-            - properties:
-                data:
-                  $ref: '#/definitions/model.DeskCategory'
-              type: object
+              - $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
+              - properties:
+                  data:
+                    $ref: '#/definitions/model.DeskCategory'
+                type: object
         "400":
           description: '{"code":400,"msg":"登录状态已失效！"}'
           schema:
             $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
       summary: 查看单个菜单类型
       tags:
-      - restaurant 桌位分类管理
+        - restaurant 桌位分类管理
     post:
       consumes:
-      - multipart/form-data
+        - multipart/form-data
       description: 提交修改单个菜单类型
       parameters:
-      - description: 单个桌位菜单id
-        in: path
-        name: id
-        required: true
-        type: string
-      - description: 小程序唯一编号
-        in: query
-        name: mid
-        required: true
-        type: string
-      - description: 分类名称
-        in: formData
-        name: category_name
-        required: true
-        type: string
-      - description: 最少座位人数
-        in: formData
-        name: least_seats
-        required: true
-        type: string
-      - description: 最多座位人数
-        in: formData
-        name: maximum_seats
-        required: true
-        type: string
+        - description: 单个桌位菜单id
+          in: path
+          name: id
+          required: true
+          type: string
+        - description: 小程序唯一编号
+          in: query
+          name: mid
+          required: true
+          type: string
+        - description: 分类名称
+          in: formData
+          name: category_name
+          required: true
+          type: string
+        - description: 最少座位人数
+          in: formData
+          name: least_seats
+          required: true
+          type: string
+        - description: 最多座位人数
+          in: formData
+          name: maximum_seats
+          required: true
+          type: string
       produces:
-      - multipart/form-data
+        - multipart/form-data
       responses:
         "200":
           description: code:1 => 更新成功，code:0 => 提交失败
           schema:
             allOf:
-            - $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
-            - properties:
-                data:
-                  $ref: '#/definitions/model.DeskCategory'
-              type: object
+              - $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
+              - properties:
+                  data:
+                    $ref: '#/definitions/model.DeskCategory'
+                type: object
         "400":
           description: '{"code":400,"msg":"登录状态已失效！"}'
           schema:
             $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
       summary: 提交修改单个菜单类型
       tags:
-      - restaurant 桌位分类管理
+        - restaurant 桌位分类管理
   /admin/dishes/category:
     get:
       consumes:
-      - multipart/form-data
+        - multipart/form-data
       description: 查看全部菜品分类列表
       parameters:
-      - description: 门店id
-        in: query
-        name: store_id
-        required: true
-        type: string
-      - description: 小程序唯一编号
-        in: query
-        name: mid
-        required: true
-        type: string
-      - description: 菜单名称
-        in: formData
-        name: name
-        required: true
-        type: string
-      - description: 菜单类型（0=>全部，1=>到店，2=>外卖）
-        enum:
-        - 0
-        - 1
-        - 2
-        in: formData
-        name: type
-        type: integer
-      - description: 是否必选（0=>否，1=>是）
-        enum:
-        - 0
-        - 1
-        in: formData
-        name: is_required
-        type: integer
-      - description: 状态（0=>停用，1=>启用）
-        enum:
-        - 0
-        - 1
-        in: formData
-        name: status
-        type: integer
+        - description: 门店id
+          in: query
+          name: store_id
+          required: true
+          type: string
+        - description: 小程序唯一编号
+          in: query
+          name: mid
+          required: true
+          type: string
+        - description: 菜单名称
+          in: formData
+          name: name
+          required: true
+          type: string
+        - description: 菜单类型（0=>全部，1=>到店，2=>外卖）
+          enum:
+            - 0
+            - 1
+            - 2
+          in: formData
+          name: type
+          type: integer
+        - description: 是否必选（0=>否，1=>是）
+          enum:
+            - 0
+            - 1
+          in: formData
+          name: is_required
+          type: integer
+        - description: 状态（0=>停用，1=>启用）
+          enum:
+            - 0
+            - 1
+          in: formData
+          name: status
+          type: integer
       produces:
-      - multipart/form-data
+        - multipart/form-data
       responses:
         "200":
           description: code:1 => 获取成功，code:0 => 获取异常
           schema:
             allOf:
-            - $ref: '#/definitions/model.Paginate'
-            - properties:
-                data:
-                  items:
-                    $ref: '#/definitions/model.FoodCategory'
-                  type: array
-              type: object
+              - $ref: '#/definitions/model.Paginate'
+              - properties:
+                  data:
+                    items:
+                      $ref: '#/definitions/model.FoodCategory'
+                    type: array
+                type: object
         "400":
           description: '{"code":400,"msg":"登录状态已失效！"}'
           schema:
             $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
       summary: 菜单分类管理
       tags:
-      - restaurant 菜单分类
+        - restaurant 菜单分类
     post:
       consumes:
-      - multipart/form-data
+        - multipart/form-data
       description: 提交新增单个菜品分类
       parameters:
-      - description: 小程序id
-        in: formData
-        name: mid
-        required: true
-        type: string
-      - description: 菜品名称
-        in: formData
-        name: name
-        required: true
-        type: string
-      - description: 菜品图片
-        in: formData
-        name: name
-        required: true
-        type: string
-      - description: 菜单类型（0=>全部，1=>到店，2=>外卖）
-        enum:
-        - 0
-        - 1
-        - 2
-        in: formData
-        name: type
-        type: integer
-      - description: 是否必选（0=>否，1=>是）
-        enum:
-        - 0
-        - 1
-        in: formData
-        name: is_required
-        type: integer
-      - description: 状态（0=>停用，1=>启用）
-        enum:
-        - 0
-        - 1
-        in: formData
-        name: status
-        type: integer
+        - description: 小程序id
+          in: formData
+          name: mid
+          required: true
+          type: string
+        - description: 菜品名称
+          in: formData
+          name: name
+          required: true
+          type: string
+        - description: 菜品图片
+          in: formData
+          name: name
+          required: true
+          type: string
+        - description: 菜单类型（0=>全部，1=>到店，2=>外卖）
+          enum:
+            - 0
+            - 1
+            - 2
+          in: formData
+          name: type
+          type: integer
+        - description: 是否必选（0=>否，1=>是）
+          enum:
+            - 0
+            - 1
+          in: formData
+          name: is_required
+          type: integer
+        - description: 状态（0=>停用，1=>启用）
+          enum:
+            - 0
+            - 1
+          in: formData
+          name: status
+          type: integer
       produces:
-      - application/json
+        - application/json
       responses:
         "200":
           description: code:1 => 获取成功，code:0 => 获取异常
           schema:
             allOf:
-            - $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
-            - properties:
-                data:
-                  $ref: '#/definitions/model.FoodCategory'
-              type: object
+              - $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
+              - properties:
+                  data:
+                    $ref: '#/definitions/model.FoodCategory'
+                type: object
         "400":
           description: '{"code":400,"msg":"登录状态已失效！"}'
           schema:
             $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
       summary: 提交新增单个菜品分类
       tags:
-      - restaurant 菜单分类
+        - restaurant 菜单分类
   /admin/dishes/category/{id}:
     delete:
       consumes:
-      - multipart/form-data
+        - multipart/form-data
       description: 提交删除单个菜品分类
       parameters:
-      - description: 单个菜单分类id
-        in: path
-        name: id
-        required: true
-        type: string
+        - description: 单个菜单分类id
+          in: path
+          name: id
+          required: true
+          type: string
       produces:
-      - multipart/form-data
+        - multipart/form-data
       responses:
         "200":
           description: code:1 => 删除成功，code:0 => 删除失败
@@ -965,90 +965,90 @@ paths:
             $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
       summary: 提交删除菜品分类
       tags:
-      - restaurant 菜单分类
+        - restaurant 菜单分类
     get:
       consumes:
-      - multipart/form-data
+        - multipart/form-data
       description: 查看单个菜品分类
       parameters:
-      - description: 单个菜单分类id
-        in: path
-        name: id
-        required: true
-        type: string
-      - description: 小程序唯一编号
-        in: query
-        name: mid
-        required: true
-        type: string
+        - description: 单个菜单分类id
+          in: path
+          name: id
+          required: true
+          type: string
+        - description: 小程序唯一编号
+          in: query
+          name: mid
+          required: true
+          type: string
       produces:
-      - multipart/form-data
+        - multipart/form-data
       responses:
         "200":
           description: code:1 => 获取成功，code:0 => 获取异常
           schema:
             allOf:
-            - $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
-            - properties:
-                data:
-                  $ref: '#/definitions/model.FoodCategory'
-              type: object
+              - $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
+              - properties:
+                  data:
+                    $ref: '#/definitions/model.FoodCategory'
+                type: object
         "400":
           description: '{"code":400,"msg":"登录状态已失效！"}'
           schema:
             $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
       summary: 查看单个菜品分类
       tags:
-      - restaurant 菜单分类
+        - restaurant 菜单分类
     post:
       consumes:
-      - multipart/form-data
+        - multipart/form-data
       description: 提交修改单个菜品分类
       parameters:
-      - description: 单个菜单分类id
-        in: formData
-        name: id
-        required: true
-        type: string
-      - description: 小程序唯一编号
-        in: query
-        name: mid
-        required: true
-        type: string
-      - description: 菜品名称
-        in: formData
-        name: name
-        required: true
-        type: string
-      - description: 菜品图片
-        in: formData
-        name: name
-        required: true
-        type: string
-      - description: 菜单类型（0=>全部，1=>到店，2=>外卖）
-        enum:
-        - 0
-        - 1
-        - 2
-        in: formData
-        name: type
-        type: integer
-      - description: 是否必选（0=>否，1=>是）
-        enum:
-        - 0
-        - 1
-        in: formData
-        name: is_required
-        type: integer
-      - description: 状态（0=>停用，1=>启用）
-        enum:
-        - 0
-        - 1
-        in: formData
-        name: status
-        type: integer
+        - description: 单个菜单分类id
+          in: formData
+          name: id
+          required: true
+          type: string
+        - description: 小程序唯一编号
+          in: query
+          name: mid
+          required: true
+          type: string
+        - description: 菜品名称
+          in: formData
+          name: name
+          required: true
+          type: string
+        - description: 菜品图片
+          in: formData
+          name: name
+          required: true
+          type: string
+        - description: 菜单类型（0=>全部，1=>到店，2=>外卖）
+          enum:
+            - 0
+            - 1
+            - 2
+          in: formData
+          name: type
+          type: integer
+        - description: 是否必选（0=>否，1=>是）
+          enum:
+            - 0
+            - 1
+          in: formData
+          name: is_required
+          type: integer
+        - description: 状态（0=>停用，1=>启用）
+          enum:
+            - 0
+            - 1
+          in: formData
+          name: status
+          type: integer
       produces:
-      - multipart/form-data
+        - multipart/form-data
       responses:
         "200":
           description: code:1 => 获取成功，code:0 => 获取异常
@@ -1060,710 +1060,710 @@ paths:
             $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
       summary: 提交修改单个菜品分类
       tags:
-      - restaurant 菜单分类
+        - restaurant 菜单分类
   /admin/dishes/food:
     get:
       consumes:
-      - multipart/form-data
+        - multipart/form-data
       description: 查看全部菜品列表
       parameters:
-      - description: 小程序唯一编号
-        in: query
-        name: mid
-        required: true
-        type: string
-      - description: 门店id
-        in: query
-        name: store_id
-        type: string
-      - description: 菜品名称
-        in: query
-        name: name
-        type: string
-      - description: 菜品分类
-        in: query
-        name: category_id
-        type: string
+        - description: 小程序唯一编号
+          in: query
+          name: mid
+          required: true
+          type: string
+        - description: 门店id
+          in: query
+          name: store_id
+          type: string
+        - description: 菜品名称
+          in: query
+          name: name
+          type: string
+        - description: 菜品分类
+          in: query
+          name: category_id
+          type: string
       produces:
-      - multipart/form-data
+        - multipart/form-data
       responses:
         "200":
           description: code:1 => 获取成功，code:0 => 获取失败
           schema:
             allOf:
-            - $ref: '#/definitions/model.Paginate'
-            - properties:
-                data:
-                  items:
-                    $ref: '#/definitions/model.Food'
-                  type: array
-              type: object
+              - $ref: '#/definitions/model.Paginate'
+              - properties:
+                  data:
+                    items:
+                      $ref: '#/definitions/model.Food'
+                    type: array
+                type: object
         "400":
           description: '{"code":400,"msg":"登录状态已失效！"}'
           schema:
             $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
       summary: 菜品管理
       tags:
-      - restaurant 菜品管理
+        - restaurant 菜品管理
     post:
       consumes:
-      - multipart/form-data
+        - multipart/form-data
       description: 提交添加单个菜品
       parameters:
-      - description: 小程序唯一编号
-        in: query
-        name: mid
-        required: true
-        type: string
-      - description: 门店id
-        in: formData
-        name: store_id
-        required: true
-        type: string
-      - description: 菜品名称
-        in: formData
-        name: name
-        required: true
-        type: string
-      - description: 菜品分类
-        in: formData
-        name: category
-        required: true
-        type: string
-      - description: 菜品缩略图
-        in: formData
-        name: thumbnail
-        type: string
-      - description: 菜品编码
-        in: formData
-        name: food_code
-        type: string
-      - description: 启用会员价
-        in: formData
-        name: use_member
-        type: string
-      - description: 会员价
-        in: formData
-        name: member_price
-        type: string
-      - description: 原价
-        in: formData
-        name: original_price
-        type: string
-      - description: 售价
-        in: formData
-        name: price
-        type: string
-      - description: 餐盒费
-        in: formData
-        name: box_fee
-        type: string
-      - description: 库存
-        in: formData
-        name: inventory
-        type: string
-      - description: 销量
-        in: formData
-        name: volume
-        type: string
-      - description: 场景
-        in: formData
-        name: scene
-        type: string
-      - description: 最低起售
-        in: formData
-        name: start_sale
-        type: string
-      - description: 启用规格
-        in: formData
-        name: use_sku
-        type: string
-      - description: 启用口味
-        in: formData
-        name: use_tasty
-        type: string
-      - description: 口味json
-        in: formData
-        name: tasty
-        type: string
-      - description: 额外加料
-        in: formData
-        name: use_material
-        type: string
-      - description: 加料
-        in: formData
-        name: material
-        type: string
-      - description: 状态
-        in: formData
-        name: status
-        type: string
-      - description: 菜品规格
-        in: formData
-        name: food_sku
-        type: string
+        - description: 小程序唯一编号
+          in: query
+          name: mid
+          required: true
+          type: string
+        - description: 门店id
+          in: formData
+          name: store_id
+          required: true
+          type: string
+        - description: 菜品名称
+          in: formData
+          name: name
+          required: true
+          type: string
+        - description: 菜品分类
+          in: formData
+          name: category
+          required: true
+          type: string
+        - description: 菜品缩略图
+          in: formData
+          name: thumbnail
+          type: string
+        - description: 菜品编码
+          in: formData
+          name: food_code
+          type: string
+        - description: 启用会员价
+          in: formData
+          name: use_member
+          type: string
+        - description: 会员价
+          in: formData
+          name: member_price
+          type: string
+        - description: 原价
+          in: formData
+          name: original_price
+          type: string
+        - description: 售价
+          in: formData
+          name: price
+          type: string
+        - description: 餐盒费
+          in: formData
+          name: box_fee
+          type: string
+        - description: 库存
+          in: formData
+          name: inventory
+          type: string
+        - description: 销量
+          in: formData
+          name: volume
+          type: string
+        - description: 场景
+          in: formData
+          name: scene
+          type: string
+        - description: 最低起售
+          in: formData
+          name: start_sale
+          type: string
+        - description: 启用规格
+          in: formData
+          name: use_sku
+          type: string
+        - description: 启用口味
+          in: formData
+          name: use_tasty
+          type: string
+        - description: 口味json
+          in: formData
+          name: tasty
+          type: string
+        - description: 额外加料
+          in: formData
+          name: use_material
+          type: string
+        - description: 加料
+          in: formData
+          name: material
+          type: string
+        - description: 状态
+          in: formData
+          name: status
+          type: string
+        - description: 菜品规格
+          in: formData
+          name: food_sku
+          type: string
       produces:
-      - multipart/form-data
+        - multipart/form-data
       responses:
         "200":
           description: code:1 => 获取成功，code:0 => 获取异常
           schema:
             allOf:
-            - $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
-            - properties:
-                data:
-                  $ref: '#/definitions/model.Food'
-              type: object
+              - $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
+              - properties:
+                  data:
+                    $ref: '#/definitions/model.Food'
+                type: object
         "400":
           description: '{"code":400,"msg":"登录状态已失效！"}'
           schema:
             $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
       summary: 提交添加单个菜品
       tags:
-      - restaurant 菜品管理
+        - restaurant 菜品管理
   /admin/dishes/food/{id}:
     delete:
       consumes:
-      - multipart/form-data
+        - multipart/form-data
       description: 提交删除菜品
       produces:
-      - multipart/form-data
+        - multipart/form-data
       responses:
         "200":
           description: code:1 => 删除成功，code:0 => 删除失败
           schema:
             allOf:
-            - $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
-            - properties:
-                data:
-                  $ref: '#/definitions/model.Food'
-              type: object
+              - $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
+              - properties:
+                  data:
+                    $ref: '#/definitions/model.Food'
+                type: object
         "400":
           description: '{"code":400,"msg":"登录状态已失效！"}'
           schema:
             $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
       summary: 提交删除菜品
       tags:
-      - restaurant 菜品管理
+        - restaurant 菜品管理
     get:
       consumes:
-      - multipart/form-data
+        - multipart/form-data
       description: 查看单个菜品
       parameters:
-      - description: 小程序唯一编号
-        in: query
-        name: mid
-        required: true
-        type: string
-      - description: 单个菜单分类id
-        in: path
-        name: id
-        required: true
-        type: string
+        - description: 小程序唯一编号
+          in: query
+          name: mid
+          required: true
+          type: string
+        - description: 单个菜单分类id
+          in: path
+          name: id
+          required: true
+          type: string
       produces:
-      - multipart/form-data
+        - multipart/form-data
       responses:
         "200":
           description: code:1 => 获取成功，code:0 => 获取异常
           schema:
             allOf:
-            - $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
-            - properties:
-                data:
-                  $ref: '#/definitions/model.Food'
-              type: object
+              - $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
+              - properties:
+                  data:
+                    $ref: '#/definitions/model.Food'
+                type: object
         "400":
           description: '{"code":400,"msg":"登录状态已失效！"}'
           schema:
             $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
       summary: 单个菜品管理
       tags:
-      - restaurant 菜品管理
+        - restaurant 菜品管理
     post:
       consumes:
-      - multipart/form-data
+        - multipart/form-data
       description: 提交修改单个菜品
       parameters:
-      - description: 单个菜品id
-        in: path
-        name: id
-        required: true
-        type: string
-      - description: 小程序唯一编号
-        in: query
-        name: mid
-        required: true
-        type: string
-      - description: 门店id
-        in: formData
-        name: store_id
-        required: true
-        type: string
-      - description: 菜品名称
-        in: formData
-        name: name
-        required: true
-        type: string
-      - description: 菜品分类
-        in: formData
-        name: category
-        required: true
-        type: string
-      - description: 菜品缩略图
-        in: formData
-        name: thumbnail
-        type: string
-      - description: 菜品编码
-        in: formData
-        name: food_code
-        type: string
-      - description: 启用会员价
-        in: formData
-        name: use_member
-        type: string
-      - description: 会员价
-        in: formData
-        name: member_price
-        type: string
-      - description: 原价
-        in: formData
-        name: original_price
-        type: string
-      - description: 售价
-        in: formData
-        name: price
-        type: string
-      - description: 餐盒费
-        in: formData
-        name: box_fee
-        type: string
-      - description: 库存
-        in: formData
-        name: inventory
-        type: string
-      - description: 销量
-        in: formData
-        name: volume
-        type: string
-      - description: 场景
-        in: formData
-        name: scene
-        type: string
-      - description: 最低起售
-        in: formData
-        name: start_sale
-        type: string
-      - description: 启用规格
-        in: formData
-        name: use_sku
-        type: string
-      - description: 启用口味
-        in: formData
-        name: use_tasty
-        type: string
-      - description: 口味json
-        in: formData
-        name: tasty
-        type: string
-      - description: 额外加料
-        in: formData
-        name: use_material
-        type: string
-      - description: 加料
-        in: formData
-        name: material
-        type: string
-      - description: 状态
-        in: formData
-        name: status
-        type: string
-      - description: 菜品规格
-        in: formData
-        name: food_sku
-        type: string
+        - description: 单个菜品id
+          in: path
+          name: id
+          required: true
+          type: string
+        - description: 小程序唯一编号
+          in: query
+          name: mid
+          required: true
+          type: string
+        - description: 门店id
+          in: formData
+          name: store_id
+          required: true
+          type: string
+        - description: 菜品名称
+          in: formData
+          name: name
+          required: true
+          type: string
+        - description: 菜品分类
+          in: formData
+          name: category
+          required: true
+          type: string
+        - description: 菜品缩略图
+          in: formData
+          name: thumbnail
+          type: string
+        - description: 菜品编码
+          in: formData
+          name: food_code
+          type: string
+        - description: 启用会员价
+          in: formData
+          name: use_member
+          type: string
+        - description: 会员价
+          in: formData
+          name: member_price
+          type: string
+        - description: 原价
+          in: formData
+          name: original_price
+          type: string
+        - description: 售价
+          in: formData
+          name: price
+          type: string
+        - description: 餐盒费
+          in: formData
+          name: box_fee
+          type: string
+        - description: 库存
+          in: formData
+          name: inventory
+          type: string
+        - description: 销量
+          in: formData
+          name: volume
+          type: string
+        - description: 场景
+          in: formData
+          name: scene
+          type: string
+        - description: 最低起售
+          in: formData
+          name: start_sale
+          type: string
+        - description: 启用规格
+          in: formData
+          name: use_sku
+          type: string
+        - description: 启用口味
+          in: formData
+          name: use_tasty
+          type: string
+        - description: 口味json
+          in: formData
+          name: tasty
+          type: string
+        - description: 额外加料
+          in: formData
+          name: use_material
+          type: string
+        - description: 加料
+          in: formData
+          name: material
+          type: string
+        - description: 状态
+          in: formData
+          name: status
+          type: string
+        - description: 菜品规格
+          in: formData
+          name: food_sku
+          type: string
       produces:
-      - multipart/form-data
+        - multipart/form-data
       responses:
         "200":
           description: code:1 => 获取成功，code:0 => 获取异常
           schema:
             allOf:
-            - $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
-            - properties:
-                data:
-                  $ref: '#/definitions/model.Food'
-              type: object
+              - $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
+              - properties:
+                  data:
+                    $ref: '#/definitions/model.Food'
+                type: object
         "400":
           description: '{"code":400,"msg":"登录状态已失效！"}'
           schema:
             $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
       summary: 提交修改单个菜品
       tags:
-      - restaurant 菜品管理
+        - restaurant 菜品管理
   /admin/member:
     get:
       consumes:
-      - multipart/form-data
+        - multipart/form-data
       description: 查看全部会员列表
       produces:
-      - multipart/form-data
+        - multipart/form-data
       responses:
         "200":
           description: code:1 => 获取成功，code:0 => 获取失败
           schema:
             allOf:
-            - $ref: '#/definitions/model.Paginate'
-            - properties:
-                data:
-                  items:
-                    $ref: '#/definitions/model.User'
-                  type: array
-              type: object
+              - $ref: '#/definitions/model.Paginate'
+              - properties:
+                  data:
+                    items:
+                      $ref: '#/definitions/model.User'
+                    type: array
+                type: object
         "400":
           description: '{"code":400,"msg":"登录状态已失效！"}'
           schema:
             $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
       summary: 会员管理
       tags:
-      - restaurant 会员管理
+        - restaurant 会员管理
   /admin/settings/business_info:
     get:
       consumes:
-      - multipart/form-data
+        - multipart/form-data
       description: 查看系统基础设置
       produces:
-      - multipart/form-data
+        - multipart/form-data
       responses:
         "200":
           description: code:1 => 获取成功，code:0 => 获取失败
           schema:
             allOf:
-            - $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
-            - properties:
-                data:
-                  $ref: '#/definitions/settings.BusinessInfo'
-              type: object
+              - $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
+              - properties:
+                  data:
+                    $ref: '#/definitions/settings.BusinessInfo'
+                type: object
         "400":
           description: '{"code":400,"msg":"登录状态已失效！"}'
           schema:
             $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
       summary: 系统基础设置
       tags:
-      - restaurant 系统设置
+        - restaurant 系统设置
     post:
       consumes:
-      - multipart/form-data
+        - multipart/form-data
       description: 提交系统基础设置
       parameters:
-      - description: 品牌名称
-        in: formData
-        name: brand_name
-        required: true
-        type: string
-      - description: 品牌LOGO
-        in: formData
-        name: brand_logo
-        required: true
-        type: string
-      - description: 公司
-        in: formData
-        name: company
-        type: string
-      - description: 公司地址
-        in: formData
-        name: address
-        type: string
-      - description: 联系人
-        in: formData
-        name: contact
-        type: string
-      - description: 手机号
-        in: formData
-        name: mobile
-        type: string
-      - description: 邮箱
-        in: formData
-        name: email
-        type: string
-      - description: 营业执照许可证
-        in: formData
-        name: business_license
-        type: string
-      - description: 经营范围
-        in: formData
-        name: business_scope
-        type: string
-      - description: 营业执照有效期
-        in: formData
-        name: business_expired
-        type: string
-      - description: 营业执照照片
-        in: formData
-        name: business_photo
-        type: string
+        - description: 品牌名称
+          in: formData
+          name: brand_name
+          required: true
+          type: string
+        - description: 品牌LOGO
+          in: formData
+          name: brand_logo
+          required: true
+          type: string
+        - description: 公司
+          in: formData
+          name: company
+          type: string
+        - description: 公司地址
+          in: formData
+          name: address
+          type: string
+        - description: 联系人
+          in: formData
+          name: contact
+          type: string
+        - description: 手机号
+          in: formData
+          name: mobile
+          type: string
+        - description: 邮箱
+          in: formData
+          name: email
+          type: string
+        - description: 营业执照许可证
+          in: formData
+          name: business_license
+          type: string
+        - description: 经营范围
+          in: formData
+          name: business_scope
+          type: string
+        - description: 营业执照有效期
+          in: formData
+          name: business_expired
+          type: string
+        - description: 营业执照照片
+          in: formData
+          name: business_photo
+          type: string
       produces:
-      - multipart/form-data
+        - multipart/form-data
       responses:
         "200":
           description: code:1 => 获取成功，code:0 => 获取失败
           schema:
             allOf:
-            - $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
-            - properties:
-                data:
-                  $ref: '#/definitions/settings.BusinessInfo'
-              type: object
+              - $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
+              - properties:
+                  data:
+                    $ref: '#/definitions/settings.BusinessInfo'
+                type: object
         "400":
           description: '{"code":400,"msg":"登录状态已失效！"}'
           schema:
             $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
       summary: 系统基础设置
       tags:
-      - restaurant 系统设置
+        - restaurant 系统设置
   /admin/settings/recharge:
     get:
       consumes:
-      - multipart/form-data
+        - multipart/form-data
       description: 查看充值规则设置
       produces:
-      - multipart/form-data
+        - multipart/form-data
       responses:
         "200":
           description: code:1 => 获取成功，code:0 => 获取失败
           schema:
             allOf:
-            - $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
-            - properties:
-                data:
-                  $ref: '#/definitions/model.Recharge'
-              type: object
+              - $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
+              - properties:
+                  data:
+                    $ref: '#/definitions/model.Recharge'
+                type: object
         "400":
           description: '{"code":400,"msg":"登录状态已失效！"}'
           schema:
             $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
       summary: 充值规则设置
       tags:
-      - restaurant 充值规则
+        - restaurant 充值规则
     post:
       consumes:
-      - multipart/form-data
+        - multipart/form-data
       description: 查看充值规则设置
       produces:
-      - multipart/form-data
+        - multipart/form-data
       responses:
         "200":
           description: code:1 => 获取成功，code:0 => 获取失败
           schema:
             allOf:
-            - $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
-            - properties:
-                data:
-                  $ref: '#/definitions/model.Recharge'
-              type: object
+              - $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
+              - properties:
+                  data:
+                    $ref: '#/definitions/model.Recharge'
+                type: object
         "400":
           description: '{"code":400,"msg":"登录状态已失效！"}'
           schema:
             $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
       summary: 充值规则设置
       tags:
-      - restaurant 充值规则
+        - restaurant 充值规则
   /admin/store/index:
     get:
       consumes:
-      - multipart/form-data
+        - multipart/form-data
       description: 查看全部门店列表
       parameters:
-      - description: 门店名称
-        in: formData
-        name: store_name
-        required: true
-        type: string
-      - description: 起始时间
-        in: formData
-        name: start_time
-        required: true
-        type: string
-      - description: 结束时间
-        in: formData
-        name: end_time
-        required: true
-        type: string
-      - description: 结束时间
-        in: formData
-        name: status
-        required: true
-        type: string
+        - description: 门店名称
+          in: formData
+          name: store_name
+          required: true
+          type: string
+        - description: 起始时间
+          in: formData
+          name: start_time
+          required: true
+          type: string
+        - description: 结束时间
+          in: formData
+          name: end_time
+          required: true
+          type: string
+        - description: 结束时间
+          in: formData
+          name: status
+          required: true
+          type: string
       produces:
-      - multipart/form-data
+        - multipart/form-data
       responses:
         "200":
           description: code:1 => 获取成功，code:0 => 获取失败
           schema:
             allOf:
-            - $ref: '#/definitions/model.Paginate'
-            - properties:
-                data:
-                  items:
-                    $ref: '#/definitions/model.Store'
-                  type: array
-              type: object
+              - $ref: '#/definitions/model.Paginate'
+              - properties:
+                  data:
+                    items:
+                      $ref: '#/definitions/model.Store'
+                    type: array
+                type: object
         "400":
           description: '{"code":400,"msg":"登录状态已失效！"}'
           schema:
             $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
       summary: 门店列表
       tags:
-      - restaurant 门店管理
+        - restaurant 门店管理
     post:
       consumes:
-      - multipart/form-data
+        - multipart/form-data
       description: 新增单个门店
       parameters:
-      - description: 商户id
-        in: formData
-        name: mid
-        required: true
-        type: string
-      - description: 商户名称
-        in: formData
-        name: store_name
-        required: true
-        type: string
-      - description: 联系电话
-        in: formData
-        name: phone
-        required: true
-        type: string
-      - description: 联系人
-        in: formData
-        name: contact_person
-        required: true
-        type: string
+        - description: 商户id
+          in: formData
+          name: mid
+          required: true
+          type: string
+        - description: 商户名称
+          in: formData
+          name: store_name
+          required: true
+          type: string
+        - description: 联系电话
+          in: formData
+          name: phone
+          required: true
+          type: string
+        - description: 联系人
+          in: formData
+          name: contact_person
+          required: true
+          type: string
       produces:
-      - multipart/form-data
+        - multipart/form-data
       responses:
         "200":
           description: code:1 => 获取成功，code:0 => 获取失败
           schema:
             allOf:
-            - $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
-            - properties:
-                data:
-                  $ref: '#/definitions/model.Store'
-              type: object
+              - $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
+              - properties:
+                  data:
+                    $ref: '#/definitions/model.Store'
+                type: object
         "400":
           description: '{"code":400,"msg":"登录状态已失效！"}'
           schema:
             $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
       summary: 新增单个门店
       tags:
-      - restaurant 门店管理
+        - restaurant 门店管理
   /admin/store/index/{id}:
     delete:
       consumes:
-      - multipart/form-data
+        - multipart/form-data
       description: 删除单个门店
       produces:
-      - multipart/form-data
+        - multipart/form-data
       responses:
         "200":
           description: code:1 => 删除成功，code:0 => 删除失败
           schema:
             allOf:
-            - $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
-            - properties:
-                data:
-                  $ref: '#/definitions/model.Store'
-              type: object
+              - $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
+              - properties:
+                  data:
+                    $ref: '#/definitions/model.Store'
+                type: object
         "400":
           description: '{"code":400,"msg":"登录状态已失效！"}'
           schema:
             $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
       summary: 删除单个门店
       tags:
-      - restaurant 门店管理
+        - restaurant 门店管理
     get:
       consumes:
-      - multipart/form-data
+        - multipart/form-data
       description: 查看单个门店信息
       parameters:
-      - description: 单个门店id
-        in: path
-        name: id
-        required: true
-        type: string
+        - description: 单个门店id
+          in: path
+          name: id
+          required: true
+          type: string
       produces:
-      - multipart/form-data
+        - multipart/form-data
       responses:
         "200":
           description: code:1 => 获取成功，code:0 => 获取失败
           schema:
             allOf:
-            - $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
-            - properties:
-                data:
-                  $ref: '#/definitions/model.Store'
-              type: object
+              - $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
+              - properties:
+                  data:
+                    $ref: '#/definitions/model.Store'
+                type: object
         "400":
           description: '{"code":400,"msg":"登录状态已失效！"}'
           schema:
             $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
       summary: 查看单个门店信息
       tags:
-      - restaurant 门店管理
+        - restaurant 门店管理
     post:
       consumes:
-      - multipart/form-data
+        - multipart/form-data
       description: 提交修改单个门店
       parameters:
-      - description: 单个门店id
-        in: path
-        name: id
-        required: true
-        type: string
+        - description: 单个门店id
+          in: path
+          name: id
+          required: true
+          type: string
       produces:
-      - multipart/form-data
+        - multipart/form-data
       responses:
         "200":
           description: code:1 => 获取成功，code:0 => 获取失败
           schema:
             allOf:
-            - $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
-            - properties:
-                data:
-                  $ref: '#/definitions/model.Store'
-              type: object
+              - $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
+              - properties:
+                  data:
+                    $ref: '#/definitions/model.Store'
+                type: object
         "400":
           description: '{"code":400,"msg":"登录状态已失效！"}'
           schema:
             $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
       summary: 提交修改单个门店
       tags:
-      - restaurant 门店管理
+        - restaurant 门店管理
   /app/voucher:
     get:
       consumes:
-      - multipart/form-data
+        - multipart/form-data
       description: 获取个人优惠券列表
       produces:
-      - multipart/form-data
+        - multipart/form-data
       responses:
         "200":
           description: code:1 => 获取成功，code:0 => 获取失败
           schema:
             allOf:
-            - $ref: '#/definitions/model.Paginate'
-            - properties:
-                data:
-                  items:
-                    $ref: '#/definitions/model.Desk'
-                  type: array
-              type: object
+              - $ref: '#/definitions/model.Paginate'
+              - properties:
+                  data:
+                    items:
+                      $ref: '#/definitions/model.Desk'
+                    type: array
+                type: object
         "400":
           description: '{"code":400,"msg":"登录状态已失效！"}'
           schema:
             $ref: '#/definitions/gincmf_plugins_restaurantPlugin_model.ReturnData'
       summary: 优惠券列表
       tags:
-      - app 优惠券列表
+        - app 优惠券列表
 swagger: "2.0"

@@ -9,7 +9,10 @@ import (
 	"encoding/json"
 	"errors"
 	"gincmf/app/model"
+	"gincmf/app/util"
+	"github.com/gincmf/alipayEasySdk/base"
 	cmf "github.com/gincmf/cmf/bootstrap"
+	cmfLog "github.com/gincmf/cmf/log"
 	"gorm.io/gorm"
 )
 
@@ -19,8 +22,8 @@ type Option struct {
 	StoreId int `gorm:"type:int(11);comment:门店id;not null" json:"store_id"`
 }
 
-func (m *Option) AutoMigrate() {
-	_ = cmf.NewDb().AutoMigrate(&m)
+func (model *Option) AutoMigrate() {
+	_ = cmf.NewDb().AutoMigrate(&model)
 }
 
 type EatIn struct {
@@ -62,10 +65,10 @@ type Recharge struct {
 	Gear           float64       `json:"gear"` // 储值金额档位
 	EnabledMoney   int           `json:"enabled_money"`
 	Money          float64       `json:"money"`
-	EnabledPoint   int           `json:"enabled_point"`
-	Point          int           `json:"point"`
+	EnabledScore   int           `json:"enabled_score"`
+	Score          int           `json:"score"`
 	EnabledVoucher int           `json:"enabled_voucher"`
-	Voucher        []voucherItem `json:"voucher"`
+	Voucher        []VoucherItem `json:"voucher"`
 }
 
 // 积分
@@ -80,7 +83,7 @@ type Score struct {
 func (model *EatIn) Show(storeId int, mid int) (EatIn, error) {
 
 	op := Option{}
-	tx := cmf.NewDb().Where("option_name = ? AND store_id = ? AND mid = ?", "eat_in", storeId, mid).First(&op)
+	tx := cmf.NewDb().Where("option_name = ? AND store_id = ? AND mid = ?", "eatin", storeId, mid).First(&op)
 	if tx.Error != nil {
 		if errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 			return EatIn{}, errors.New("配置不存在！")
@@ -100,7 +103,7 @@ func (model *EatIn) Show(storeId int, mid int) (EatIn, error) {
 func (model *TakeOut) Show(storeId int, mid int) (TakeOut, error) {
 
 	op := Option{}
-	tx := cmf.NewDb().Where("option_name = ? AND store_id = ? AND mid = ?", "take_out", storeId, mid).First(&op)
+	tx := cmf.NewDb().Where("option_name = ? AND store_id = ? AND mid = ?", "takeout", storeId, mid).First(&op)
 	if tx.Error != nil {
 		if errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 			return TakeOut{}, errors.New("配置不存在！")
@@ -114,5 +117,104 @@ func (model *TakeOut) Show(storeId int, mid int) (TakeOut, error) {
 	_ = json.Unmarshal([]byte(val), &to)
 
 	return to, nil
+
+}
+
+/**
+ * @Author return <1140444693@qq.com>
+ * @Description
+ * @Date 2021/3/2 23:53:49
+ * @Param
+ * @return
+ **/
+
+type BusinessInfo struct {
+	BrandName       string `json:"brand_name"`
+	BrandLogo       string `json:"brand_logo"`
+	AlipayLogoId    string `json:"alipay_logo_id"`
+	Company         string `json:"company"`
+	Address         string `json:"address"`
+	Contact         string `json:"contact"`
+	Mobile          string `json:"mobile"`
+	Email           string `json:"email"`
+	BusinessLicense string `json:"business_license"`
+	BusinessScope   string `json:"business_scope"`
+	BusinessExpired string `json:"business_expired"`
+	BusinessPhoto   string `json:"business_photo"`
+	MiniCategoryIds string `json:"mini_category_ids"`
+	AppSlogan       string `json:"app_slogan"`
+	AppDesc         string `json:"app_desc"`
+	OutDoorPic      string `json:"out_door_pic"`
+	FoodLicensePic  string `json:"food_license_pic"`
+}
+
+func (model *BusinessInfo) AlipayImageId(brandLogo string) (string, error) {
+
+	absPath := util.CurrentPath() + "/public/uploads/" + brandLogo
+	b, err := util.ExistPath(absPath)
+	if err != nil {
+
+		return "", err
+	}
+
+	if !b {
+		return "", errors.New("品牌LOGO地址错误！")
+	}
+
+	imageId := ""
+
+	bizContent := make(map[string]string, 0)
+	bizContent["image_type"] = "jpg"
+	bizContent["image_name"] = "brand_logo"
+	imgResult, err := new(base.Image).Upload(bizContent, absPath)
+
+	if imgResult.Response.Code != "10000" {
+
+		return "", errors.New("上传失败！" + imgResult.Response.SubMsg)
+	}
+
+	imageId = imgResult.Response.ImageId
+
+	if err != nil {
+		return "", err
+	}
+
+	return imageId, nil
+
+}
+
+func (model *Option) Updates(businessInfo BusinessInfo) (Option, error) {
+
+	op := Option{}
+
+	result := cmf.NewDb().Where("option_name = ? AND mid = ?", "business_info", model.Mid).First(&op)
+	if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		return op, result.Error
+	}
+
+	op.Mid = model.Mid
+	op.AutoLoad = 1
+	op.OptionName = "business_info"
+
+	val, err := json.Marshal(businessInfo)
+	if err != nil {
+		cmfLog.Error(err.Error())
+		return op, err
+	}
+
+	op.OptionValue = string(val)
+
+	var tx *gorm.DB
+	if op.Id == 0 {
+		tx = cmf.NewDb().Create(&op)
+	} else {
+		tx = cmf.NewDb().Save(&op)
+	}
+
+	if tx.Error != nil {
+		return op, tx.Error
+	}
+
+	return op, nil
 
 }

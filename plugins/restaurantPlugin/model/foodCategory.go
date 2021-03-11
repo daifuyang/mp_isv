@@ -31,11 +31,11 @@ type FoodCategoryStoreHouse struct {
 	IsRequired int               `gorm:"type:tinyint(3);comment:是否必选品（0=>否，1=>是）;not null;default:0" json:"is_required"`
 	Scene      int               `gorm:"type:tinyint(3);comment:支持场景（0 =>全部；1=>堂食；2=>外卖）;default:0;not null" json:"scene"`
 	Count      int               `gorm:"type:int(11);comment:商品数量;not null;default:0" json:"count"`
-	CreateAt   int64             `gorm:"type:int(11)" json:"create_at"`
-	UpdateAt   int64             `gorm:"type:int(11)" json:"update_at"`
+	CreateAt   int64             `gorm:"type:bigint(20)" json:"create_at"`
+	UpdateAt   int64             `gorm:"type:bigint(20)" json:"update_at"`
 	CreateTime string            `gorm:"-" json:"create_time"`
 	UpdateTime string            `gorm:"-" json:"update_time"`
-	DeleteAt   int64             `gorm:"type:int(10);comment:'删除时间';default:0" json:"delete_at"`
+	DeleteAt   int64             `gorm:"type:bigint(20);comment:'删除时间';default:0" json:"delete_at"`
 	Status     int               `gorm:"type:tinyint(3);comment:菜品分类状态;" json:"status"`
 	paginate   cmfModel.Paginate `gorm:"-"`
 	Db         *gorm.DB          `gorm:"-" json:"-"`

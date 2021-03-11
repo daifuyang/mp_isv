@@ -8,34 +8,16 @@ package settings
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"gincmf/app/util"
 	"gincmf/plugins/restaurantPlugin/model"
 	"github.com/gin-gonic/gin"
-	"github.com/gincmf/alipayEasySdk/base"
 	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
-	cmfLog "github.com/gincmf/cmf/log"
 	"gorm.io/gorm"
 )
 
 type Common struct {
 	rc controller.RestController
-}
-
-type BusinessInfo struct {
-	BrandName       string `json:"brand_name"`
-	BrandLogo       string `json:"brand_logo"`
-	AlipayLogoId    string `json:"alipay_logo_id"`
-	Company         string `json:"company"`
-	Address         string `json:"address"`
-	Contact         string `json:"contact"`
-	Mobile          string `json:"mobile"`
-	Email           string `json:"email"`
-	BusinessLicense string `json:"business_license"`
-	BusinessScope   string `json:"business_scope"`
-	BusinessExpired string `json:"business_expired"`
-	BusinessPhoto   string `json:"business_photo"`
 }
 
 // @Summary 系统基础设置
@@ -50,23 +32,27 @@ func (rest *Common) Show(c *gin.Context) {
 
 	mid, _ := c.Get("mid")
 	op := model.Option{}
-	result := cmf.NewDb().Where("option_name = ? AND mid = ?", "business_info",mid).First(&op)
+	result := cmf.NewDb().Where("option_name = ? AND mid = ?", "business_info", mid).First(&op)
 	if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, result.Error.Error(), nil)
 		return
 	}
-	bi := BusinessInfo{}
+	bi := model.BusinessInfo{}
 	json.Unmarshal([]byte(op.OptionValue), &bi)
 
 	var res struct {
-		BusinessInfo
-		BrandLogoPrev     string `json:"brand_logo_prev"`
-		BusinessPhotoPrev string `json:"business_photo_prev"`
+		model.BusinessInfo
+		BrandLogoPrev      string `json:"brand_logo_prev"`
+		BusinessPhotoPrev  string `json:"business_photo_prev"`
+		OutDoorPicPrev     string `json:"out_door_pic_prev"`
+		FoodLicensePicPrev string `json:"food_license_pic_prev"`
 	}
 
 	res.BusinessInfo = bi
 	res.BrandLogoPrev = util.GetFileUrl(bi.BrandLogo)
 	res.BusinessPhotoPrev = util.GetFileUrl(bi.BusinessPhoto)
+	res.OutDoorPicPrev = util.GetFileUrl(bi.OutDoorPic)
+	res.FoodLicensePicPrev = util.GetFileUrl(bi.FoodLicensePic)
 
 	rest.rc.Success(c, "获取成功！", res)
 
@@ -94,6 +80,7 @@ func (rest *Common) Show(c *gin.Context) {
 func (rest *Common) Edit(c *gin.Context) {
 
 	mid, _ := c.Get("mid")
+	_, exist := c.Get("user_id")
 
 	// 品牌名
 	brandName := c.PostForm("brand_name")
@@ -109,34 +96,18 @@ func (rest *Common) Edit(c *gin.Context) {
 		return
 	}
 
-	absPath := util.CurrentPath() + "/public/uploads/" + brandLogo
-	b, err := util.ExistPath(absPath)
-	if err != nil {
-		rest.rc.Error(c, err.Error(), nil)
-		return
-	}
+	var (
+		businessInfo model.BusinessInfo
+		imageId      string
+		err          error
+	)
 
-	if !b {
-		rest.rc.Error(c, "品牌LOGO地址错误！", nil)
-		return
-	}
-
-
-	bizContent := make(map[string]string, 0)
-	bizContent["image_type"] = "jpg"
-	bizContent["image_name"] = "brand_logo"
-	imgResult, err := new(base.Image).Upload(bizContent, absPath)
-
-	if imgResult.Response.Code != "10000" {
-		rest.rc.Error(c, "上传失败！"+imgResult.Response.SubMsg, imgResult)
-		return
-	}
-
-	fmt.Println(imgResult)
-
-	if err != nil {
-		rest.rc.Error(c, err.Error(), nil)
-		return
+	if exist {
+		imageId, err = businessInfo.AlipayImageId(brandLogo)
+		if err != nil {
+			rest.rc.Error(c, err.Error(), nil)
+			return
+		}
 	}
 
 	company := c.PostForm("company")
@@ -144,17 +115,19 @@ func (rest *Common) Edit(c *gin.Context) {
 	contact := c.PostForm("contact")
 	mobile := c.PostForm("mobile")
 	email := c.PostForm("email")
+	miniCategoryIds := c.PostForm("mini_category_ids")
 	businessLicense := c.PostForm("business_license")
 	businessScope := c.PostForm("business_scope")
 	businessExpired := c.PostForm("business_expired")
 	businessPhoto := c.PostForm("business_photo")
+	appSlogan := c.PostForm("app_slogan")
+	appDesc := c.PostForm("app_desc")
+	outDoorPic := c.PostForm("out_door_pic")
+	foodLicensePic := c.PostForm("food_license_pic")
 
-	op := model.Option{}
-
-	var businessInfo BusinessInfo
 	businessInfo.BrandName = brandName
 	businessInfo.BrandLogo = brandLogo
-	businessInfo.AlipayLogoId = imgResult.Response.ImageId
+	businessInfo.AlipayLogoId = imageId
 	businessInfo.Company = company
 	businessInfo.Address = address
 	businessInfo.Contact = contact
@@ -164,35 +137,20 @@ func (rest *Common) Edit(c *gin.Context) {
 	businessInfo.BusinessScope = businessScope
 	businessInfo.BusinessExpired = businessExpired
 	businessInfo.BusinessPhoto = businessPhoto
+	businessInfo.AppSlogan = appSlogan
+	businessInfo.AppDesc = appDesc
+	businessInfo.OutDoorPic = outDoorPic
+	businessInfo.FoodLicensePic = foodLicensePic
+	businessInfo.MiniCategoryIds = miniCategoryIds
 
-	result := cmf.NewDb().Where("option_name = ?", "business_info").First(&op)
-	if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		rest.rc.Error(c, result.Error.Error(), nil)
-		return
+	op := model.Option{
+		Mid: mid.(int),
 	}
 
-	op.Mid = mid.(int)
-	op.AutoLoad = 1
-	op.OptionName = "business_info"
+	_, err = op.Updates(businessInfo)
 
-	val, err := json.Marshal(businessInfo)
 	if err != nil {
-		cmfLog.Error(err.Error())
 		rest.rc.Error(c, err.Error(), nil)
-		return
-	}
-
-	op.OptionValue = string(val)
-
-	var tx *gorm.DB
-	if op.Id == 0 {
-		tx = cmf.NewDb().Create(&op)
-	} else {
-		tx = cmf.NewDb().Save(&op)
-	}
-
-	if tx.Error != nil {
-		rest.rc.Error(c, tx.Error.Error(), nil)
 		return
 	}
 

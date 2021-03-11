@@ -51,7 +51,7 @@ func (rest CategoryController) Get(c *gin.Context) {
 	}
 
 	storeId := c.PostForm("store_id")
-	if storeId == "" {
+	if storeId != "" {
 		query = append(query, "store_id = ?")
 		queryArgs = append(queryArgs, storeId)
 	}

@@ -15,16 +15,18 @@ type Level struct {
 
 // 优惠券详情
 type voucher struct {
-	Once  []voucherItem `json:"once"`
-	Month []voucherItem `json:"month"`
+	Once  []VoucherItem `json:"once"`
+	Month []VoucherItem `json:"month"`
 }
 
-type voucherItem struct {
-	SendType    string `json:"send_type"` //发放方式：once：发放1次 month：每月发放
-	Count       int    `json:"count"`
-	VoucherName string `json:"voucher_name"`
-	VoucherId   int    `json:"voucher_id"`
-	TemplateId  string `json:"template_id"`
+type VoucherItem struct {
+	SendType              string   `json:"send_type"` //发放方式：once：发放1次 month：每月发放
+	Count                 int      `json:"count"`
+	VoucherName           string   `json:"voucher_name"`
+	VoucherDescription    string   `json:"voucher_description"`
+	VoucherDescriptionMap []string `json:"voucher_description_map"`
+	VoucherId             int      `json:"voucher_id"`
+	TemplateId            string   `json:"template_id"`
 }
 
 // 等级权益

@@ -9,14 +9,19 @@ import (
 	"encoding/json"
 	"errors"
 	"gincmf/app/middleware/socket"
-	"gincmf/plugins/restaurantPlugin/model"
+	"gincmf/app/model"
+	resModel "gincmf/plugins/restaurantPlugin/model"
 	"github.com/gin-gonic/gin"
+	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
 	cmfLog "github.com/gincmf/cmf/log"
 	"github.com/gorilla/websocket"
+	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 	"log"
 	"net/http"
+	"strconv"
+	"time"
 )
 
 type Index struct {
@@ -76,7 +81,7 @@ func (rest *Index) Index(c *gin.Context) {
 		queryArgs = append(queryArgs, orderStatus)
 	}
 
-	order := model.FoodOrder{}
+	order := resModel.FoodOrder{}
 	data, err := order.IndexByStore(c, query, queryArgs)
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, err.Error(), nil)
@@ -120,7 +125,7 @@ func (rest *Index) Confirm(c *gin.Context) {
 	query = append(query, "store_id = ?")
 	queryArgs = append(queryArgs, storeId)
 
-	order := model.FoodOrder{}
+	order := resModel.FoodOrder{}
 	err := order.Confirm(query, queryArgs)
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)
@@ -166,7 +171,7 @@ func (rest *Index) Cancel(c *gin.Context) {
 	query = append(query, "store_id = ?")
 	queryArgs = append(queryArgs, storeId)
 
-	order := model.FoodOrder{}
+	order := resModel.FoodOrder{}
 	err := order.Cancel(query, queryArgs, appId.(string))
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)
@@ -287,7 +292,7 @@ func (rest *Index) Order(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		order := model.FoodOrder{}
+		order := resModel.FoodOrder{}
 
 		data, err := order.ByStore(current, pageSize, query, queryArgs)
 		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
@@ -307,4 +312,150 @@ func (rest *Index) Order(w http.ResponseWriter, r *http.Request) {
 		}
 
 	}
+}
+
+/**
+ * @Author return <1140444693@qq.com>
+ * @Description // 查订单详情
+ * @Date 2021/2/21 12:51:57
+ * @Param
+ * @return
+ **/
+
+func (rest *Index) Show(c *gin.Context) {
+
+	var rewrite struct {
+		Id int `uri:"id"`
+	}
+	if err := c.ShouldBindUri(&rewrite); err != nil {
+		c.JSON(400, gin.H{"msg": err.Error()})
+		return
+	}
+
+	mid, _ := c.Get("mid")
+
+	var query = []string{"fo.mid = ? AND fo.id = ?"}
+	var queryArgs = []interface{}{mid, rewrite.Id}
+
+	data, err := new(resModel.FoodOrder).ShowByStore(query, queryArgs)
+
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
+	rest.rc.Success(c, "获取成功！", data)
+
+}
+
+/**
+ * @Author return <1140444693@qq.com>
+ * @Description 申请退款
+ * @Date 2021/3/11 16:2:23
+ * @Param
+ * @return
+ **/
+
+func (rest *Index) Refund(c *gin.Context) {
+
+	var rewrite struct {
+		Id int `uri:"id"`
+	}
+
+	if err := c.ShouldBindUri(&rewrite); err != nil {
+		c.JSON(400, gin.H{"msg": err.Error()})
+		return
+	}
+
+	mid, _ := c.Get("mid")
+
+	var query = []string{"fo.mid = ?", " fo.id = ? "}
+	var queryArgs = []interface{}{mid, rewrite.Id, "TRADE_SUCCESS"}
+
+	data, err := new(resModel.FoodOrder).ShowByStore(query, queryArgs)
+
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
+	if data.Id == 0 {
+		rest.rc.Error(c, "订单不存在", nil)
+		return
+	}
+
+	if !(data.OrderStatus == "TRADE_SUCCESS" || data.OrderStatus == "TRADE_FINISHED") {
+		rest.rc.Error(c, "订单状态不正确", nil)
+		return
+	}
+
+	// 如果是余额支付
+	if data.PayType == "balance" {
+
+		rLog := model.RechargeLog{}
+		tx := cmf.NewDb().Where("target_id = ? AND target_type = ?", data.Id, 0).First(&rLog)
+		if tx.Error != nil {
+			rest.rc.Error(c, tx.Error.Error(), nil)
+			return
+		}
+
+		userData, err := new(model.User).Show([]string{"id = ?", "mid = ?", "user_type = 0", "delete_at = 0"}, []interface{}{data.UserId, mid})
+		if err != nil {
+			rest.rc.Error(c, err.Error(), nil)
+			return
+		}
+
+		balance := userData.Balance
+
+		reFee, err := decimal.NewFromString(rLog.Fee)
+
+		if err != nil {
+			rest.rc.Error(c, err.Error(), nil)
+			return
+		}
+
+		balanceDecimal := decimal.NewFromFloat(balance).Add(reFee)
+		balance, _ = balanceDecimal.Round(2).Float64()
+
+		tx = cmf.NewDb().Model(&resModel.User{}).Where("id = ?", userData.Id).Updates(map[string]interface{}{
+			"balance": balance,
+		})
+
+		if tx.Error != nil {
+			cmfLog.Error(tx.Error.Error())
+			rest.rc.Error(c, err.Error(), nil)
+		}
+
+		balanceStr := strconv.FormatFloat(balance, 'E', -1, 64)
+
+		rechargeLog := model.RechargeLog{
+			UserId:   userData.Id,
+			TargetId: data.Id,
+			TargetType: 0,
+			Type:     0,
+			Fee:      rLog.Fee,
+			Balance:  balanceStr,
+			Remark:   "订单退款",
+			CreateAt: time.Now().Unix(),
+		}
+
+		tx = cmf.NewDb().Create(&rechargeLog)
+		if tx.Error != nil {
+			cmfLog.Error(tx.Error.Error())
+			rest.rc.Error(c, err.Error(), nil)
+		}
+	}
+
+	if data.PayType == "alipay" {
+
+	}
+
+	tx := cmf.NewDb().Model(&resModel.FoodOrder{}).Where("id = ?", data.Id).Update("order_status", "TRADE_REFUND")
+	if tx.Error != nil {
+		cmfLog.Error(tx.Error.Error())
+		rest.rc.Error(c, err.Error(), nil)
+	}
+
+	rest.rc.Success(c, "退款成功！", nil)
+
 }

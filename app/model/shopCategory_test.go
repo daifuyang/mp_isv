@@ -15,7 +15,7 @@ import (
 func TestShopCategory_AutoMigrate(t *testing.T) {
 
 	cmf.Initialize("../../data/conf/config.json")
-	
+
 	f, err := excelize.OpenFile("/Users/return/Downloads/ShopCategory.xlsx")
 	if err != nil {
 		fmt.Println(err)
@@ -28,7 +28,7 @@ func TestShopCategory_AutoMigrate(t *testing.T) {
 		if row[0] == "超市便利店" || row[0] == "美食" {
 
 			top := ShopCategory{}
-			
+
 			second := ShopCategory{
 				CategoryType: 1,
 			}
@@ -36,10 +36,10 @@ func TestShopCategory_AutoMigrate(t *testing.T) {
 			third := ShopCategory{
 				CategoryType: 2,
 			}
-			
+
 			for k, colCell := range row {
 				if pk > 1 {
-					
+
 				}
 
 				//顶级
@@ -73,7 +73,6 @@ func TestShopCategory_AutoMigrate(t *testing.T) {
 				if k == 5 {
 					third.CategoryId = colCell
 				}
-
 
 			}
 

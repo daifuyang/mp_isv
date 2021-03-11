@@ -8,8 +8,9 @@ package card
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
+	appModel "gincmf/app/model"
 	"gincmf/app/util"
-	"gincmf/plugins/restaurantPlugin/controller/admin/settings"
 	"gincmf/plugins/restaurantPlugin/model"
 	saasModel "gincmf/plugins/saasPlugin/model"
 	"github.com/gin-gonic/gin"
@@ -85,9 +86,10 @@ func (rest *Card) VipDetail(c *gin.Context) {
 	json.Unmarshal([]byte(vipInfo), &viMap)
 
 	// 获取当前用户的信息
-	for _, v := range viMap.Level {
+	for k, v := range viMap.Level {
+
 		// 用户的经验取值范围
-		if userData.Exp < v.ExpRangeEnd {
+		if userData.Exp < v.ExpRangeEnd || k == len(viMap.Level)-1 {
 
 			// 获取发卡要求
 			getType := v.GetType
@@ -111,6 +113,27 @@ func (rest *Card) VipDetail(c *gin.Context) {
 			result.Level = v.LevelId
 			result.Name = v.LevelName
 			result.Fee = v.Num
+
+			voucherItem := make([]model.VoucherItem, 0)
+			for _, iv := range v.Benefit.Voucher.Once {
+				voucher, err := rest.validVoucher(iv)
+				if err == nil {
+					voucherItem = append(voucherItem, voucher)
+				}
+			}
+			v.Benefit.Voucher.Once = voucherItem
+
+			voucherItem = make([]model.VoucherItem, 0)
+			for _, iv := range v.Benefit.Voucher.Month {
+
+				voucher, err := rest.validVoucher(iv)
+				if err == nil {
+					voucherItem = append(voucherItem, voucher)
+				}
+
+			}
+
+			v.Benefit.Voucher.Month = voucherItem
 			result.Benefit = v.Benefit
 			break
 		}
@@ -118,6 +141,39 @@ func (rest *Card) VipDetail(c *gin.Context) {
 
 	rest.rc.Success(c, "获取成功！", result)
 
+}
+
+func (rest *Card) validVoucher(VoucherItem model.VoucherItem) (model.VoucherItem, error) {
+
+	prefix := cmf.Conf().Database.Prefix
+
+	var voucher struct {
+		VoucherName        string `json:"voucher_name"`
+		VoucherDescription string `json:"voucher_description"`
+		VoucherId          int    `json:"voucher_id"`
+		TemplateId         string `json:"template_id"`
+	}
+
+	tx := cmf.NewDb().Table(prefix+"voucher_post vp").
+		Joins("INNER JOIN "+prefix+"voucher v ON vp.voucher_id = v.id").Where("v.id = ?", VoucherItem.VoucherId).Scan(&voucher)
+
+	if tx.RowsAffected > 0 {
+
+		var voucherDescriptionMap []string
+		json.Unmarshal([]byte(voucher.VoucherDescription), &voucherDescriptionMap)
+
+		return model.VoucherItem{
+			SendType:              VoucherItem.SendType,
+			Count:                 VoucherItem.Count,
+			VoucherName:           voucher.VoucherName,
+			VoucherDescription:    voucher.VoucherDescription,
+			VoucherDescriptionMap: voucherDescriptionMap,
+			VoucherId:             voucher.VoucherId,
+			TemplateId:            voucher.TemplateId,
+		}, nil
+	}
+
+	return model.VoucherItem{}, errors.New("暂无内容！")
 }
 
 /**
@@ -129,19 +185,21 @@ func (rest *Card) VipDetail(c *gin.Context) {
  **/
 func (rest *Card) Send(c *gin.Context) {
 
-	appId, _ := c.Get("app_id")
 	mpUserId, _ := c.Get("mp_user_id")
 	mpType, _ := c.Get("mp_type")
 	Openid, _ := c.Get("open_id")
 
 	// 获取当前租户信息
 	mid, _ := c.Get("mid")
+	appId, _ := c.Get("app_id")
 
 	// 获取当前用户信息
 	userId, _ := c.Get("mp_user_id")
 
 	u := model.User{}
 	userData, err := u.Show([]string{"u.id = ?"}, []interface{}{userId})
+
+	fmt.Println("VipLevel", userData.VipLevel)
 
 	if err != nil {
 		rest.rc.Error(c, "获取失败！"+err.Error(), err)
@@ -161,6 +219,12 @@ func (rest *Card) Send(c *gin.Context) {
 	var viMap model.VipInfo
 	json.Unmarshal([]byte(vipInfo), &viMap)
 
+	initVipLevel := viMap.Level[0].LevelId
+
+	if userData.VipLevel != "" {
+		initVipLevel = userData.VipLevel
+	}
+
 	// 获取会员信息
 	vip := model.MemberCard{
 		UserId: userData.Id,
@@ -171,7 +235,7 @@ func (rest *Card) Send(c *gin.Context) {
 	vip.CreateAt = nowUnix
 	vip.UpdateAt = nowUnix
 
-	levelId, _ := strconv.Atoi(strings.Replace(vip.VipLevel, "VIP", "", -1))
+	levelId, _ := strconv.Atoi(strings.Replace(initVipLevel, "VIP", "", -1))
 
 	/*
 	 ** 唯一uid编号生成逻辑
@@ -180,7 +244,7 @@ func (rest *Card) Send(c *gin.Context) {
 	yearStr, monthStr, dayStr := util.CurrentDate()
 	insertKey := "mp_isv" + strconv.Itoa(mid.(int)) + ":member_card:" + yearStr + monthStr + dayStr
 	date := yearStr + monthStr + dayStr
-	vipNum := util.DateUuid("", insertKey, date)
+	vipNum := util.DateUuid("", insertKey, date, mid.(int))
 	// 新建会员卡
 	switch viMap.Level[levelId].GetType {
 	case "pay":
@@ -193,7 +257,7 @@ func (rest *Card) Send(c *gin.Context) {
 			return
 		}
 
-		tx := cmf.NewDb().Where("user_id = ? AND mid = ? AND vip_level = ? AND fee = ? AND pay_type = ? AND order_status = ?", mpUserId, mid, vip.VipLevel, fee, "alipay", "WAIT_BUYER_PAY").First(&co)
+		tx := cmf.NewDb().Where("user_id = ? AND mid = ? AND vip_level = ? AND fee = ? AND pay_type = ? AND order_status = ?", mpUserId, mid, initVipLevel, fee, "alipay", "WAIT_BUYER_PAY").First(&co)
 
 		if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 			rest.rc.Error(c, tx.Error.Error(), nil)
@@ -205,14 +269,11 @@ func (rest *Card) Send(c *gin.Context) {
 			return
 		}
 
-		appIdInt, _ := appId.(int)
-		appIdStr := strconv.Itoa(appIdInt)
-
 		yearStr, monthStr, dayStr := util.CurrentDate()
 		date := yearStr + monthStr + dayStr
-		insertKey := "mp_isv" + appIdStr + ":card:" + date
+		insertKey := "mp_isv" + strconv.Itoa(mid.(int)) + ":card:" + date
 
-		orderId := util.DateUuid("vip", insertKey, date)
+		orderId := util.DateUuid("vip", insertKey, date, mid.(int))
 
 		if orderId == "" {
 			rest.rc.Error(c, "订单号生成出错！", nil)
@@ -227,8 +288,9 @@ func (rest *Card) Send(c *gin.Context) {
 		}
 
 		// 支付宝小程序下单
+
 		businessJson := saasModel.Options("business_info", mid.(int))
-		bi := settings.BusinessInfo{}
+		bi := model.BusinessInfo{}
 		json.Unmarshal([]byte(businessJson), &bi)
 
 		// 未开过卡
@@ -244,19 +306,20 @@ func (rest *Card) Send(c *gin.Context) {
 
 			co.VipName = viMap.Level[0].LevelName
 			co.VipLevel = viMap.Level[0].LevelId
-		}else{
+			co.VipNum = vipNum
+		} else {
 			co.VipName = vipData.VipName
 			co.VipLevel = vipData.VipLevel
+			co.VipNum = vipData.VipNum
 		}
 
-		co.VipNum = vipNum
+		co.Mid = mid.(int)
 		co.OrderId = orderId
 		co.PayType = "alipay"
 		co.UserId = mpUserId.(int)
 		co.Fee = fee
 		co.CreateAt = nowUnix
 		co.OrderStatus = "WAIT_BUYER_PAY"
-
 
 		brandName := bi.BrandName
 		if brandName == "" {
@@ -280,8 +343,15 @@ func (rest *Card) Send(c *gin.Context) {
 			bizContent := make(map[string]interface{}, 0)
 			bizContent["out_trade_no"] = orderId
 			// bizContent["total_amount"] = fee
-			bizContent["total_amount"] = 0.01
-			// bizContent["discountable_amount"] = 0
+			// 测试模板
+			flag := new(appModel.TestAppId).InList(appId.(string))
+			if flag {
+				bizContent["total_amount"] = 0.01
+			} else {
+				bizContent["total_amount"] = fee
+			}
+
+			bizContent["discountable_amount"] = 0
 			bizContent["subject"] = brandName
 			bizContent["body"] = bi.BrandName + "开通会员卡"
 			bizContent["buyer_id"] = Openid

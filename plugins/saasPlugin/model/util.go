@@ -7,7 +7,6 @@ package model
 
 import (
 	"encoding/json"
-	"fmt"
 	"gincmf/app/model"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
@@ -18,12 +17,10 @@ import (
 // 获取当前租户信息
 func CurrentTenant(c *gin.Context) Tenant {
 	t := Tenant{}
-	session :=sessions.Default(c)
+	session := sessions.Default(c)
 	tenant := session.Get("tenant")
 	userId, _ := c.Get("user_id")
 	userIdInt, _ := strconv.Atoi(userId.(string))
-
-	fmt.Println("tenant",tenant)
 	if tenant == nil {
 		cmf.Db().First(&t, "id = ?", userId)
 		jsonBytes, _ := json.Marshal(t)
@@ -44,10 +41,10 @@ func CurrentTenant(c *gin.Context) Tenant {
 }
 
 // 获取系统配置项
-func Options(key string,mid int) string {
+func Options(key string, mid int) string {
 	option := model.Option{}
 	var optionJson string
-	uploadResult := cmf.NewDb().First(&option, "option_name = ? AND  mid = ?", key,mid) // 查询
+	uploadResult := cmf.NewDb().First(&option, "option_name = ? AND  mid = ?", key, mid) // 查询
 	if uploadResult.RowsAffected > 0 {
 		optionJson = option.OptionValue
 	}

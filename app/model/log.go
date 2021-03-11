@@ -10,5 +10,5 @@ type Log struct {
 	UserId         int    `gorm:"type:int(11)" json:"userid"`
 	UserNickname   string `gorm:"type:varchar(50)" json:"user_nickname"`
 	Message        string `gorm:"type:varchar(255)" json:"message"`
-	CreateAt       int64  `gorm:"type:int(11)" json:"create_at"`
+	CreateAt       int64  `gorm:"type:bigint(20)" json:"create_at"`
 }

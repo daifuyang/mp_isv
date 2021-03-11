@@ -21,19 +21,21 @@ func AutoMigrate() {
 }
 
 func StartMigrate() {
-	StartTenantMigrate()
+
 	new(user).AutoMigrate()
 	new(option).AutoMigrate()
 	new(mpIsvAuth).AutoMigrate()
 	new(tenant).AutoMigrate()
-	new(AdminMenu).AutoMigrate()
+	//new(AdminMenu).AutoMigrate()
 	new(Region).AutoMigrate()
-	new(ShopCategory).AutoMigrate()
+	new(shopCategory).AutoMigrate()
+	new(model.MiniCategory).AutoMigrate()
+
+	StartTenantMigrate()
 }
 
 // 租户表迁移
 func StartTenantMigrate() {
-	new(asset).AutoMigrate()
 	new(role).AutoMigrate()
 	new(authAccess).AutoMigrate()
 	new(authRule).AutoMigrate()

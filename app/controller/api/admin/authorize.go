@@ -11,13 +11,13 @@ import (
 	"strconv"
 )
 
-type AuthorizeController struct {
+type Authorize struct {
 	rc controller.RestController
 }
 
 type tempAuthorize struct {
-	Id         int     `json:"id"`
-	RuleId     int     `json:"rule_id"`
+	Id         int     `gorm:"->" json:"id"`
+	RuleId     int     `gorm:"->" json:"rule_id"`
 	UniqueName string  `gorm:"type:varchar(30);comment:'唯一名称'" json:"unique_name"`
 	ParentId   int     `gorm:"type:int(11);comment:'所属父类id';default:0" json:"parent_id"`
 	Name       string  `gorm:"type:varchar(30);comment:'路由名称'" json:"name"`
@@ -27,9 +27,13 @@ type tempAuthorize struct {
 	ListOrder  float64 `gorm:"type:float;comment:'排序';default:10000" json:"list_order"`
 }
 
-func (rest *AuthorizeController) Get(c *gin.Context) {
+func (rest *Authorize) Get(c *gin.Context) {
+
 	var adminMenu []tempAuthorize
-	result := cmf.NewDb().Find(&adminMenu)
+	prefix := cmf.Conf().Database.Prefix
+	result := cmf.NewDb().Debug().Table(prefix + "admin_menu m").
+		Select("r.id as rule_id,m.id,m.unique_name,m.parent_id,m.name,m.path,m.icon,m.hide_in_menu,m.list_order").
+		Joins("INNER JOIN  " + prefix + "auth_rule r ON m.unique_name = r.name").Scan(&adminMenu)
 
 	if result.RowsAffected == 0 {
 		controller.RestController{}.Error(c, "暂无菜单,请联系管理员添加！", nil)
@@ -40,7 +44,7 @@ func (rest *AuthorizeController) Get(c *gin.Context) {
 	rest.rc.Success(c, "获取成功！", results)
 }
 
-func (rest *AuthorizeController) Show(c *gin.Context) {
+func (rest *Authorize) Show(c *gin.Context) {
 	var rewrite struct {
 		Id int `uri:"id"`
 	}
@@ -64,15 +68,15 @@ func (rest *AuthorizeController) Show(c *gin.Context) {
 	rest.rc.Success(c, "获取成功！", results)
 }
 
-func (rest *AuthorizeController) Edit(c *gin.Context) {
+func (rest *Authorize) Edit(c *gin.Context) {
 	rest.rc.Success(c, "操作成功Edit", nil)
 }
 
-func (rest *AuthorizeController) Store(c *gin.Context) {
+func (rest *Authorize) Store(c *gin.Context) {
 	rest.rc.Success(c, "操作成功Store", nil)
 }
 
-func (rest *AuthorizeController) Delete(c *gin.Context) {
+func (rest *Authorize) Delete(c *gin.Context) {
 	rest.rc.Success(c, "操作成功Delete", nil)
 }
 
@@ -85,7 +89,7 @@ type aResultStruct struct {
 	Children []interface{} `json:"children"`
 }
 
-func (rest *AuthorizeController) recursionMenu(menus []tempAuthorize, parentId int, tree []string) []aResultStruct {
+func (rest *Authorize) recursionMenu(menus []tempAuthorize, parentId int, tree []string) []aResultStruct {
 
 	var results []aResultStruct
 

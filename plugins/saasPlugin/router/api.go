@@ -8,7 +8,6 @@ package router
 import (
 	"gincmf/app/middleware"
 	"gincmf/app/migrate"
-	AliMiddle "gincmf/plugins/alipayPlugin/middleware"
 	"gincmf/plugins/saasPlugin/controller/api/common"
 	"gincmf/plugins/saasPlugin/controller/api/tenant"
 	"gincmf/plugins/saasPlugin/controller/app"
@@ -24,25 +23,29 @@ func ApiListenRouter() {
 	cmf.Post("api/tenant/register", middleware.MainDb, new(tenant.User).Register)
 
 	// 租户通用管理
-	tenantGroup := cmf.Group("api/tenant", middleware.ValidationBearerToken, middleware.TenantDb, middleware.ValidationAdmin, middleware.ApiBaseController, middleware.Rbac)
+	tenantGroup := cmf.Group("api/tenant", middleware.ValidationBearerToken, middleware.ValidationAdmin, middleware.TenantDb, middleware.ApiBaseController, middleware.Rbac)
 	{
+
+		tenantGroup.Rest("/assets", new(tenant.Assets), middleware.UseMerchant)
 		tenantGroup.Get("/mp/apps", new(tenant.MpTheme).Get)
 		tenantGroup.Get("/mp/apps/:id", new(tenant.MpTheme).Show)
+		tenantGroup.Get("/mp/show/mid", middleware.ValidationMerchant, new(tenant.MpTheme).ShowByMid)
 		tenantGroup.Post("/mp/create", new(tenant.MpTheme).Store)
 		tenantGroup.Post("/mp/apps/:id", new(tenant.MpTheme).Edit)
 		tenantGroup.Delete("/mp/apps/:id", new(tenant.MpTheme).Delete)
+		tenantGroup.Get("/mp/category/:id", new(tenant.MpTheme).UpdateCategory)
+		tenantGroup.Get("/mp/unbind/:id", new(tenant.MpTheme).UnOauth)
 
 		// 根据mid获取主题首页
-		tenantGroup.Get("/mp/theme/home",middleware.ValidationMerchant,new(tenant.MpThemePage).Home)
+		tenantGroup.Get("/mp/theme/home", middleware.ValidationMerchant, new(tenant.MpThemePage).Home)
 
 		// 小程序页面管理
 		tenantGroup.Rest("/mp/page", new(tenant.MpThemePage))
 		// 资源管理
-		tenantGroup.Rest("/assets", new(tenant.AssetsController))
 
 		// 同步数据库
 		tenantGroup.Get("/sync", func(c *gin.Context) {
-			new(migrate.AdminMenu).AutoMigrate()
+
 			migrate.StartTenantMigrate()
 			saasMigrate.AutoMigrate()
 			// 地址
@@ -60,8 +63,7 @@ func ApiListenRouter() {
 	// 小程序路由注册
 	appGroup := cmf.Group("api/v1/app", middleware.ValidationMp)
 	{
-		appGroup.Post("/user/detail",middleware.ValidationUserId,AliMiddle.AppAuthToken,new(app.User).Show)
-		appGroup.Post("/user/edit",middleware.ValidationUserId,new(app.User).Edit)
-		appGroup.Post("/theme_file",new(tenant.MpThemePage).Detail)
+		appGroup.Post("/user/edit", middleware.ValidationBindMobile, new(app.User).Edit)
+		appGroup.Post("/theme_file", new(tenant.MpThemePage).Detail)
 	}
 }

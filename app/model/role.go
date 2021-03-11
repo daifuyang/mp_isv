@@ -19,8 +19,8 @@ type Role struct {
 	Name      string  `gorm:"type:varchar(30);comment:名称" json:"name"`
 	Remark    string  `gorm:"type:varchar(255);comment:备注" json:"remark"`
 	ListOrder float64 `gorm:"type:float;comment:排序;default:10000" json:"list_order"`
-	CreateAt  int64   `gorm:"type:int(11)" json:"create_at"`
-	UpdateAt  int64   `gorm:"type:int(11)" json:"update_at"`
+	CreateAt  int64   `gorm:"type:bigint(20)" json:"create_at"`
+	UpdateAt  int64   `gorm:"type:bigint(20)" json:"update_at"`
 	Status    int     `gorm:"type:tinyint(3);comment:状态;default:1" json:"status"`
 	paginate  cmfModel.Paginate
 }
@@ -49,8 +49,8 @@ func (model *Role) Get(c *gin.Context, query []string, queryArgs []interface{}) 
 	cmf.NewDb().Where(queryStr, queryArgs...).Find(&role).Count(&total)
 	tx := cmf.NewDb().Limit(pageSize).Where(queryStr, queryArgs...).Offset((current - 1) * pageSize).Find(&role)
 
-	if tx.Error != nil && errors.Is(tx.Error,gorm.ErrRecordNotFound) {
-		return cmfModel.Paginate{},tx.Error
+	if tx.Error != nil && errors.Is(tx.Error, gorm.ErrRecordNotFound) {
+		return cmfModel.Paginate{}, tx.Error
 	}
 
 	paginationData := cmfModel.Paginate{Data: role, Current: current, PageSize: pageSize, Total: total}
@@ -58,6 +58,6 @@ func (model *Role) Get(c *gin.Context, query []string, queryArgs []interface{}) 
 		paginationData.Data = make([]string, 0)
 	}
 
-	return paginationData,nil
+	return paginationData, nil
 
 }

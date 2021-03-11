@@ -14,7 +14,6 @@ import (
 	"gincmf/plugins/restaurantPlugin/model"
 	saasModel "gincmf/plugins/saasPlugin/model"
 	"github.com/gin-gonic/gin"
-	"github.com/gincmf/alipayEasySdk"
 	"github.com/gincmf/alipayEasySdk/base"
 	easyUtil "github.com/gincmf/alipayEasySdk/util"
 	cmf "github.com/gincmf/cmf/bootstrap"
@@ -23,7 +22,7 @@ import (
 	"gorm.io/gorm"
 	"net/url"
 	"strconv"
-	"strings"
+	"time"
 )
 
 type Auth struct {
@@ -56,46 +55,45 @@ func (rest *Auth) OutAuthQrcode(c *gin.Context) {
 	redirectUri := "http://www.codecloud.ltd/alipay/auth_redirect"
 
 	mid, _ := c.Get("mid")
-	if mid == nil{
-		rest.rc.Error(c,"小程序不存在！",nil)
+	if mid == nil {
+		rest.rc.Error(c, "小程序不存在！", nil)
 	}
 
 	tenant := saasModel.CurrentTenant(c)
 
-	stateMap := make(map[string]string,0)
+	stateMap := make(map[string]string, 0)
 	stateMap["tenant_id"] = strconv.Itoa(tenant.TenantId)
 	stateMap["mp_id"] = strconv.Itoa(mid.(int))
 	stateMap["type"] = "alipay"
-	sign ,bizContent := easyUtil.Sign(stateMap)
+	sign, bizContent := easyUtil.Sign(stateMap)
 
 	stateMap["biz_content"] = bizContent
 	stateMap["sign"] = sign
 
-
-	b,err :=  json.Marshal(stateMap)
+	b, err := json.Marshal(stateMap)
 	if err != nil {
-		fmt.Println("err",err)
+		fmt.Println("err", err)
 	}
 
 	state := base64.StdEncoding.EncodeToString(b)
 
 	p := url.Values{}
-	p.Add("app_id",appId)
-	p.Add("redirect_uri",redirectUri)
-	p.Add("state",state)
+	p.Add("app_id", appId)
+	p.Add("redirect_uri", redirectUri)
+	p.Add("state", state)
 
 	e := p.Encode()
 
 	qrcodeUrl := baseUrl + "?" + e
 
-	png, err := qrcode.Encode(qrcodeUrl, qrcode.Highest,512)
+	png, err := qrcode.Encode(qrcodeUrl, qrcode.Highest, 512)
 	if err != nil {
-		rest.rc.Error(c,"生成二维码出错！",nil)
+		rest.rc.Error(c, "生成二维码出错！", nil)
 	}
 
 	w := c.Writer
 	w.Header().Set("Content-Type", "image/jpg")
-	w.Header().Set("Content-Disposition",`inline; filename="oauth.jpg"; filename*=utf-8''oauth.jpg`)
+	w.Header().Set("Content-Disposition", `inline; filename="oauth.jpg"; filename*=utf-8''oauth.jpg`)
 
 	w.Write(png)
 
@@ -110,12 +108,9 @@ func (rest *Auth) OutAuthQrcode(c *gin.Context) {
  **/
 func (rest *Auth) Redirect(c *gin.Context) {
 
-	// 获取三方应用的appId
-	appId := c.Query("app_id")
 	// 获取用户授权码
 	appAuthCode := c.Query("app_auth_code")
-	fmt.Println("app_id",appId)
-	fmt.Println("app_auth_code",appAuthCode)
+	redirect := c.Query("redirect")
 
 	// 获取自定义额外参数
 	state := c.Query("state")
@@ -123,29 +118,43 @@ func (rest *Auth) Redirect(c *gin.Context) {
 	decoded, _ := base64.StdEncoding.DecodeString(state)
 	decodeStr := string(decoded)
 
-	fmt.Println("state",decodeStr)
+	fmt.Println("state", decodeStr)
 
-	inParams := make(map[string]string,0)
-	json.Unmarshal(decoded,&inParams)
+	var stateMap struct {
+		TenantId int    `json:"tenant_id"`
+		Mid      int    `json:"mid"`
+		Type     string `json:"type"`
+	}
+	json.Unmarshal(decoded, &stateMap)
 
-	sign := inParams["sign"]
-
-	bizContent := inParams["biz_content"]
-	fmt.Println("biz_content", bizContent)
-
-	// 验证签名
-	err := easyUtil.VerifySign(bizContent,sign)
-
-	if err != nil {
-		rest.rc.Error(c,"验证签名出错！不合法的参数！",nil)
+	tenant := saasModel.Tenant{}
+	tx := cmf.Db().Where("tenant_id = ?", stateMap.TenantId).First(&tenant)
+	if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
+		rest.rc.Error(c, tx.Error.Error(), nil)
 		return
 	}
 
+	if tx.RowsAffected == 0 {
+		rest.rc.Error(c, "租户不存在或已删除", nil)
+		return
+	}
+
+	mp := saasModel.MpTheme{}
+	tx = cmf.NewDb().Where("mid = ?", stateMap.Mid).First(&mp)
+	if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
+		rest.rc.Error(c, tx.Error.Error(), nil)
+		return
+	}
+
+	if tx.RowsAffected == 0 {
+		rest.rc.Error(c, "小程序不存在", nil)
+		return
+	}
+
+	auth := cmfModel.MpIsvAuth{}
+
 	oauth := base.Oauth{}
 	oauthResult := oauth.GetOpenToken(appAuthCode)
-
-
-
 
 	response := oauthResult.Response
 	codeStatus := response.Code
@@ -154,47 +163,55 @@ func (rest *Auth) Redirect(c *gin.Context) {
 
 		token := response.Tokens
 
-		for _, v := range token {
+		v := token[0]
 
-			userId := v.UserId
-			authAppId := v.AuthAppId
-			appAuthToken := v.AppAuthToken
-			appRefreshToken := v.AppRefreshToken
-			expiresIn := v.ExpiresIn
-			reExpiresIn := v.ReExpiresIn
+		userId := v.UserId
+		authAppId := v.AuthAppId
 
-			tenantId,_ := strconv.Atoi(inParams["tenant_id"])
-			mpId,_ := strconv.Atoi(inParams["mp_id"])
-			t := inParams["type"]
+		appAuthToken := v.AppAuthToken
+		appRefreshToken := v.AppRefreshToken
+		expiresIn := v.ExpiresIn
+		reExpiresIn := v.ReExpiresIn
 
-			auth := cmfModel.MpIsvAuth{
-				TenantId:tenantId,
-				MpId: mpId,
-				Type: t,
+		tenantId := stateMap.TenantId
+		mpId := stateMap.Mid
+		t := stateMap.Type
+
+		/*query := []string{"user_id = ?", "auth_app_id = ?"}
+		queryArgs := []interface{}{userId, authAppId}
+		queryStr := strings.Join(query, " AND ")
+		result := cmf.Db().Where(queryStr, queryArgs...).Order("id desc").First(&auth)*/
+
+		auth.TenantId = tenantId
+		auth.MpId = mpId
+		auth.Type = t
+		auth.UserId = userId
+		auth.AuthAppId = authAppId
+		auth.AppAuthToken = appAuthToken
+		auth.AppRefreshToken = appRefreshToken
+		auth.ExpiresIn = expiresIn
+		auth.ReExpiresIn = reExpiresIn
+
+		if auth.Id == 0 {
+			auth.CreateAt = time.Now().Unix()
+			cmf.Db().Debug().Create(&auth)
+		} else {
+
+			if authAppId != auth.AuthAppId {
+				rest.rc.Error(c, "重新授权的账号与当前绑定的账号不一致", nil)
+				return
 			}
 
-			query := []string{"user_id","auth_app_id"}
-			queryArgs := []interface{}{userId,authAppId}
-			queryStr := strings.Join(query,"AND ")
-			result := cmf.NewDb().Where(queryStr,queryArgs...).First(&auth)
-
-			auth.UserId = userId
-			auth.AuthAppId = authAppId
-			auth.AppAuthToken = appAuthToken
-			auth.AppRefreshToken = appRefreshToken
-			auth.ExpiresIn = expiresIn
-			auth.ReExpiresIn = reExpiresIn
-
-			if result.RowsAffected == 0 {
-				cmf.Db().Create(&auth)
-			}else{
-				cmf.Db().Save(&auth)
-			}
-
-			rest.rc.Success(c, "授权成功！", auth)
-			return
+			auth.UpdateAt = time.Now().Unix()
+			cmf.Db().Debug().Updates(&auth)
 		}
+
+		c.Redirect(301, redirect)
+		return
+
 	}
+
+	fmt.Println("response",response)
 
 	rest.rc.Error(c, "授权失败！"+response.SubMsg, response)
 }
@@ -207,58 +224,47 @@ func (rest *Auth) Redirect(c *gin.Context) {
  * @return
  **/
 
-func (rest *Auth) Token (c *gin.Context) {
+func (rest *Auth) Token(c *gin.Context) {
 
-	appId,_ := c.Get("app_id")
-
-	mid,_ := c.Get("mid")
-
-	isvAuth :=	cmfModel.MpIsvAuth{}
-	rowResult := cmf.Db().Where("auth_app_id = ?",appId).First(&isvAuth)
-	if rowResult.RowsAffected == 0 {
-		rest.rc.Error(c,"小程序不存在，请联系管理员！",nil)
-		return
-	}
+	mid, _ := c.Get("mid")
 
 	code := c.Query("code")
 	if code == "" {
-		rest.rc.Error(c,"授权码不能为空！",nil)
+		rest.rc.Error(c, "授权码不能为空！", nil)
 		return
 	}
-
-	alipayEasySdk.SetOption("AppAuthToken",isvAuth.AppAuthToken)
 
 	base := base.Oauth{}
 	data := base.GetSystemToken(code)
 
 	if data.Response.UserId == "" {
-		rest.rc.Error(c,"获取失败！"+data.ErrorResponse.SubMsg,data.ErrorResponse)
+		rest.rc.Error(c, "获取失败！"+data.ErrorResponse.SubMsg, data.ErrorResponse)
 		return
 	}
 
 	openId := data.Response.UserId
 	query := []string{"tp.open_id = ? AND tp.mid = ?"}
-	queryArgs :=[]interface{}{openId,mid}
+	queryArgs := []interface{}{openId, mid}
 
 	// 查询当前用户是否存在
 	userPart := model.UserPart{}
-	partData, err := userPart.Show(query,queryArgs)
-	if err != nil && !errors.Is(err,gorm.ErrRecordNotFound){
-		rest.rc.Error(c,err.Error(),nil)
+	partData, err := userPart.Show(query, queryArgs)
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		rest.rc.Error(c, err.Error(), nil)
 		return
 	}
 
-	fmt.Println("partData",partData)
+	fmt.Println("partData", partData)
 
 	// 当前三方关系不存在 新建第三方用户
 	if partData.OpenId == "" {
-		cmf.NewDb().Where("open_id = ?",openId).FirstOrCreate(&model.ThirdPart{
-			Mid: mid.(int),
-			Type: "alipay-mp",
+		cmf.NewDb().Where("open_id = ?", openId).FirstOrCreate(&model.ThirdPart{
+			Mid:    mid.(int),
+			Type:   "alipay-mp",
 			UserId: 0,
-			OpenId:openId,
+			OpenId: openId,
 		})
 	}
 
-	rest.rc.Success(c,"获取成功！",data.Response)
+	rest.rc.Success(c, "获取成功！", data.Response)
 }

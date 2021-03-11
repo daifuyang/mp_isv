@@ -65,9 +65,9 @@ func (rest *Notice) WsGet(w http.ResponseWriter, r *http.Request) {
 		}
 
 		var result struct {
-			Token       string `json:"token"`
-			Current     int    `json:"current"`
-			PageSize    int    `json:"pageSize"`
+			Token    string `json:"token"`
+			Current  int    `json:"current"`
+			PageSize int    `json:"pageSize"`
 		}
 
 		current := 0
@@ -101,7 +101,7 @@ func (rest *Notice) WsGet(w http.ResponseWriter, r *http.Request) {
 		var query []string
 		var queryArgs []interface{}
 
-		data,err := new(model.AdminNotice).PaginateGet(current,pageSize,query,queryArgs)
+		data, err := new(model.AdminNotice).PaginateGet(current, pageSize, query, queryArgs)
 		if err != nil {
 			if err = c.WriteMessage(mt, []byte( rest.rc.JsonError(err.Error(), nil) )); err != nil {
 				return
@@ -118,7 +118,6 @@ func (rest *Notice) WsGet(w http.ResponseWriter, r *http.Request) {
 			log.Println("write:", err)
 			return
 		}
-
 
 	}
 

@@ -290,11 +290,14 @@ func (rest Food) Edit(c *gin.Context) {
 		useMemberInt = 0
 	}
 
-	memberPrice := c.PostForm("member_price")
-	mp, err := strconv.ParseFloat(memberPrice, 64)
-	if err != nil {
-		rest.rc.Error(c, "会员价参数非法！", nil)
-		return
+	var mp float64
+	if useMemberInt == 1 {
+		memberPrice := c.PostForm("member_price")
+		mp, err = strconv.ParseFloat(memberPrice, 64)
+		if err != nil {
+			rest.rc.Error(c, "会员价参数非法！", nil)
+			return
+		}
 	}
 
 	// 菜品原价
@@ -788,12 +791,15 @@ func (rest Food) Store(c *gin.Context) {
 		useMemberInt = 0
 	}
 
-	memberPrice := c.PostForm("member_price")
-	mp, err := strconv.ParseFloat(memberPrice, 64)
-	if err != nil {
-		cmfLog.Error(err.Error())
-		rest.rc.Error(c, "会员价参数非法！", nil)
-		return
+	var mp float64
+	if useMemberInt == 1 {
+		memberPrice := c.PostForm("member_price")
+		mp, err = strconv.ParseFloat(memberPrice, 64)
+		if err != nil {
+			cmfLog.Error(err.Error())
+			rest.rc.Error(c, "会员价参数非法！", nil)
+			return
+		}
 	}
 
 	// 菜品原价

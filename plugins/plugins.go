@@ -10,6 +10,7 @@ import (
 	"gincmf/plugins/demoPlugin"
 	"gincmf/plugins/feiePlugin"
 	"gincmf/plugins/portalPlugin"
+	"gincmf/plugins/qiniuPlugin"
 	"gincmf/plugins/queuePlugin"
 	"gincmf/plugins/restaurantPlugin"
 	"gincmf/plugins/saasPlugin"
@@ -24,4 +25,5 @@ func AutoRegister() {
 	queuePlugin.Init()
 	feiePlugin.Init()
 	portalPlugin.Init()
+	qiniuPlugin.Init()
 }

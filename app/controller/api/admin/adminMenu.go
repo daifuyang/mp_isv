@@ -11,13 +11,13 @@ import (
 	"github.com/gincmf/cmf/controller"
 )
 
-type MenuController struct {
+type Menu struct {
 	rc controller.RestController
 }
 
-func (rest *MenuController) Get(c *gin.Context) {
+func (rest *Menu) Get(c *gin.Context) {
 	var adminMenu []model.AdminMenu
-	result := cmf.Db().Where("path <> ?", "").Order("list_order,id").Find(&adminMenu)
+	result := cmf.NewDb().Where("path <> ?", "").Order("list_order,id").Find(&adminMenu)
 
 	if result.RowsAffected == 0 {
 		rest.rc.Error(c, "暂无菜单,请联系管理员添加！", nil)
@@ -53,7 +53,7 @@ type resultStruct struct {
 	Routes     []interface{} `json:"routes"`
 }
 
-func (rest *MenuController) inMap(s string, target []model.AuthAccessRule) (result bool) {
+func (rest *Menu) inMap(s string, target []model.AuthAccessRule) (result bool) {
 	for _, v := range target {
 		if s == v.Name {
 			return true
@@ -62,7 +62,7 @@ func (rest *MenuController) inMap(s string, target []model.AuthAccessRule) (resu
 	return false
 }
 
-func (rest *MenuController) recursionMenu(c *gin.Context, menus []model.AdminMenu, parentId int) []resultStruct {
+func (rest *Menu) recursionMenu(c *gin.Context, menus []model.AdminMenu, parentId int) []resultStruct {
 
 	var results []resultStruct
 	for _, v := range menus {

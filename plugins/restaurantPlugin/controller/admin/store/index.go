@@ -21,7 +21,7 @@ import (
 	"time"
 )
 
-type IndexController struct {
+type Index struct {
 	rc controller.RestController
 }
 
@@ -45,7 +45,7 @@ type IndexController struct {
 // @Success 200 {object} model.Paginate{data=[]model.Store} "code:1 => 获取成功，code:0 => 获取失败"
 // @Failure 400 {object} model.ReturnData "{"code":400,"msg":"登录状态已失效！"}"
 // @Router /admin/store/index [get]
-func (rest *IndexController) Get(c *gin.Context) {
+func (rest *Index) Get(c *gin.Context) {
 
 	var query []string
 	var queryArgs []interface{}
@@ -106,7 +106,7 @@ func (rest *IndexController) Get(c *gin.Context) {
  * @Param
  * @return
  **/
-func (rest *IndexController) IndexWithFoodCount(c *gin.Context) {
+func (rest *Index) IndexWithFoodCount(c *gin.Context) {
 
 	var query []string
 	var queryArgs []interface{}
@@ -129,7 +129,7 @@ func (rest *IndexController) IndexWithFoodCount(c *gin.Context) {
 	rest.rc.Success(c, "获取成功！", data)
 }
 
-func (rest *IndexController) List(c *gin.Context) {
+func (rest *Index) List(c *gin.Context) {
 	var query []string
 	var queryArgs []interface{}
 
@@ -166,7 +166,7 @@ func (rest *IndexController) List(c *gin.Context) {
 // @Success 200 {object} model.ReturnData{data=model.Store} "code:1 => 获取成功，code:0 => 获取失败"
 // @Failure 400 {object} model.ReturnData "{"code":400,"msg":"登录状态已失效！"}"
 // @Router /admin/store/index/{id} [get]
-func (rest IndexController) Show(c *gin.Context) {
+func (rest Index) Show(c *gin.Context) {
 
 	var rewrite struct {
 		Id int `uri:"id"`
@@ -241,7 +241,7 @@ func (rest IndexController) Show(c *gin.Context) {
 // @Success 200 {object} model.ReturnData{data=model.Store} "code:1 => 获取成功，code:0 => 获取失败"
 // @Failure 400 {object} model.ReturnData "{"code":400,"msg":"登录状态已失效！"}"
 // @Router /admin/store/index/{id} [post]
-func (rest IndexController) Edit(c *gin.Context) {
+func (rest Index) Edit(c *gin.Context) {
 
 	var rewrite struct {
 		Id int `uri:"id"`
@@ -254,7 +254,7 @@ func (rest IndexController) Edit(c *gin.Context) {
 	mid, _ := c.Get("mid")
 	midInt := mid.(int)
 
-	alipayUserId, _ := c.Get("alipay_user_id")
+	alipayUserId, alipayExist := c.Get("alipay_user_id")
 
 	// 门店名称
 	storeName := c.PostForm("store_name")
@@ -263,8 +263,8 @@ func (rest IndexController) Edit(c *gin.Context) {
 		return
 	}
 
-	query := []string{"mid = ?", "store_name = ?"}
-	queryArgs := []interface{}{mid, storeName}
+	query := []string{"mid = ?", "id = ?"}
+	queryArgs := []interface{}{mid, rewrite.Id}
 
 	storeData, err := new(model.Store).Show(query, queryArgs)
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
@@ -277,7 +277,6 @@ func (rest IndexController) Edit(c *gin.Context) {
 	}
 
 	storeNumber := storeData.StoreNumber
-	fmt.Println(storeNumber)
 
 	// 联系电话
 	phone := c.PostForm("phone")
@@ -407,6 +406,23 @@ func (rest IndexController) Edit(c *gin.Context) {
 		return
 	}
 
+	// 启用沽清
+	enabledSellClear := c.PostForm("enabled_sell_clear")
+
+	enabledSellInt := 0
+	if enabledSellClear == "0" {
+		enabledSellInt = 0
+	}
+
+	if enabledSellClear == "1" {
+		enabledSellInt = 1
+	}
+
+	sellClear := ""
+	if enabledSellInt == 1 {
+		sellClear = c.PostForm("sell_clear")
+	}
+
 	// 营业时间
 	hours := c.PostForm("hours")
 	if !json.Valid([]byte(hours)) {
@@ -427,29 +443,31 @@ func (rest IndexController) Edit(c *gin.Context) {
 	notice := c.PostForm("notice")
 
 	store := model.Store{
-		Id:             rewrite.Id,
-		Mid:            midInt,
-		StoreNumber:    storeNumber,
-		StoreName:      storeName,
-		TopCategory:    topCategory,
-		StoreType:      storeType,
-		ShopCategory:   shopCategory,
-		Phone:          phone,
-		ContactPerson:  contactPerson,
-		Province:       provinceInt,
-		ProvinceName:   provinceName,
-		City:           cityInt,
-		CityName:       cityName,
-		District:       districtInt,
-		DistrictName:   districtName,
-		Address:        address,
-		StoreThumbnail: storeThumbnail,
-		Longitude:      longitudeFloat,
-		Latitude:       latitudeFloat,
-		IsClosure:      isClosureInt,
-		Notice:         notice,
-		CreateAt:       time.Now().Unix(),
-		UpdateAt:       time.Now().Unix(),
+		Id:               rewrite.Id,
+		Mid:              midInt,
+		StoreNumber:      storeNumber,
+		StoreName:        storeName,
+		TopCategory:      topCategory,
+		StoreType:        storeType,
+		ShopCategory:     shopCategory,
+		Phone:            phone,
+		ContactPerson:    contactPerson,
+		Province:         provinceInt,
+		ProvinceName:     provinceName,
+		City:             cityInt,
+		CityName:         cityName,
+		District:         districtInt,
+		DistrictName:     districtName,
+		Address:          address,
+		StoreThumbnail:   storeThumbnail,
+		Longitude:        longitudeFloat,
+		Latitude:         latitudeFloat,
+		IsClosure:        isClosureInt,
+		EnabledSellClear: enabledSellInt,
+		SellClear:        sellClear,
+		Notice:           notice,
+		CreateAt:         time.Now().Unix(),
+		UpdateAt:         time.Now().Unix(),
 	}
 
 	var bt = make([]merchant.BusinessTime, 0)
@@ -514,78 +532,81 @@ func (rest IndexController) Edit(c *gin.Context) {
 		}
 	}
 
-	// 换取门头照片
-	bizC := make(map[string]string, 0)
-	file := util.GetAbsPath(storeThumbnail)
-	resultImage, err := new(merchant.Image).Upload(bizC, file)
+	// 存在阿里授权则门店同步到蚂蚁门店
+	if alipayExist {
 
-	if err != nil {
-		rest.rc.Error(c, err.Error(), nil)
-		return
-	}
+		// 换取门头照片
+		bizC := make(map[string]string, 0)
+		file := util.GetAbsPath(storeThumbnail)
+		resultImage, err := new(merchant.Image).Upload(bizC, file)
 
-	if resultImage.Response.Code != "10000" {
-		rest.rc.Error(c, "上传失败！"+resultImage.Response.SubMsg, nil)
-		return
-	}
-
-	outDoorImages := []string{resultImage.Response.ImageId}
-
-	// 同步到支付宝蚂蚁门店
-	bizContent := make(map[string]interface{}, 0)
-	bizContent["business_address"] = merchant.BusinessAddress{
-		ProvinceCode: province,
-		CityCode:     city,
-		DistrictCode: district,
-		Longitude:    longitude,
-		Latitude:     latitude,
-		Address:      address,
-	}
-
-	bizContent["shop_category"] = shopCategory
-	bizContent["store_id"] = strconv.Itoa(storeNumber)
-	bizContent["shop_type"] = storeType
-	bizContent["ip_role_id"] = alipayUserId
-	bizContent["shop_name"] = storeName
-	bizContent["out_door_images"] = outDoorImages
-	bizContent["business_time"] = bt
-	bizContent["contact_mobile"] = phone
-	bizContent["contact_infos"] = []merchant.ContactInfo{
-		{
-			Name:   contactPerson,
-			Mobile: phone,
-		},
-	}
-
-	// 查询门店存不存在
-	shopResult := new(merchant.Shop).Query(bizContent)
-
-	if shopResult.Response.Code == "10000" {
-		result := new(merchant.Shop).Modify(bizContent)
-		if result.Response.Code != "10000" {
-			rest.rc.Error(c, "同步失败！"+result.Response.SubMsg, result)
-			return
-		}
-		store.OrderId = result.Response.OrderId
-	}else{
-
-
-		result := new(merchant.Shop).Create(bizContent)
-		if result.Response.Code != "10000" {
-			rest.rc.Error(c, "同步失败！"+result.Response.SubMsg, result)
+		if err != nil {
+			rest.rc.Error(c, err.Error(), nil)
 			return
 		}
 
-		store.AuditStatus = "wait"
-		store.OrderId = result.Response.OrderId
+		if resultImage.Response.Code != "10000" {
+			rest.rc.Error(c, "上传失败！"+resultImage.Response.SubMsg, nil)
+			return
+		}
+
+		outDoorImages := []string{resultImage.Response.ImageId}
+
+		// 同步到支付宝蚂蚁门店
+		bizContent := make(map[string]interface{}, 0)
+		bizContent["business_address"] = merchant.BusinessAddress{
+			ProvinceCode: province,
+			CityCode:     city,
+			DistrictCode: district,
+			Longitude:    longitude,
+			Latitude:     latitude,
+			Address:      address,
+		}
+
+		bizContent["shop_category"] = shopCategory
+		bizContent["store_id"] = strconv.Itoa(storeNumber)
+		bizContent["shop_type"] = storeType
+		bizContent["ip_role_id"] = alipayUserId
+		bizContent["shop_name"] = storeName
+		bizContent["out_door_images"] = outDoorImages
+		bizContent["business_time"] = bt
+		bizContent["contact_mobile"] = phone
+		bizContent["contact_infos"] = []merchant.ContactInfo{
+			{
+				Name:   contactPerson,
+				Mobile: phone,
+				Tag:    []string{"02"},
+				Type:   "LEGAL_PERSON",
+			},
+		}
+
+		orderId := storeData.OrderId
+		// 查询门店存不存在
+		shopResult := new(merchant.Shop).Query(bizContent)
+		if shopResult.Response.Code == "10000" {
+			result := new(merchant.Shop).Modify(bizContent)
+			if result.Response.Code != "10000" {
+				rest.rc.Error(c, "同步失败！"+result.Response.SubMsg, result)
+				return
+			}
+			orderId = result.Response.OrderId
+		} else {
+			result := new(merchant.Shop).Create(bizContent)
+			if result.Response.Code != "10000" {
+				rest.rc.Error(c, "同步失败！"+result.Response.SubMsg, result)
+				return
+			}
+			orderId = result.Response.OrderId
+		}
 
 		// 查询审核状态
+		store.AuditStatus = "wait"
+		store.OrderId = orderId
 		bizContent = make(map[string]interface{}, 0)
-		bizContent["order_id"] = result.Response.OrderId
+		bizContent["order_id"] = orderId
 		statusResult := new(merchant.Shop).QueryStatus(bizContent)
-
 		if statusResult.Response.Code != "10000" {
-			rest.rc.Error(c,"查询状态失败！"+statusResult.Response.SubMsg,nil)
+			rest.rc.Error(c, "查询状态失败！"+statusResult.Response.SubMsg, nil)
 			return
 		}
 
@@ -597,6 +618,7 @@ func (rest IndexController) Edit(c *gin.Context) {
 		case "99":
 			store.AuditStatus = "passed"
 		}
+
 	}
 	store, err = store.Update()
 	if err != nil {
@@ -642,13 +664,13 @@ func (rest IndexController) Edit(c *gin.Context) {
 // @Success 200 {object} model.ReturnData{data=model.Store} "code:1 => 获取成功，code:0 => 获取失败"
 // @Failure 400 {object} model.ReturnData "{"code":400,"msg":"登录状态已失效！"}"
 // @Router /admin/store/index [post]
-func (rest IndexController) Store(c *gin.Context) {
+func (rest Index) Store(c *gin.Context) {
 
 	// 获取小程序mid
 	mid, _ := c.Get("mid")
 	midInt := mid.(int)
 
-	alipayUserId, _ := c.Get("alipay_user_id")
+	alipayUserId, alipayExist := c.Get("alipay_user_id")
 
 	// 门店名称
 	storeName := c.PostForm("store_name")
@@ -659,23 +681,10 @@ func (rest IndexController) Store(c *gin.Context) {
 
 	// 门店编号
 	yearStr, monthStr, dayStr := util.CurrentDate()
-	insertKey := "mp_isv:store:" + yearStr + monthStr + dayStr
-
-	year, month, day := time.Now().Date()
-	today := time.Date(year, month, day, 23, 59, 59, 59, time.Local)
-
-	cmf.NewRedisDb().ExpireAt(insertKey, today)
-	val := util.SetIncr(insertKey)
-	numIdStr := strconv.FormatInt(val, 10)
-	nStr := "10" + yearStr + monthStr + dayStr + numIdStr
-
-	n, err := strconv.Atoi(nStr)
-	if err != nil {
-		rest.rc.Error(c, "门店编号生成出错，请联系管理员！", err.Error())
-		return
-	}
-
-	storeNumber := util.EncodeId(uint64(n))
+	date := yearStr + monthStr + dayStr
+	insertKey := "mp_isv" + strconv.Itoa(mid.(int)) + ":store" + yearStr + monthStr + dayStr
+	number := util.EncryptUuid(insertKey, date, mid.(int))
+	storeNumber, _ := strconv.Atoi(number)
 
 	// 联系电话
 	phone := c.PostForm("phone")
@@ -820,6 +829,23 @@ func (rest IndexController) Store(c *gin.Context) {
 		return
 	}
 
+	// 启用沽清
+	enabledSellClear := c.PostForm("enabled_sell_clear")
+
+	enabledSellInt := 0
+	if enabledSellClear == "0" {
+		enabledSellInt = 0
+	}
+
+	if enabledSellClear == "1" {
+		enabledSellInt = 1
+	}
+
+	sellClear := ""
+	if enabledSellInt == 1 {
+		sellClear = c.PostForm("sell_clear")
+	}
+
 	// 公告通知
 	notice := c.PostForm("notice")
 
@@ -837,163 +863,170 @@ func (rest IndexController) Store(c *gin.Context) {
 	}
 
 	store := model.Store{
-		Mid:            midInt,
-		StoreNumber:    storeNumber,
-		StoreName:      storeName,
-		StoreType:      storeType,
-		TopCategory:    topCategory,
-		ShopCategory:   shopCategory,
-		Phone:          phone,
-		ContactPerson:  contactPerson,
-		Province:       provinceInt,
-		ProvinceName:   provinceName,
-		City:           cityInt,
-		CityName:       cityName,
-		District:       districtInt,
-		DistrictName:   districtName,
-		Address:        address,
-		StoreThumbnail: storeThumbnail,
-		Longitude:      longitudeFloat,
-		Latitude:       latitudeFloat,
-		IsClosure:      isClosureInt,
-		Notice:         notice,
-		CreateAt:       time.Now().Unix(),
-		UpdateAt:       time.Now().Unix(),
+		Mid:              midInt,
+		StoreNumber:      storeNumber,
+		StoreName:        storeName,
+		StoreType:        storeType,
+		TopCategory:      topCategory,
+		ShopCategory:     shopCategory,
+		Phone:            phone,
+		ContactPerson:    contactPerson,
+		Province:         provinceInt,
+		ProvinceName:     provinceName,
+		City:             cityInt,
+		CityName:         cityName,
+		District:         districtInt,
+		DistrictName:     districtName,
+		Address:          address,
+		StoreThumbnail:   storeThumbnail,
+		Longitude:        longitudeFloat,
+		Latitude:         latitudeFloat,
+		IsClosure:        isClosureInt,
+		EnabledSellClear: enabledSellInt,
+		SellClear:        sellClear,
+		Notice:           notice,
+		CreateAt:         time.Now().Unix(),
+		UpdateAt:         time.Now().Unix(),
 	}
 
 	// 同步到支付宝蚂蚁门店
+	if alipayExist {
 
-	// 换取门头照片
-	bizC := make(map[string]string, 0)
-	file := util.GetAbsPath(storeThumbnail)
-	resultImage, err := new(merchant.Image).Upload(bizC, file)
+		// 换取门头照片
+		bizC := make(map[string]string, 0)
+		file := util.GetAbsPath(storeThumbnail)
 
-	if err != nil {
-		rest.rc.Error(c, err.Error(), nil)
-		return
-	}
+		resultImage, err := new(merchant.Image).Upload(bizC, file)
 
-	if resultImage.Response.Code != "10000" {
-		rest.rc.Error(c, "上传失败！"+resultImage.Response.SubMsg, nil)
-		return
-	}
-
-	outDoorImages := []string{resultImage.Response.ImageId}
-
-	bizContent := make(map[string]interface{}, 0)
-
-	var bt = make([]merchant.BusinessTime, 0)
-	for _, v := range storeHours {
-
-		openTime := v.StartTime
-		endTime := v.EndTime
-
-		if v.AllTime == 1 {
-			openTime = "00:00"
-			endTime = "23.59"
+		if err != nil {
+			rest.rc.Error(c, err.Error(), nil)
+			return
 		}
 
-		if v.Mon == 1 {
-			bt = append(bt, merchant.BusinessTime{
-				WeekDay:   1,
-				OpenTime:  openTime,
-				CloseTime: endTime,
-			})
+		if resultImage.Response.Code != "10000" {
+			rest.rc.Error(c, "上传失败！"+resultImage.Response.SubMsg, nil)
+			return
 		}
-		if v.Sat == 1 {
-			bt = append(bt, merchant.BusinessTime{
-				WeekDay:   2,
-				OpenTime:  openTime,
-				CloseTime: endTime,
-			})
+
+		outDoorImages := []string{resultImage.Response.ImageId}
+
+		bizContent := make(map[string]interface{}, 0)
+
+		var bt = make([]merchant.BusinessTime, 0)
+		for _, v := range storeHours {
+
+			openTime := v.StartTime
+			endTime := v.EndTime
+
+			if v.AllTime == 1 {
+				openTime = "00:00"
+				endTime = "23:59"
+			}
+
+			if v.Mon == 1 {
+				bt = append(bt, merchant.BusinessTime{
+					WeekDay:   1,
+					OpenTime:  openTime,
+					CloseTime: endTime,
+				})
+			}
+			if v.Sat == 1 {
+				bt = append(bt, merchant.BusinessTime{
+					WeekDay:   2,
+					OpenTime:  openTime,
+					CloseTime: endTime,
+				})
+			}
+			if v.Wed == 1 {
+				bt = append(bt, merchant.BusinessTime{
+					WeekDay:   3,
+					OpenTime:  openTime,
+					CloseTime: endTime,
+				})
+			}
+			if v.Thur == 1 {
+				bt = append(bt, merchant.BusinessTime{
+					WeekDay:   4,
+					OpenTime:  openTime,
+					CloseTime: endTime,
+				})
+			}
+			if v.Fri == 1 {
+				bt = append(bt, merchant.BusinessTime{
+					WeekDay:   5,
+					OpenTime:  openTime,
+					CloseTime: endTime,
+				})
+			}
+			if v.Sat == 1 {
+				bt = append(bt, merchant.BusinessTime{
+					WeekDay:   6,
+					OpenTime:  openTime,
+					CloseTime: endTime,
+				})
+			}
+			if v.Sun == 1 {
+				bt = append(bt, merchant.BusinessTime{
+					WeekDay:   7,
+					OpenTime:  openTime,
+					CloseTime: endTime,
+				})
+			}
 		}
-		if v.Wed == 1 {
-			bt = append(bt, merchant.BusinessTime{
-				WeekDay:   3,
-				OpenTime:  openTime,
-				CloseTime: endTime,
-			})
+
+		bizContent["business_address"] = merchant.BusinessAddress{
+			ProvinceCode: province,
+			CityCode:     city,
+			DistrictCode: district,
+			Longitude:    longitude,
+			Latitude:     latitude,
+			Address:      address,
 		}
-		if v.Thur == 1 {
-			bt = append(bt, merchant.BusinessTime{
-				WeekDay:   4,
-				OpenTime:  openTime,
-				CloseTime: endTime,
-			})
+
+		bizContent["shop_category"] = shopCategory
+		bizContent["store_id"] = storeNumber
+		bizContent["shop_type"] = storeType
+		bizContent["ip_role_id"] = alipayUserId
+		bizContent["shop_name"] = storeName
+		bizContent["out_door_images"] = outDoorImages
+		bizContent["business_time"] = bt
+		bizContent["contact_mobile"] = phone
+		bizContent["contact_infos"] = []merchant.ContactInfo{
+			{
+				Name:   contactPerson,
+				Mobile: phone,
+				Tag:    []string{"02"},
+				Type:   "LEGAL_PERSON",
+			},
 		}
-		if v.Fri == 1 {
-			bt = append(bt, merchant.BusinessTime{
-				WeekDay:   5,
-				OpenTime:  openTime,
-				CloseTime: endTime,
-			})
+
+		result := new(merchant.Shop).Create(bizContent)
+		if result.Response.Code != "10000" {
+			rest.rc.Error(c, "同步失败！"+result.Response.SubMsg, result)
+			return
 		}
-		if v.Sat == 1 {
-			bt = append(bt, merchant.BusinessTime{
-				WeekDay:   6,
-				OpenTime:  openTime,
-				CloseTime: endTime,
-			})
-		}
-		if v.Sun == 1 {
-			bt = append(bt, merchant.BusinessTime{
-				WeekDay:   7,
-				OpenTime:  openTime,
-				CloseTime: endTime,
-			})
-		}
-	}
 
-	bizContent["business_address"] = merchant.BusinessAddress{
-		ProvinceCode: province,
-		CityCode:     city,
-		DistrictCode: district,
-		Longitude:    longitude,
-		Latitude:     latitude,
-		Address:      address,
-	}
-
-	bizContent["shop_category"] = shopCategory
-	bizContent["store_id"] = storeNumber
-	bizContent["shop_type"] = storeType
-	bizContent["ip_role_id"] = alipayUserId
-	bizContent["shop_name"] = storeName
-	bizContent["out_door_images"] = outDoorImages
-	bizContent["business_time"] = bt
-	bizContent["contact_mobile"] = phone
-	bizContent["contact_infos"] = []merchant.ContactInfo{
-		{
-			Name:   contactPerson,
-			Mobile: phone,
-		},
-	}
-
-	result := new(merchant.Shop).Create(bizContent)
-	if result.Response.Code != "10000" {
-		rest.rc.Error(c, "同步失败！"+result.Response.SubMsg, result)
-		return
-	}
-
-	store.AuditStatus = "wait"
-	store.OrderId = result.Response.OrderId
-
-	// 查询审核状态
-	bizContent = make(map[string]interface{}, 0)
-	bizContent["order_id"] = result.Response.OrderId
-	statusResult := new(merchant.Shop).QueryStatus(bizContent)
-
-	if statusResult.Response.Code != "10000" {
-		rest.rc.Error(c,"查询状态失败！"+statusResult.Response.SubMsg,nil)
-		return
-	}
-
-	switch statusResult.Response.Status {
-	case "031":
 		store.AuditStatus = "wait"
-	case "-1":
-		store.AuditStatus = "rejected"
-	case "99":
-		store.AuditStatus = "passed"
+		store.OrderId = result.Response.OrderId
+
+		// 查询审核状态
+		bizContent = make(map[string]interface{}, 0)
+		bizContent["order_id"] = result.Response.OrderId
+		statusResult := new(merchant.Shop).QueryStatus(bizContent)
+
+		if statusResult.Response.Code != "10000" {
+			rest.rc.Error(c, "查询状态失败！"+statusResult.Response.SubMsg, nil)
+			return
+		}
+
+		switch statusResult.Response.Status {
+		case "031":
+			store.AuditStatus = "wait"
+		case "-1":
+			store.AuditStatus = "rejected"
+		case "99":
+			store.AuditStatus = "passed"
+		}
 	}
 
 	store, err = store.Store()
@@ -1036,7 +1069,7 @@ func (rest IndexController) Store(c *gin.Context) {
 // @Success 200 {object} model.ReturnData{data=model.Store} "code:1 => 删除成功，code:0 => 删除失败"
 // @Failure 400 {object} model.ReturnData "{"code":400,"msg":"登录状态已失效！"}"
 // @Router /admin/store/index/{id} [delete]
-func (rest IndexController) Delete(c *gin.Context) {
+func (rest Index) Delete(c *gin.Context) {
 
 	var rewrite struct {
 		Id int `uri:"id"`
@@ -1057,4 +1090,86 @@ func (rest IndexController) Delete(c *gin.Context) {
 	}
 
 	rest.rc.Success(c, "删除成功！", nil)
+}
+
+/**
+ * @Author return <1140444693@qq.com>
+ * @Description // 查询蚂蚁门店审核状态
+ * @Date 2021/2/22 19:13:37
+ * @Param
+ * @return
+ **/
+
+func (rest Index) QueryStatus(c *gin.Context) {
+
+	var rewrite struct {
+		Id int `uri:"id"`
+	}
+	if err := c.ShouldBindUri(&rewrite); err != nil {
+		c.JSON(400, gin.H{"msg": err.Error()})
+		return
+	}
+
+	mid, _ := c.Get("mid")
+
+	alipayUserId, _ := c.Get("alipay_user_id")
+
+	store := model.Store{}
+
+	store, err := store.Show([]string{"mid = ?", "id = ?"}, []interface{}{mid, rewrite.Id})
+
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
+	orderId := store.OrderId
+
+	if orderId == "" {
+		rest.rc.Error(c, "请先提交或编辑门店", nil)
+		return
+	}
+
+	bizContent := make(map[string]interface{}, 0)
+	bizContent["order_id"] = orderId
+
+	result := new(merchant.Shop).QueryStatus(bizContent)
+
+	if result.Response.Code == "10000" {
+
+		switch result.Response.Status {
+		case "031":
+			store.AuditStatus = "wait"
+		case "-1":
+			store.AuditStatus = "rejected"
+		case "99":
+
+			bizContent := make(map[string]interface{}, 0)
+			bizContent["store_id"] = strconv.Itoa(store.StoreNumber)
+			bizContent["ip_role_id"] = alipayUserId
+			fmt.Println("bizContent", bizContent)
+
+			shopResult := new(merchant.Shop).Query(bizContent)
+			fmt.Println("shopResult", shopResult)
+
+			if shopResult.Response.Code == "10000" {
+				shopId := shopResult.Response.ShopId
+				store.ShopId = shopId
+			}
+
+			store.AuditStatus = "passed"
+		}
+
+		tx := cmf.NewDb().Save(store)
+
+		if tx.Error != nil {
+			rest.rc.Error(c, err.Error(), nil)
+			return
+		}
+
+		rest.rc.Success(c, result.Response.Msg, result.Response)
+	} else {
+		rest.rc.Error(c, result.Response.SubMsg, result.Response)
+	}
+
 }

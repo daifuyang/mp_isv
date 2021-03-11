@@ -8,7 +8,6 @@ package card
 import (
 	"encoding/json"
 	"gincmf/app/util"
-	"gincmf/plugins/restaurantPlugin/controller/admin/settings"
 	"gincmf/plugins/restaurantPlugin/model"
 	saasModel "gincmf/plugins/saasPlugin/model"
 	"github.com/gin-gonic/gin"
@@ -30,7 +29,7 @@ func (rest *Index) Show(c *gin.Context) {
 	mid, _ := c.Get("mid")
 
 	card := model.CardTemplate{}
-	tx := cmf.NewDb().Where("id = ? AND mid = ?", "1",mid).First(&card)
+	tx := cmf.NewDb().Where("id = ? AND mid = ?", "1", mid).First(&card)
 
 	if tx.Error != nil {
 		rest.rc.Error(c, tx.Error.Error(), nil)
@@ -47,7 +46,7 @@ func (rest *Index) Show(c *gin.Context) {
 	card.UpdateTime = time.Unix(card.CreateAt, 0).Format(data.TimeLayout)
 
 	card.BenefitInfoJson = tbiArr
-	rest.rc.Success(c,"获取成功！",card)
+	rest.rc.Success(c, "获取成功！", card)
 
 }
 
@@ -84,9 +83,9 @@ func (rest *Index) Edit(c *gin.Context) {
 		syncToAlipayInt = 1
 	}
 
-	businessJson := saasModel.Options("business_info",mid.(int))
+	businessJson := saasModel.Options("business_info", mid.(int))
 
-	bi := settings.BusinessInfo{}
+	bi := model.BusinessInfo{}
 
 	json.Unmarshal([]byte(businessJson), &bi)
 
@@ -116,7 +115,7 @@ func (rest *Index) Edit(c *gin.Context) {
 	timeLayout := "2006-01-02 15:04:05"
 	nowUnix := time.Now().Unix()
 
-	for k, _ := range tbiArr {
+	for k := range tbiArr {
 		tbiArr[k].StartDate = time.Unix(nowUnix, 0).Format(timeLayout)
 		tbiArr[k].EndDate = "2199-01-01 00:00:00"
 	}
@@ -134,6 +133,12 @@ func (rest *Index) Edit(c *gin.Context) {
 	card.UpdateAt = t
 
 	if syncToAlipayInt == 1 {
+
+		alipayUserId, _ := c.Get("alipay_user_id")
+		if alipayUserId == 0 {
+			rest.rc.Error(c, "请先完成支付宝授权绑定", nil)
+			return
+		}
 
 		absPath := util.CurrentPath() + "/public/uploads/" + cardBackground
 

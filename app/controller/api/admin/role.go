@@ -10,11 +10,11 @@ import (
 	"github.com/gincmf/cmf/controller"
 )
 
-type RoleController struct {
+type Role struct {
 	rc controller.RestController
 }
 
-func (rest *RoleController) Get(c *gin.Context) {
+func (rest *Role) Get(c *gin.Context) {
 
 	var query []string
 	var queryArgs []interface{}
@@ -34,16 +34,16 @@ func (rest *RoleController) Get(c *gin.Context) {
 	}
 	role := model.Role{}
 
-	data,err := role.Get(c,query,queryArgs)
+	data, err := role.Get(c, query, queryArgs)
 	if err != nil {
-		rest.rc.Error(c,err.Error(),nil)
+		rest.rc.Error(c, err.Error(), nil)
 		return
 	}
 
 	rest.rc.Success(c, "获取成功", data)
 }
 
-func (rest *RoleController) Show(c *gin.Context) {
+func (rest *Role) Show(c *gin.Context) {
 	var rewrite struct {
 		Id int `uri:"id"`
 	}
@@ -54,14 +54,14 @@ func (rest *RoleController) Show(c *gin.Context) {
 	rest.rc.Success(c, "操作成功show", nil)
 }
 
-func (rest *RoleController) Edit(c *gin.Context) {
+func (rest *Role) Edit(c *gin.Context) {
 	rest.rc.Success(c, "操作成功Edit", nil)
 }
 
-func (rest *RoleController) Store(c *gin.Context) {
+func (rest *Role) Store(c *gin.Context) {
 	rest.rc.Success(c, "操作成功Store", nil)
 }
 
-func (rest *RoleController) Delete(c *gin.Context) {
+func (rest *Role) Delete(c *gin.Context) {
 	rest.rc.Success(c, "操作成功Delete", nil)
 }

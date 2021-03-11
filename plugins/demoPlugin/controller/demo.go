@@ -6,8 +6,8 @@
 package controller
 
 import (
-"github.com/gin-gonic/gin"
-"github.com/gincmf/cmf/controller"
+	"github.com/gin-gonic/gin"
+	"github.com/gincmf/cmf/controller"
 )
 
 type DemoController struct {

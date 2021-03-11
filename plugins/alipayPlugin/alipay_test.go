@@ -25,7 +25,7 @@ func Test_InstantDelivery(t *testing.T) {
 	}
 	alipayEasySdk.NewOptions(op)
 
-	alipayEasySdk.SetOption("AppAuthToken","202012BBc94d62297edb49e385e2136023b0dX61")
+	alipayEasySdk.SetOption("AppAuthToken", "202012BBc94d62297edb49e385e2136023b0dX61")
 	instantDelivery := logistics.InstantDelivery{}
 	instantDelivery.Query(nil)
 

@@ -22,10 +22,11 @@ import (
 
 // 门店信息表
 type Store struct {
-	Id               int               `json:"id,omitempty"`
+	Id               int               `gorm:"comment:门店id;not null" json:"id"`
 	OrderId          string            `gorm:"type:varchar(64);comment:申请单id;not null" json:"order_id"`
 	Mid              int               `gorm:"type:bigint(20);comment:对应小程序id;not null" json:"mid"`
 	StoreNumber      int               `gorm:"type:int(11);comment:门店唯一编号;not null" json:"store_number"`
+	ShopId           string            `gorm:"type:varchar(32);comment:蚂蚁店铺id" json:"shop_id"`
 	StoreName        string            `gorm:"type:varchar(32);comment:门店名称;not null" json:"store_name"`
 	StoreType        string            `gorm:"type:tinyint(3);comment:门店类型（1：直营，2：加盟）;not null" json:"store_type"`
 	TopCategory      string            `gorm:"type:varchar(10);comment:所属门店顶级id;not null" json:"top_category"`
@@ -43,10 +44,12 @@ type Store struct {
 	Longitude        float64           `gorm:"type:decimal(10,7);comment:经度;not null" json:"longitude"`
 	Latitude         float64           `gorm:"type:decimal(10,7);comment:纬度;not null" json:"latitude"`
 	IsClosure        int               `gorm:"type:tinyint(3);comment:是否歇业;not null;default:0" json:"is_closure"`
+	EnabledSellClear int               `gorm:"type:tinyint(3);comment:启用沽清;not null;default:0" json:"enabled_sell_clear"`
+	SellClear        string            `gorm:"type:varchar(10);comment:自定义沽清时间" json:"sell_clear"`
 	Notice           string            `gorm:"type:varchar(255);comment:公告通知" json:"notice"`
-	CreateAt         int64             `gorm:"type:int(11)" json:"create_at"`
-	UpdateAt         int64             `gorm:"type:int(11)" json:"update_at"`
-	DeleteAt         int64             `gorm:"type:int(10);comment:删除时间;default:0" json:"delete_at"`
+	CreateAt         int64             `gorm:"type:bigint(20)" json:"create_at"`
+	UpdateAt         int64             `gorm:"type:bigint(20)" json:"update_at"`
+	DeleteAt         int64             `gorm:"type:bigint(20);comment:删除时间;default:0" json:"delete_at"`
 	AuditStatus      string            `gorm:"type:varchar(20);comment:审核状态(passed:通过,rejected:拒绝,wait:审核中);default:wait;not null" json:"audit_status"`
 	Reason           string            `gorm:"type:varchar(255);comment:拒绝愿意" json:"reason"`
 	CreateTime       string            `gorm:"-" json:"create_time"`
@@ -118,6 +121,8 @@ func (model *Store) Index(c *gin.Context, query []string, queryArgs []interface{
 	var store []Store
 	cmf.NewDb().Where(queryStr, queryArgs...).Find(&store).Count(&total)
 	result := cmf.NewDb().Where(queryStr, queryArgs...).Limit(pageSize).Offset((current - 1) * pageSize).Find(&store)
+
+	fmt.Println("store", store)
 
 	if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return cmfModel.Paginate{}, result.Error
@@ -275,7 +280,7 @@ func (model *Store) ListByDistance(query []string, queryArgs []interface{}) ([]S
 	queryStr := strings.Join(query, " AND ")
 
 	var store = make([]Store, 0)
-	result := cmf.NewDb().Model(&Store{}).Select("*", "(st_distance (point (longitude,latitude),point ("+lon+","+lat+"))*111195/1000 ) as distance").
+	result := cmf.NewDb().Model(&Store{}).Select("*", "(round(st_distance_sphere(point (longitude,latitude),point ("+lon+","+lat+"))/1000,2)) AS distance").
 		Where(queryStr, queryArgs...).Order("distance ASC").Scan(&store)
 
 	if result.Error != nil {
@@ -455,7 +460,7 @@ func (model Store) Show(query []string, queryArgs []interface{}) (Store, error) 
 
 	store := Store{}
 	queryStr := strings.Join(query, " AND ")
-	result := cmf.NewDb().Select("*", "(st_distance (point (longitude,latitude),point ("+lon+","+lat+"))*111195/1000 ) as distance").Where(queryStr, queryArgs...).First(&store)
+	result := cmf.NewDb().Select("*", "(round(st_distance_sphere(point (longitude,latitude),point ("+lon+","+lat+"))/1000,2)) AS distance").Where(queryStr, queryArgs...).First(&store)
 
 	if result.Error != nil {
 		return store, result.Error
@@ -495,6 +500,10 @@ func (model Store) AppShow(query []string, queryArgs []interface{}) (Store, erro
 	// 获取营业时间
 	hours := model.hoursInStore(store.Mid, store.Id, storeHours)
 	store.StoreHours = hours
+
+	distance, _ := strconv.ParseFloat(fmt.Sprintf("%.2f", store.Distance), 64)
+
+	store.Distance = distance
 
 	// 歇业状态
 	if store.IsClosure == 0 {
@@ -548,8 +557,6 @@ func (model Store) AppShow(query []string, queryArgs []interface{}) (Store, erro
 
 	store.CreateTime = time.Unix(store.CreateAt, 0).Format(data.TimeLayout)
 	store.UpdateTime = time.Unix(store.UpdateAt, 0).Format(data.TimeLayout)
-
-	store.Id = 0
 
 	return store, nil
 }

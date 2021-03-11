@@ -70,16 +70,16 @@ func (q Queue) AddAll(members []redis.Z) error {
 	return nil
 }
 
-func (q Queue) ExpireAllData() ([]redis.Z,error) {
+func (q Queue) ExpireAllData() ([]redis.Z, error) {
 
 	key := q.Key
 	if key == "" {
 		panic("键不能为空！")
 	}
 
-	dateTime := strconv.FormatInt(time.Now().Unix(),10)
+	dateTime := strconv.FormatInt(time.Now().Unix(), 10)
 
-	cmd := cmf.NewRedisDb().ZRangeByScoreWithScores(key,redis.ZRangeBy{
+	cmd := cmf.NewRedisDb().ZRangeByScoreWithScores(key, redis.ZRangeBy{
 		Min: "-inf",
 		Max: dateTime,
 	})
@@ -90,5 +90,5 @@ func (q Queue) ExpireAllData() ([]redis.Z,error) {
 
 	result := cmd.Val()
 
-	return result,nil
+	return result, nil
 }

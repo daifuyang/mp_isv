@@ -23,12 +23,12 @@ func (rest *Score) Score(c *gin.Context) {
 	var query = []string{"user_id = ?"}
 	var queryArgs = []interface{}{userId}
 
-	data,err := new(appModel.ScoreLog).Index(c,query,queryArgs)
+	data, err := new(appModel.ScoreLog).Index(c, query, queryArgs)
 
 	if err != nil {
-		rest.rc.Error(c,err.Error(),nil)
+		rest.rc.Error(c, err.Error(), nil)
 		return
 	}
 
-	rest.rc.Success(c,"获取成功！",data)
+	rest.rc.Success(c, "获取成功！", data)
 }

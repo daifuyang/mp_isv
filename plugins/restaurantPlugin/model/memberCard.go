@@ -27,8 +27,8 @@ type MemberCard struct {
 	EndAt     int64  `gorm:"type:int(11);comment:截止时间;not null" json:"end_at"`
 	StartTime string `gorm:"-" json:"start_time"`
 	EndTime   string `gorm:"-" json:"end_time"`
-	CreateAt  int64  `gorm:"type:int(11);not null" json:"create_at"`
-	UpdateAt  int64  `gorm:"type:int(11);not null" json:"update_at"`
+	CreateAt  int64  `gorm:"type:bigint(20);not null" json:"create_at"`
+	UpdateAt  int64  `gorm:"type:bigint(20);not null" json:"update_at"`
 	DeleteAt  int64  `gorm:"type:int(11);not null" json:"delete_at"`
 	Status    int    `gorm:"type:tinyint(3);default:1;not null" json:"status"`
 }
@@ -42,10 +42,14 @@ type MemberCardOrder struct {
 	TradeNo      string  `gorm:"type:varchar(60);comment:支付宝订单号;not null" json:"trade_no"`
 	VipName      string  `gorm:"type:varchar(40);comment:会员名称;not null" json:"vip_name"`
 	VipLevel     string  `gorm:"type:varchar(10);comment:会员等级;not null" json:"vip_level"`
-	UserId       int     `gorm:"type:int(11);comment:下单人信息" json:"user_id"`
+	UserId       int     `gorm:"->" json:"user_id"`
+	Avatar       string  `gorm:"->" json:"avatar"`
+	UserLogin    string  `gorm:"->" json:"user_login"`
+	UserNickname string  `gorm:"->" json:"user_nickname"`
+	UserRealName string  `gorm:"->" json:"user_realname"`
 	PayType      string  `gorm:"type:varchar(10);comment:第三方支付类型;not null" json:"pay_type"`
 	Fee          float64 `gorm:"type:decimal(7,2);comment:合计金额;default:0;not null" json:"fee"`
-	CreateAt     int64   `gorm:"type:int(11)" json:"create_at"`
+	CreateAt     int64   `gorm:"type:bigint(20)" json:"create_at"`
 	FinishedAt   int64   `gorm:"type:int(11)" json:"finished_at"`
 	CreateTime   string  `gorm:"-" json:"create_time"`
 	FinishedTime string  `gorm:"-" json:"finished_time"`
@@ -57,8 +61,10 @@ func (model *MemberCard) AutoMigrate() {
 	cmf.NewDb().AutoMigrate(&model)
 	cmf.NewDb().AutoMigrate(&MemberCardOrder{})
 
-	cmf.NewDb().Exec("drop table if exists memberStatus")
-	cmf.NewDb().Exec("CREATE EVENT memberStatus ON SCHEDULE EVERY 1 SECOND DO UPDATE cmf_member_card SET status = -1 WHERE end_at < UNIX_TIMESTAMP(NOW())")
+	prefix := cmf.Conf().Database.Prefix
+
+	cmf.NewDb().Exec("drop event if exists memberStatus")
+	cmf.NewDb().Exec("CREATE EVENT memberStatus ON SCHEDULE EVERY 1 SECOND DO UPDATE " + prefix + "member_card SET status = -1 WHERE end_at < UNIX_TIMESTAMP(NOW())")
 }
 
 func (model *MemberCard) Show(query []string, queryArgs []interface{}) (MemberCard, error) {
@@ -97,8 +103,17 @@ func (model *MemberCardOrder) Index(c *gin.Context, query []string, queryArgs []
 
 	var mco []MemberCardOrder
 
-	cmf.NewDb().Where(queryStr, queryArgs...).Find(&mco).Count(&total)
-	tx := cmf.NewDb().Where(queryStr, queryArgs...).Limit(pageSize).Offset((current - 1) * pageSize).Order("id desc").Find(&mco)
+	prefix := cmf.Conf().Database.Prefix
+
+	cmf.NewDb().Table(prefix+"member_card_order co").Select("co.*").
+		Joins("INNER JOIN "+prefix+"user u ON co.user_id = u.id").
+		Where(queryStr, queryArgs...).
+		Scan(&mco).Count(&total)
+
+	tx := cmf.NewDb().Debug().Table(prefix+"member_card_order co").
+		Select("co.*,u.id as user_id,u.user_login,u.user_nickname,u.user_realname").
+		Joins("INNER JOIN "+prefix+"user u ON co.user_id = u.id").
+		Where(queryStr, queryArgs...).Limit(pageSize).Offset((current - 1) * pageSize).Order("co.id desc").Scan(&mco)
 
 	if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 		return cmfModel.Paginate{}, tx.Error

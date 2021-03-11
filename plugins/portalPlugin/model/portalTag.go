@@ -54,7 +54,7 @@ func (model PortalTag) Save(postId int) error {
 	var count int64
 	cmf.NewDb().Model(&PortalTagPost{}).Where("post_id = ?", postId).Count(&count)
 
-	cmf.NewDb().Where("id = ?",model.Id).First(&model)
+	cmf.NewDb().Where("id = ?", model.Id).First(&model)
 
 	model.PostCount = count
 	tx := cmf.NewDb().Save(&model)
@@ -106,9 +106,9 @@ func (model *PortalTagPost) FirstOrSave(kId []int) error {
 	var toAdd []PortalTagPost
 
 	for _, v := range kId {
-		if !new(PortalTagPost).inAddArray(v,tagPost) || len(tagPost) == 0 {
-			toAdd = append(toAdd,PortalTagPost{
-				TagId: v,
+		if !new(PortalTagPost).inAddArray(v, tagPost) || len(tagPost) == 0 {
+			toAdd = append(toAdd, PortalTagPost{
+				TagId:  v,
 				PostId: postId,
 			})
 		}
@@ -120,20 +120,20 @@ func (model *PortalTagPost) FirstOrSave(kId []int) error {
 
 	for _, v := range tagPost {
 		if !new(PortalTagPost).inDelArray(v.Id, kId) {
-			toDel = append(toDel,"id = ?")
-			toDelArgs = append(toDelArgs,v.Id)
+			toDel = append(toDel, "id = ?")
+			toDelArgs = append(toDelArgs, v.Id)
 		}
 
 		if len(kId) == 0 {
-			toDel = append(toDel,"id = ?")
-			toDelArgs = append(toDelArgs,v.Id)
+			toDel = append(toDel, "id = ?")
+			toDelArgs = append(toDelArgs, v.Id)
 		}
 	}
 
 	// 删除要删除的
 	if len(toDel) > 0 {
-		delStr := strings.Join(toDel," OR ")
-		cmf.NewDb().Where(delStr,toDelArgs...).Delete(&PortalTagPost{})
+		delStr := strings.Join(toDel, " OR ")
+		cmf.NewDb().Where(delStr, toDelArgs...).Delete(&PortalTagPost{})
 	}
 
 	if len(toAdd) > 0 {

@@ -4,10 +4,11 @@
 ** @描述　　:
  */
 package migrate
+
 import "gincmf/plugins/demoPlugin/model"
 
-type Demo struct {}
+type Demo struct{}
 
-func (migrate *Demo) AutoMigrate () {
+func (migrate *Demo) AutoMigrate() {
 	new(model.Demo).AutoMigrate()
 }

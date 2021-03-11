@@ -52,7 +52,7 @@ func (rest *Address) Get(c *gin.Context) {
 	}
 
 	var address []model.Address
-	result := cmf.NewDb().Where("mid = ?", mid).Find(&address)
+	result := cmf.NewDb().Debug().Where("mid = ?", mid).Order("`default` desc").Find(&address)
 
 	if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, result.Error.Error(), nil)
@@ -60,24 +60,24 @@ func (rest *Address) Get(c *gin.Context) {
 	}
 
 	// 获取当前堂食配置
-	takeJson := saasModel.Options("take_out", store.Mid)
+	takeJson := saasModel.Options("takeout", store.Mid)
 	var takeOut model.TakeOut
 	_ = json.Unmarshal([]byte(takeJson), &takeOut)
 
 	type addressTemp struct {
 		model.Address
 		Distance float64 `json:"distance,omitempty"`
-		OutRange bool    `json:"out_range,omitempty"`
+		OutRange bool    `json:"out_range"`
 	}
 
-	var addressResult = make([]addressTemp,0)
+	var addressResult = make([]addressTemp, 0)
 
 	for _, v := range address {
 
 		distance := util.EarthDistance(v.Latitude, v.Longitude, store.Latitude, store.Longitude)
 
 		at := addressTemp{
-			Address:v,
+			Address:  v,
 			Distance: distance,
 		}
 
@@ -86,7 +86,7 @@ func (rest *Address) Get(c *gin.Context) {
 			at.OutRange = true
 		}
 
-		addressResult = append(addressResult,at)
+		addressResult = append(addressResult, at)
 
 	}
 
@@ -130,12 +130,12 @@ func (rest *Address) Show(c *gin.Context) {
 		}
 
 		if store.Id == 0 {
-			rest.rc.Error(c,"门店不存在！",nil)
+			rest.rc.Error(c, "门店不存在！", nil)
 			return
 		}
 
 		// 获取当前堂食配置
-		takeJson := saasModel.Options("take_out", store.Mid)
+		takeJson := saasModel.Options("takeout", store.Mid)
 		_ = json.Unmarshal([]byte(takeJson), &takeOut)
 	}
 
@@ -157,15 +157,15 @@ func (rest *Address) Show(c *gin.Context) {
 		return
 	}
 
-	var addressResult struct{
+	var addressResult struct {
 		model.Address
 		Distance float64 `json:"distance,omitempty"`
-		OutRange bool    `json:"out_range,omitempty"`
+		OutRange bool    `json:"out_range"`
 	}
 
 	addressResult.Address = address
 
-	fmt.Println(address.Latitude,address.Longitude)
+	fmt.Println(address.Latitude, address.Longitude)
 
 	distanceFloat := util.EarthDistance(address.Latitude, address.Longitude, store.Latitude, store.Longitude)
 

@@ -10,14 +10,14 @@ import (
 	"gincmf/plugins/portalPlugin/router"
 )
 
-func Router()  {
+func Router() {
 	router.ApiListenRouter()
 }
 
-func AutoMigrate()  {
+func AutoMigrate() {
 	migrate.AutoMigrate()
 }
 
-func Init()  {
+func Init() {
 	Router()
 }

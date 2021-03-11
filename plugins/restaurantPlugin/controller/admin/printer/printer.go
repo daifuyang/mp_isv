@@ -57,7 +57,7 @@ func (rest *Printer) Show(c *gin.Context) {
 	}
 
 	mid, _ := c.Get("mid")
-	data, err := new(model.Printer).Show([]string{"id = ? AND mid = ?"}, []interface{}{rewrite.Id,mid})
+	data, err := new(model.Printer).Show([]string{"id = ? AND mid = ?"}, []interface{}{rewrite.Id, mid})
 
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, err.Error(), data)
@@ -114,7 +114,7 @@ func (rest *Printer) Save(id int, c *gin.Context) {
 
 	name := form.Name
 	if name == "" {
-		rest.rc.Error(c,"门店名称不能为空！",nil)
+		rest.rc.Error(c, "门店名称不能为空！", nil)
 		return
 	}
 
@@ -124,33 +124,33 @@ func (rest *Printer) Save(id int, c *gin.Context) {
 	case "cloud":
 		t = "cloud"
 	default:
-		rest.rc.Error(c,"打印机类型错误！",nil)
+		rest.rc.Error(c, "打印机类型错误！", nil)
 		return
 	}
 
 	sn := form.Sn
 	if sn == "" {
-		rest.rc.Error(c,"sn不能为空！",nil)
+		rest.rc.Error(c, "sn不能为空！", nil)
 		return
 	}
 
 	key := form.Key
 	if key == "" {
-		rest.rc.Error(c,"key不能为空！",nil)
+		rest.rc.Error(c, "key不能为空！", nil)
 		return
 	}
 
 	status := form.Status
 	if status == 1 {
 		status = 1
-	}else {
+	} else {
 		status = 0
 	}
 
 	printer := model.Printer{}
 
 	if id > 0 {
-		data, err := new(model.Printer).Show([]string{"id = ? AND mid = ?"}, []interface{}{id,mid})
+		data, err := new(model.Printer).Show([]string{"id = ? AND mid = ?"}, []interface{}{id, mid})
 		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 			rest.rc.Error(c, err.Error(), data)
 			return
@@ -162,22 +162,22 @@ func (rest *Printer) Save(id int, c *gin.Context) {
 	brand := form.Brand
 	switch brand {
 	case "feie":
-		brand  = "feie"
+		brand = "feie"
 
 		// 删除原来的打印关系
 		new(base.Printer).Delete(sn)
 
-		snList := sn+"#"+key
+		snList := sn + "#" + key
 		feieRes := new(base.Printer).Add(snList)
 
-		if  len(feieRes.Data.Ok) == 0 {
-			rest.rc.Error(c,strings.Join(feieRes.Data.No,""),nil)
+		if len(feieRes.Data.Ok) == 0 {
+			rest.rc.Error(c, strings.Join(feieRes.Data.No, ""), nil)
 			fmt.Println(feieRes.Data)
 			return
 		}
 
 	default:
-		rest.rc.Error(c,"打印机品牌错误！",nil)
+		rest.rc.Error(c, "打印机品牌错误！", nil)
 		return
 	}
 
@@ -190,10 +190,10 @@ func (rest *Printer) Save(id int, c *gin.Context) {
 	printer.Key = key
 	printer.CreateAt = time.Now().Unix()
 	printer.UpdateAt = time.Now().Unix()
-	result,err := printer.Save()
+	result, err := printer.Save()
 
 	if err != nil {
-		rest.rc.Error(c,err.Error(),nil)
+		rest.rc.Error(c, err.Error(), nil)
 		return
 	}
 
@@ -202,7 +202,7 @@ func (rest *Printer) Save(id int, c *gin.Context) {
 		msg = "更新成功！"
 	}
 
-	rest.rc.Success(c,msg,result)
+	rest.rc.Success(c, msg, result)
 
 }
 

@@ -71,9 +71,9 @@ type FoodStoreHouse struct {
 	Scene            int                      `gorm:"type:tinyint(3);comment:支持场景（0 =>全部；1=>堂食；2=>外卖）;default:0;not null" json:"scene"`
 	IsRecommend      int                      `gorm:"type:tinyint(3);comment:是否推荐菜;not null;default:0" json:"is_recommend"`
 	Content          string                   `gorm:"type:text" json:"content"`
-	CreateAt         int64                    `gorm:"type:int(11)" json:"create_at"`
-	UpdateAt         int64                    `gorm:"type:int(11)" json:"update_at"`
-	DeleteAt         int64                    `gorm:"type:int(10);comment:'删除时间';default:0" json:"delete_at"`
+	CreateAt         int64                    `gorm:"type:bigint(20)" json:"create_at"`
+	UpdateAt         int64                    `gorm:"type:bigint(20)" json:"update_at"`
+	DeleteAt         int64                    `gorm:"type:bigint(20);comment:'删除时间';default:0" json:"delete_at"`
 	CreateTime       string                   `gorm:"-" json:"create_time"`
 	UpdateTime       string                   `gorm:"-" json:"update_time"`
 	Category         []FoodCategory           `gorm:"-" json:"category"`
@@ -96,8 +96,8 @@ type FoodCategoryPost struct {
 	Id             int      `json:"id"`
 	FoodId         int      `gorm:"type:int(11)" json:"food_id"`
 	FoodCategoryId int      `gorm:"type:int(11)" json:"food_category_id"`
-	CreateAt       int64    `gorm:"type:int(11)" json:"create_at"`
-	UpdateAt       int64    `gorm:"type:int(11)" json:"update_at"`
+	CreateAt       int64    `gorm:"type:bigint(20)" json:"create_at"`
+	UpdateAt       int64    `gorm:"type:bigint(20)" json:"update_at"`
 	Db             *gorm.DB `gorm:"-" json:"-"`
 }
 
@@ -303,7 +303,6 @@ func (model Food) Detail(query []string, queryArgs []interface{}) (Food, error) 
 		cmfLog.Error(err.Error())
 		return Food{}, err
 	}
-
 
 	if food.UseSku == 1 {
 

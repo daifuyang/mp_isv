@@ -68,7 +68,7 @@ func (rest Cashier) BatchQuery(c *gin.Context) {
 			Code: "10000",
 			Msg:  "Success",
 		},
-		CashierList: make([]cashierList,0),
+		CashierList: make([]cashierList, 0),
 	}
 
 	r.Response = qResponse
@@ -118,7 +118,7 @@ func (rest Cashier) Query(c *gin.Context) {
 			Code: "10000",
 			Msg:  "Success",
 		},
-		Status: "1",
+		Status:    "1",
 		CashierId: "001",
 	}
 

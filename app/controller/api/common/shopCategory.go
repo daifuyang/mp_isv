@@ -35,7 +35,7 @@ func (rest *ShopCategory) List(c *gin.Context) {
 }
 
 // 根据top_level获取三级数据
-func (rest *ShopCategory) Last( c *gin.Context ) {
+func (rest *ShopCategory) Last(c *gin.Context) {
 
 	var rewrite struct {
 		Id string `uri:"id"`

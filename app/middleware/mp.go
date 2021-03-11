@@ -57,11 +57,11 @@ func ValidationMp(c *gin.Context) {
 
 	// 验证当前小程序是否存在
 	mpAuth := model.MpIsvAuth{}
-	result := cmf.Db().Where("auth_app_id = ?", appId).First(&mpAuth)
+	result := cmf.Db().Where("auth_app_id = ?", appId).Order("id desc").First(&mpAuth)
 
 	if result.RowsAffected == 0 {
 		fmt.Println("ValidationMp,小程序app_id不正确")
-		cmfLog.Error("小程序app_id不正确")
+		cmfLog.Error("小程序app_id不正确，appId：" + appId)
 		controller.RestController{}.Error(c, "小程序auth_app_id不正确！", nil)
 		c.Abort()
 		return
@@ -71,16 +71,77 @@ func ValidationMp(c *gin.Context) {
 	db := "tenant_" + strconv.Itoa(mpAuth.TenantId)
 	cmf.ManualDb(db)
 
-	mpJson, _ := json.Marshal(&mpAuth)
-
-	appIdInt, _ := strconv.Atoi(appId)
+	alipayJson, _ := json.Marshal(&mpAuth)
 
 	mid := mpAuth.MpId
 
 	c.Set("mid", mid)
-	c.Set("app_id", appIdInt)
+	c.Set("app_id", appId)
 	c.Set("mp_type", mpAuth.Type)
-	c.Set("mp_json", string(mpJson))
+	c.Set("alipay_json", string(alipayJson))
+	c.Next()
+}
+
+func UseMp(c *gin.Context) {
+
+	// 获取小程序的app_id
+	req := c.Request
+	req.ParseMultipartForm(32 << 20)
+	err := req.ParseForm()
+
+	if err != nil {
+		// handle error http.Error() for example
+		log.Fatal("ParseForm: ", err)
+	}
+
+	param := req.Form
+
+	getParams := ""
+	for k, v := range param {
+		getParams = getParams + k + "=" + strings.Join(v, "") + "&"
+	}
+
+	getParams = getParams[:len(getParams)-1]
+	cmfLog.Info("alipay-getway：" + getParams)
+
+	appId := strings.Join(param["app_id"], "")
+
+	authAppId := strings.Join(param["auth_app_id"], "")
+
+	if authAppId != "" {
+		appId = authAppId
+	}
+
+	if appId == "" {
+		fmt.Println("ValidationMp,小程序app_id不能为空")
+		controller.RestController{}.Error(c, "小程序app_id不能为空！", nil)
+		c.Abort()
+		return
+	}
+
+	// 验证当前小程序是否存在
+	mpAuth := model.MpIsvAuth{}
+	result := cmf.Db().Where("auth_app_id = ?", appId).Order("id desc").First(&mpAuth)
+
+	if result.RowsAffected == 0 {
+		fmt.Println("ValidationMp,小程序app_id不正确")
+		cmfLog.Error("小程序app_id不正确，appId：" + appId)
+		controller.RestController{}.Error(c, "小程序auth_app_id不正确！", nil)
+		c.Abort()
+		return
+	}
+
+	// 设置访问数据库
+	db := "tenant_" + strconv.Itoa(mpAuth.TenantId)
+	cmf.ManualDb(db)
+
+	alipayJson, _ := json.Marshal(&mpAuth)
+	mid := mpAuth.MpId
+
+	c.Set("mid", mid)
+	c.Set("app_id", appId)
+	c.Set("mp_type", mpAuth.Type)
+	c.Set("alipay_json", string(alipayJson))
 	c.Next()
 }
 
@@ -108,7 +169,7 @@ func ValidationOpenId(c *gin.Context) {
 
 }
 
-func ValidationUserId(c *gin.Context) {
+func ValidationBindMobile(c *gin.Context) {
 
 	r := c.Request
 	r.ParseForm()

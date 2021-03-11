@@ -10,7 +10,7 @@ import (
 	cmf "github.com/gincmf/cmf/bootstrap"
 )
 
-func AutoMigrate () {
+func AutoMigrate() {
 	cmf.NewDb().AutoMigrate(&model.PortalCategory{})
 	cmf.NewDb().AutoMigrate(&model.PortalPost{})
 	cmf.NewDb().AutoMigrate(&model.PortalCategoryPost{})

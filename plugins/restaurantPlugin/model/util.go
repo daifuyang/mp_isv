@@ -49,17 +49,23 @@ func QueueNo(appId string) string {
 		number = unix
 	}
 
-	queueNo := strconv.Itoa(int(math.Floor(number + 0.5)))
-
 	// 获取redis自增队列
-
 	yearStr, monthStr, dayStr := util.CurrentDate()
+
 	date := yearStr + monthStr + dayStr
 
 	insertKey := "mp_isv" + appId + ":order_queue:" + date
+
+	uuNumber := util.SetIncr(insertKey)
+
+	number += float64(uuNumber)
+
+	queueNo := strconv.Itoa(int(math.Floor(number + 0.5)))
+
 	// 设置当天失效时间
 	cmf.NewRedisDb().ExpireAt(insertKey, today)
 
+	// 获取当天自增的值
 	return queueNo
 }
 
@@ -68,7 +74,7 @@ func GeoAddress(address string) GeoResult {
 	_, geoResult := cmfUtil.Request("GET", url, nil, nil)
 
 	var geo GeoResult
-	_ = json.Unmarshal(geoResult,&geo)
+	_ = json.Unmarshal(geoResult, &geo)
 
 	return geo
 }

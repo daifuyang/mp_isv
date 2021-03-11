@@ -10,7 +10,6 @@ import (
 	"errors"
 	appModel "gincmf/app/model"
 	"gincmf/app/util"
-	"gincmf/plugins/restaurantPlugin/controller/admin/settings"
 	"gincmf/plugins/restaurantPlugin/model"
 	saasModel "gincmf/plugins/saasPlugin/model"
 	"github.com/gin-gonic/gin"
@@ -34,16 +33,16 @@ func (rest *Recharge) Order(c *gin.Context) {
 	userId, _ := c.Get("mp_user_id")
 
 	var query = []string{"mid = ? AND  user_id = ? AND order_status = ?"}
-	var queryArgs = []interface{}{mid,userId,"TRADE_FINISHED"}
+	var queryArgs = []interface{}{mid, userId, "TRADE_FINISHED"}
 
-	data,err := new(model.RechargeOrder).Index(c,query,queryArgs)
+	data, err := new(model.RechargeOrder).Index(c, query, queryArgs)
 
 	if err != nil {
-		rest.rc.Error(c,err.Error(),nil)
+		rest.rc.Error(c, err.Error(), nil)
 		return
 	}
 
-	rest.rc.Success(c,"获取成功！",data)
+	rest.rc.Success(c, "获取成功！", data)
 }
 
 // 查看充值规则
@@ -51,7 +50,7 @@ func (rest *Recharge) Show(c *gin.Context) {
 
 	mid, _ := c.Get("mid")
 
-	recJson := saasModel.Options("recharge",mid.(int))
+	recJson := saasModel.Options("recharge", mid.(int))
 
 	var recharge []model.Recharge
 	json.Unmarshal([]byte(recJson), &recharge)
@@ -61,7 +60,7 @@ func (rest *Recharge) Show(c *gin.Context) {
 
 	var result struct {
 		Recharge []model.Recharge `json:"recharge"`
-		Balance  float64 `json:"balance"`
+		Balance  float64          `json:"balance"`
 	}
 
 	result.Recharge = recharge
@@ -74,11 +73,11 @@ func (rest *Recharge) Show(c *gin.Context) {
 // 充值
 func (rest *Recharge) Pay(c *gin.Context) {
 
-	appId, _ := c.Get("app_id")
 	mpUserId, _ := c.Get("mp_user_id")
 	mpType, _ := c.Get("mp_type")
 	Openid, _ := c.Get("open_id")
 	mid, _ := c.Get("mid")
+	appId, _ := c.Get("app_id")
 
 	var form struct {
 		Fee float64 `json:"fee"`
@@ -96,26 +95,23 @@ func (rest *Recharge) Pay(c *gin.Context) {
 
 	ro := model.RechargeOrder{}
 
-	tx := cmf.NewDb().Where("user_id = ? AND mid = ? AND fee = ? AND pay_type = ? AND order_status = ?",mpUserId,mid,form.Fee,"alipay","WAIT_BUYER_PAY").First(&ro)
+	tx := cmf.NewDb().Where("user_id = ? AND mid = ? AND fee = ? AND pay_type = ? AND order_status = ?", mpUserId, mid, form.Fee, "alipay", "WAIT_BUYER_PAY").First(&ro)
 
-	if tx.Error != nil && !errors.Is(tx.Error,gorm.ErrRecordNotFound) {
-		rest.rc.Error(c,tx.Error.Error(),nil)
+	if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
+		rest.rc.Error(c, tx.Error.Error(), nil)
 		return
 	}
 
 	if tx.RowsAffected > 0 {
-		rest.rc.Success(c,"获取历史订单成功！",ro)
+		rest.rc.Success(c, "获取历史订单成功！", ro)
 		return
 	}
 
-	appIdInt, _ := appId.(int)
-	appIdStr := strconv.Itoa(appIdInt)
-
 	yearStr, monthStr, dayStr := util.CurrentDate()
 	date := yearStr + monthStr + dayStr
-	insertKey := "mp_isv" + appIdStr + ":recharge:" + date
+	insertKey := "mp_isv" + strconv.Itoa(mid.(int)) + ":recharge:" + date
 
-	orderId := util.DateUuid("recharge", insertKey, date)
+	orderId := util.DateUuid("recharge", insertKey, date, mid.(int))
 
 	if orderId == "" {
 		rest.rc.Error(c, "订单号生成出错！", nil)
@@ -123,8 +119,8 @@ func (rest *Recharge) Pay(c *gin.Context) {
 	}
 
 	// 支付宝小程序下单
-	businessJson := saasModel.Options("business_info",mid.(int))
-	bi := settings.BusinessInfo{}
+	businessJson := saasModel.Options("business_info", mid.(int))
+	bi := model.BusinessInfo{}
 	json.Unmarshal([]byte(businessJson), &bi)
 	// 支付宝小程序下单
 
@@ -151,11 +147,18 @@ func (rest *Recharge) Pay(c *gin.Context) {
 		common := payment.Common{}
 		bizContent := make(map[string]interface{}, 0)
 		bizContent["out_trade_no"] = orderId
-		//bizContent["total_amount"] = form.Fee
-		bizContent["total_amount"] = 0.01
-		// bizContent["discountable_amount"] = 0
+
+		// 测试模板
+		flag := new(appModel.TestAppId).InList(appId.(string))
+		if flag {
+			bizContent["total_amount"] = 0.01
+		} else {
+			bizContent["total_amount"] = form.Fee
+		}
+
+		bizContent["discountable_amount"] = 0
 		bizContent["subject"] = bi.BrandName
-		bizContent["body"] = bi.BrandName + "开通会员卡"
+		bizContent["body"] = bi.BrandName + "钱包充值"
 		bizContent["buyer_id"] = Openid
 		bizContent["goods_detail"] = aliDetail
 		bizContent["product_code"] = "FACE_TO_FACE_PAYMENT"

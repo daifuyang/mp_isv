@@ -18,8 +18,8 @@ type Tenant struct {
 	UserPass     string `gorm:"type:varchar(64);not null" json:"user_pass"`
 	Avatar       string `json:"avatar"`
 	TenantStatus int    `gorm:"type:tinyint(3);not null" json:"user_status"`
-	CreateAt     int64  `gorm:"type:int(11)" json:"create_at"`
-	UpdateAt     int64  `gorm:"type:int(11)" json:"update_at"`
+	CreateAt     int64  `gorm:"type:bigint(20)" json:"create_at"`
+	UpdateAt     int64  `gorm:"type:bigint(20)" json:"update_at"`
 }
 
 func (model Tenant) List(query []string, queryArgs []interface{}) ([]Tenant, error) {
@@ -27,9 +27,9 @@ func (model Tenant) List(query []string, queryArgs []interface{}) ([]Tenant, err
 	queryStr := strings.Join(query, " AND ")
 
 	var tenant []Tenant
-	result := cmf.Db().Where(queryStr,queryArgs...).Find(&tenant)
+	result := cmf.Db().Where(queryStr, queryArgs...).Find(&tenant)
 	if result.Error != nil {
 		return tenant, result.Error
 	}
-	return tenant,nil
+	return tenant, nil
 }

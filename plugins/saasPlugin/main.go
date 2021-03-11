@@ -10,10 +10,10 @@ import (
 	"gincmf/plugins/saasPlugin/router"
 )
 
-func Init()  {
+func Init() {
 	router.ApiListenRouter()
 }
 
-func AutoMigrate()  {
+func AutoMigrate() {
 	migrate.AutoMigrate()
 }

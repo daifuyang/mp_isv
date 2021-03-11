@@ -23,48 +23,46 @@ func TestAuthRedirectController_OpenAuth(t *testing.T) {
 	appId := "2021001192664075"
 	redirectUri := "http://www.codecloud.ltd/alipay/auth_redirect"
 
-	stateMap := make(map[string]string,0)
+	stateMap := make(map[string]string, 0)
 
 	stateMap["tenant_id"] = "1051453199"
 	stateMap["mp_id"] = "2090057678"
 	stateMap["type"] = "alipay"
-	sign ,bizContent := easyUtil.Sign(stateMap)
+	sign, bizContent := easyUtil.Sign(stateMap)
 
 	stateMap["biz_content"] = bizContent
 	stateMap["sign"] = sign
 
-
-	b,err :=  json.Marshal(stateMap)
+	b, err := json.Marshal(stateMap)
 	if err != nil {
-		fmt.Println("err",err)
+		fmt.Println("err", err)
 	}
 
 	state := base64.StdEncoding.EncodeToString(b)
 
-	fmt.Println("state",state)
+	fmt.Println("state", state)
 
 	p := url.Values{}
-	p.Add("app_id",appId)
-	p.Add("application_type","TINYAPP")
-	p.Add("redirect_uri",redirectUri)
-	p.Add("state",state)
+	p.Add("app_id", appId)
+	p.Add("application_type", "TINYAPP")
+	p.Add("redirect_uri", redirectUri)
+	p.Add("state", state)
 
 	e := p.Encode()
 
 	//e += "&state="+state
-	fmt.Println("e",e)
-
+	fmt.Println("e", e)
 
 	qcrodeUrl := baseUrl + "?" + e
-	fmt.Println("qcrodeUrl",qcrodeUrl)
+	fmt.Println("qcrodeUrl", qcrodeUrl)
 
 	//png, err := qrcode.Encode(qcrodeUrl, qrcode.Medium,256)
 	//if err != nil {
 	//	panic(err)
 	//}
 
-	 q, _ := qrcode.New(qcrodeUrl,qrcode.Highest)
-	 q.WriteFile(512,"output.png")
+	q, _ := qrcode.New(qcrodeUrl, qrcode.Highest)
+	q.WriteFile(512, "output.png")
 
 	// ?app_id=2021001192664075&redirect_uri=http%3A%2F%2Fwww.gincmf.com%2Falipay%2FauthRedirect&state=eyJhIjoxMjMsImIiOjQ1Nn0%3D
 }
@@ -79,18 +77,18 @@ func TestAuthRedirectController_Get(t *testing.T) {
 	decoded, _ := base64.StdEncoding.DecodeString(state)
 	decodeStr := string(decoded[:])
 
-	fmt.Println("state",decodeStr)
-	inParams := make(map[string]string,0)
-	json.Unmarshal(decoded,&inParams)
+	fmt.Println("state", decodeStr)
+	inParams := make(map[string]string, 0)
+	json.Unmarshal(decoded, &inParams)
 
 	sign := inParams["sign"]
-	fmt.Println("sign",sign)
+	fmt.Println("sign", sign)
 
 	bizContent := inParams["biz_content"]
 	fmt.Println("biz_content", bizContent)
 
 	// 验证签名
-	err := easyUtil.VerifySign(bizContent,sign)
+	err := easyUtil.VerifySign(bizContent, sign)
 
 	if err != nil {
 		fmt.Println("验证签名出错！")

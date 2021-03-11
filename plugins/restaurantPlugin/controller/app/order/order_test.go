@@ -63,7 +63,7 @@ func TestOrder_Sync(t *testing.T) {
 	storeId := fo.StoreId
 	// 获取门店信息
 	store := model.Store{}
-	cmf.NewDb().Where("id = ?",storeId).First(&store)
+	cmf.NewDb().Where("id = ?", storeId).First(&store)
 
 	// 查询订单列表
 	var fod []model.FoodOrderDetail
@@ -102,7 +102,7 @@ func TestOrder_Sync(t *testing.T) {
 		ioInfo := map[string]interface{}{
 			"item_id":    v.Code,
 			"item_name":  v.FoodName,
-			"unit_price": v.Fee,
+			"unit_price": v.Price,
 			"quantity":   v.Count,
 			"ext_info":   fodExtInfo,
 		}
@@ -125,7 +125,7 @@ func TestOrder_Sync(t *testing.T) {
 			"ext_value": "MERCHANT_PAID",
 		},
 		{
-			"ext_key": "merchant_order_link_page",  // 小程序订单详情页
+			"ext_key":   "merchant_order_link_page", // 小程序订单详情页
 			"ext_value": "pages/order/index",
 		},
 		{
@@ -141,10 +141,10 @@ func TestOrder_Sync(t *testing.T) {
 
 	// 门店信息
 	bizContent["shop_info"] = map[string]interface{}{
-		"merchant_shop_id":store.StoreNumber,
-		"name":store.StoreName,
-		"address":store.Address,
-		"phone_num":store.Phone,
+		"merchant_shop_id": store.StoreNumber,
+		"name":             store.StoreName,
+		"address":          store.Address,
+		"phone_num":        store.Phone,
 	}
 
 	result := new(merchant.Order).Sync(bizContent)

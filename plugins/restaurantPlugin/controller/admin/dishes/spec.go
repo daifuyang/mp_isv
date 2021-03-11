@@ -23,7 +23,7 @@ func (rest SpecController) AddKey(c *gin.Context) {
 
 	name := c.PostForm("name")
 	if name == "" {
-		rest.rc.Error(c,"规格名称不能为空！",nil)
+		rest.rc.Error(c, "规格名称不能为空！", nil)
 		return
 	}
 
@@ -31,9 +31,9 @@ func (rest SpecController) AddKey(c *gin.Context) {
 		Name: name,
 	}
 
-	result := cmf.NewDb().Where("name = ?",name).First(&attrKey)
-	if result.Error != nil && !errors.Is(result.Error,gorm.ErrRecordNotFound)  {
-		rest.rc.Error(c,result.Error.Error(),nil)
+	result := cmf.NewDb().Where("name = ?", name).First(&attrKey)
+	if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		rest.rc.Error(c, result.Error.Error(), nil)
 		return
 	}
 
@@ -41,35 +41,34 @@ func (rest SpecController) AddKey(c *gin.Context) {
 		cmf.NewDb().Create(&attrKey)
 	}
 
-
-	rest.rc.Success(c,"添加成功！",attrKey)
+	rest.rc.Success(c, "添加成功！", attrKey)
 }
 
 func (rest SpecController) AddValue(c *gin.Context) {
 
 	attrId := c.PostForm("attr_id")
 	if attrId == "" {
-		rest.rc.Error(c,"规格名称不能为空！",nil)
+		rest.rc.Error(c, "规格名称不能为空！", nil)
 		return
 	}
-	attrIdInt ,err := strconv.Atoi(attrId)
+	attrIdInt, err := strconv.Atoi(attrId)
 	if err != nil {
-		rest.rc.Error(c,"规格名称参数非法！",nil)
+		rest.rc.Error(c, "规格名称参数非法！", nil)
 		return
 	}
 	attrVal := c.PostForm("attr_value")
 
 	attrValue := model.FoodAttrValue{
-		AttrId: attrIdInt,
+		AttrId:    attrIdInt,
 		AttrValue: attrVal,
 	}
 
-	attrValue ,err = attrValue.AddAttrValue()
+	attrValue, err = attrValue.AddAttrValue()
 
 	if err != nil {
-		rest.rc.Error(c,err.Error(),nil)
+		rest.rc.Error(c, err.Error(), nil)
 		return
 	}
 
-	rest.rc.Success(c,"添加成功！",attrValue)
+	rest.rc.Success(c, "添加成功！", attrValue)
 }
