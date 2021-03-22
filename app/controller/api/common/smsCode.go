@@ -13,11 +13,11 @@ import (
 	"strconv"
 )
 
-type SmsCodeController struct {
+type SmsCode struct {
 	rc controller.RestController
 }
 
-func (rest *SmsCodeController) Post(c *gin.Context) {
+func (rest *SmsCode) Post(c *gin.Context) {
 	// 获取验证码
 	mobile := c.PostForm("mobile")
 	if mobile == "" {

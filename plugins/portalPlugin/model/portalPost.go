@@ -7,6 +7,7 @@ package model
 
 import (
 	"encoding/json"
+	"errors"
 	"gincmf/app/util"
 	"github.com/gin-gonic/gin"
 	cmf "github.com/gincmf/cmf/bootstrap"
@@ -43,9 +44,11 @@ type PortalPost struct {
 	PostExcerpt         string            `gorm:"type:varchar(500);comment:post摘要;NOT NULL" json:"post_excerpt"`
 	PostSource          string            `gorm:"type:varchar(500);comment:转载文章的来源;NOT NULL" json:"post_source"`
 	Thumbnail           string            `gorm:"type:varchar(100);comment:缩略图;NOT NULL" json:"thumbnail"`
+	ThumbnailPrev       string            `gorm:"-" json:"thumbnail_prev"`
 	PostContent         string            `gorm:"type:text;comment:文章内容;NOT NULL" json:"post_content"`
 	PostContentFiltered string            `gorm:"type:text;comment:处理过的文章内容;NOT NULL" json:"post_content_filtered"`
 	More                string            `gorm:"type:json;comment:扩展属性,如缩略图。格式为json;NOT NULL" json:"more"`
+	Category            []PortalCategory  `gorm:"-" json:"category"`
 	MoreJson            More              `gorm:"-" json:"more_json"`
 	paginate            cmfModel.Paginate `gorm:"-"`
 }
@@ -137,11 +140,10 @@ func (model PortalPost) IndexByCategory(c *gin.Context, query []string, queryArg
 
 	type temp struct {
 		PortalPost
-		UserLogin      string           `json:"user_login"`
-		Category       []PortalCategory `gorm:"-" json:"category"`
-		MoreJson       More             `gorm:"-" json:"more_json"`
-		ReferenceQuote string           `gorm:"-" json:"reference_quote"`
-		ThumbnailPrev  string           `json:"thumbnail_prev"`
+		UserLogin     string           `json:"user_login"`
+		Category      []PortalCategory `gorm:"-" json:"category"`
+		MoreJson      More             `gorm:"-" json:"more_json"`
+		ThumbnailPrev string           `json:"thumbnail_prev"`
 	}
 
 	var tempArr []temp
@@ -191,20 +193,36 @@ func (model PortalPost) IndexByCategory(c *gin.Context, query []string, queryArg
  * @Param
  * @return
  **/
-func (model PortalPost) Show(query []string, queryArgs []interface{}) (PortalPost, error) {
 
-	post := PortalPost{}
+func (model PortalPost) Show(query []string, queryArgs []interface{}) (post PortalPost, err error) {
+
 	queryStr := strings.Join(query, " AND ")
-	result := cmf.NewDb().Where(queryStr, queryArgs...).Find(&post)
+	tx := cmf.NewDb().Debug().Where(queryStr, queryArgs...).Find(&post)
+
+	if tx.Error != nil {
+		return post, tx.Error
+	}
+
+	if post.Id == 0 {
+		return post, errors.New("该文章不存在！")
+	}
+
+	category := PortalCategory{}
+	categoryItem, _ := category.ListWithPost([]string{"p.id = ?"}, []interface{}{post.Id})
+	post.Category = categoryItem
+
+	createTime := time.Unix(post.CreateAt, 0).Format("2006-01-02 15:04:05")
+	post.CreateTime = createTime
+
+	updateTime := time.Unix(post.UpdateAt, 0).Format("2006-01-02 15:04:05")
+	post.UpdateTime = updateTime
+
+	post.ThumbnailPrev = util.GetFileUrl(post.Thumbnail)
 
 	m := More{}
 
 	json.Unmarshal([]byte(post.More), &m)
 	post.MoreJson = m
-
-	if result.Error != nil {
-		return post, nil
-	}
 
 	return post, nil
 

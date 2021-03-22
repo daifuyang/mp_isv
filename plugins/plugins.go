@@ -7,7 +7,6 @@ package plugins
 
 import (
 	"gincmf/plugins/alipayPlugin"
-	"gincmf/plugins/demoPlugin"
 	"gincmf/plugins/feiePlugin"
 	"gincmf/plugins/portalPlugin"
 	"gincmf/plugins/qiniuPlugin"
@@ -19,7 +18,6 @@ import (
 func AutoRegister() {
 	// 注册阿里的插件
 	alipayPlugin.Init()
-	demoPlugin.Init()
 	restaurantPlugin.Init()
 	saasPlugin.Init()
 	queuePlugin.Init()

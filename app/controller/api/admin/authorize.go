@@ -31,7 +31,7 @@ func (rest *Authorize) Get(c *gin.Context) {
 
 	var adminMenu []tempAuthorize
 	prefix := cmf.Conf().Database.Prefix
-	result := cmf.NewDb().Debug().Table(prefix + "admin_menu m").
+	result := cmf.NewDb().Table(prefix + "admin_menu m").
 		Select("r.id as rule_id,m.id,m.unique_name,m.parent_id,m.name,m.path,m.icon,m.hide_in_menu,m.list_order").
 		Joins("INNER JOIN  " + prefix + "auth_rule r ON m.unique_name = r.name").Scan(&adminMenu)
 
@@ -45,6 +45,7 @@ func (rest *Authorize) Get(c *gin.Context) {
 }
 
 func (rest *Authorize) Show(c *gin.Context) {
+
 	var rewrite struct {
 		Id int `uri:"id"`
 	}

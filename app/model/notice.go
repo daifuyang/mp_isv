@@ -20,9 +20,10 @@ type AdminNotice struct {
 	Id         int    `json:"id"`
 	Title      string `gorm:"type:varchar(40);comment:通知标题;not null" json:"title"`
 	Desc       string `gorm:"type:varchar(255);comment:通知描述" json:"desc"`
+	TargetId   int    `gorm:"type:bigint(20);comment:目标id;" json:"target_id"`
 	CreateAt   int64  `gorm:"type:bigint(20);comment:创建时间;default:0" json:"create_at"`
 	CreateTime string `gorm:"-" json:"create_time"`
-	Type       int    `gorm:"type:tinyint(3);comment:类型（0 => 订单）;default:0" json:"type"`
+	Type       int    `gorm:"type:tinyint(3);comment:类型（0 => 堂食外卖订单）;default:0" json:"type"`
 	Status     int    `gorm:"type:tinyint(3);comment:状态（0 => 未读，1 => 已读）;default:0" json:"status"`
 	Audio      string `gorm:"type:varchar(255);comment:通知提示音" json:"audio"`
 	paginate   cmfModel.Paginate
@@ -89,11 +90,12 @@ func (model *AdminNotice) Show(query []string, queryArgs []interface{}) (AdminNo
 }
 
 // 新增一条消息
-func (model *AdminNotice) Save(title string, desc string, t int, audio string) (AdminNotice, error) {
+func (model *AdminNotice) Save(title string, desc string, id int, t int, audio string) (AdminNotice, error) {
 
 	notice := AdminNotice{
 		Title:    title,
 		Desc:     desc,
+		TargetId: id,
 		CreateAt: time.Now().Unix(),
 		Type:     t,
 		Status:   0,

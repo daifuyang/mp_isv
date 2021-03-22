@@ -5,8 +5,6 @@
  */
 package model
 
-import cmf "github.com/gincmf/cmf/bootstrap"
-
 type PayLog struct {
 	Id             int     `json:"id"`
 	OrderId        string  `gorm:"type:varchar(40);comment:系统订单号;not null" json:"order_id"`
@@ -25,12 +23,8 @@ type PayLog struct {
 	Subject        string  `gorm:"type:varchar(256);comment:商品的标题/交易标题/订单标题/订单关键字等，是请求时对应的参数，原样通知回来。" json:"subject"`
 	Body           string  `gorm:"type:varchar(400);comment:该订单的备注、描述、明细等。对应请求时的 body 参数，原样通知回来。" json:"body"`
 	FundBillList   string  `gorm:"type:json;comment:支付成功的各个渠道金额信息" json:"fund_bill_list"`
-	GmtPayment     int64   `gorm:"type:int(11);comment:交易付款时间" json:"gmt_payment"`
-	GmtRefund      int64   `gorm:"type:int(11);comment:交易退款时间" json:"gmt_refund"`
-	GmtClose       int64   `gorm:"type:int(11);comment:交易结束时间" json:"gmt_close"`
+	GmtPayment     int64   `gorm:"type:bigint(20);comment:交易付款时间" json:"gmt_payment"`
+	GmtRefund      int64   `gorm:"type:bigint(20);comment:交易退款时间" json:"gmt_refund"`
+	GmtClose       int64   `gorm:"type:bigint(20);comment:交易结束时间" json:"gmt_close"`
 	TradeStatus    string  `gorm:"type:varchar(32);comment:交易状态;not null" json:"trade_status"`
-}
-
-func (model PayLog) AutoMigrate() {
-	cmf.NewDb().AutoMigrate(&model)
 }

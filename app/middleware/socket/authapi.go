@@ -16,8 +16,6 @@ import (
 	"time"
 )
 
-var UserId int
-
 func ValidationBearerToken(token string) error {
 	s := common.Srv
 	t, err := s.Manager.LoadAccessToken(token)
@@ -33,13 +31,13 @@ func ValidationBearerToken(token string) error {
 		return duration, nil
 	})
 
-	UserId, _ = strconv.Atoi(t.GetUserID())
+	userId, _ := strconv.Atoi(t.GetUserID())
 
-	fmt.Println("userid", UserId)
+	fmt.Println("userid", userId)
 
 	tenant := model.Tenant{}
 
-	if err := cmf.Db().Where("id = ?", UserId).First(&tenant).Error; err != nil {
+	if err := cmf.Db().Where("id = ?", userId).First(&tenant).Error; err != nil {
 		return err
 	}
 

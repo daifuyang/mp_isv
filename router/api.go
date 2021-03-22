@@ -18,7 +18,7 @@ func ApiListenRouter() {
 	// 全局中间件
 	cmf.HandleFunc = append(cmf.HandleFunc, middleware.AllowCors)
 
-	adminGroup := cmf.Group("api/admin", middleware.ValidationBearerToken, middleware.ValidationAdmin, middleware.TenantDb, middleware.ApiBaseController, middleware.Rbac)
+	adminGroup := cmf.Group("api/admin", middleware.ValidationBearerToken, middleware.TenantDb, middleware.ValidationAdmin, middleware.ApiBaseController)
 	{
 		adminGroup.Rest("/settings", new(admin.Settings))
 		adminGroup.Rest("/upload", new(admin.Upload))
@@ -35,17 +35,10 @@ func ApiListenRouter() {
 	}
 
 	// 获取短信验证码
-	cmf.Post("api/sms_code", new(common.SmsCodeController).Post)
+	cmf.Post("api/sms_code", new(common.SmsCode).Post)
 
 	// 获取当前用户信息
-	cmf.Get("/api/currentUser", middleware.ValidationBearerToken, middleware.ValidationAdmin, middleware.ApiBaseController, func(c *gin.Context) {
-		scope, _ := c.Get("scope")
-		if scope == "tenant" {
-			new(tenant.User).CurrentUser(c)
-		} else {
-			new(admin.User).CurrentUser(c)
-		}
-	})
+	cmf.Get("/api/currentUser", new(tenant.User).CurrentUser, middleware.ValidationBearerToken, middleware.TenantDb, middleware.ValidationAdmin, middleware.ApiBaseController)
 
 	v1 := cmf.Group("/api/v1")
 	{
@@ -92,8 +85,6 @@ func ApiListenRouter() {
 	})
 
 	cmf.Get("/api/alipay_isv_app", new(admin.Settings).AlipayApp)
-
-	cmf.Socket("/socket/v1/admin/notice", new(admin.Notice).WsGet)
 
 	common.RegisterOauthRouter()
 }

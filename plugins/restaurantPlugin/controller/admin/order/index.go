@@ -6,20 +6,17 @@
 package order
 
 import (
-	"encoding/json"
 	"errors"
-	"gincmf/app/middleware/socket"
 	"gincmf/app/model"
 	resModel "gincmf/plugins/restaurantPlugin/model"
 	"github.com/gin-gonic/gin"
+	"github.com/gincmf/alipayEasySdk/payment"
 	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
 	cmfLog "github.com/gincmf/cmf/log"
 	"github.com/gorilla/websocket"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
-	"log"
-	"net/http"
 	"strconv"
 	"time"
 )
@@ -67,12 +64,24 @@ func (rest *Index) Index(c *gin.Context) {
 		queryArgs = append(queryArgs, storeId)
 	}
 
+	// 订单场景
+	scene := c.Query("scene")
+	if scene == "eatin" {
+		query = append(query, "fo.order_type < ?")
+		queryArgs = append(queryArgs, 4)
+	}
+
+	if scene == "takeout" {
+		query = append(query, "fo.order_type = ?")
+		queryArgs = append(queryArgs, 4)
+	}
+
 	// 订单类型
-	orderType := c.Query("order_type")
+	/*orderType := c.Query("order_type")
 	if orderType != "" {
 		query = append(query, "fo.order_type = ?")
 		queryArgs = append(queryArgs, orderType)
-	}
+	}*/
 
 	// 订单状态
 	orderStatus := c.Query("order_status")
@@ -182,7 +191,7 @@ func (rest *Index) Cancel(c *gin.Context) {
 
 }
 
-func (rest *Index) Order(w http.ResponseWriter, r *http.Request) {
+/*func (rest *Index) Order(w http.ResponseWriter, r *http.Request) {
 
 	var upgrader = websocket.Upgrader{
 		// 允许跨域
@@ -313,7 +322,7 @@ func (rest *Index) Order(w http.ResponseWriter, r *http.Request) {
 
 	}
 }
-
+*/
 /**
  * @Author return <1140444693@qq.com>
  * @Description // 查订单详情
@@ -368,6 +377,7 @@ func (rest *Index) Refund(c *gin.Context) {
 	}
 
 	mid, _ := c.Get("mid")
+	_, exist := c.Get("alipay_user_id")
 
 	var query = []string{"fo.mid = ?", " fo.id = ? "}
 	var queryArgs = []interface{}{mid, rewrite.Id, "TRADE_SUCCESS"}
@@ -426,17 +436,17 @@ func (rest *Index) Refund(c *gin.Context) {
 			rest.rc.Error(c, err.Error(), nil)
 		}
 
-		balanceStr := strconv.FormatFloat(balance, 'E', -1, 64)
+		balanceStr := strconv.FormatFloat(balance, 'f', -1, 64)
 
 		rechargeLog := model.RechargeLog{
-			UserId:   userData.Id,
-			TargetId: data.Id,
+			UserId:     userData.Id,
+			TargetId:   data.Id,
 			TargetType: 0,
-			Type:     0,
-			Fee:      rLog.Fee,
-			Balance:  balanceStr,
-			Remark:   "订单退款",
-			CreateAt: time.Now().Unix(),
+			Type:       0,
+			Fee:        rLog.Fee,
+			Balance:    balanceStr,
+			Remark:     "订单退款",
+			CreateAt:   time.Now().Unix(),
 		}
 
 		tx = cmf.NewDb().Create(&rechargeLog)
@@ -448,6 +458,29 @@ func (rest *Index) Refund(c *gin.Context) {
 
 	if data.PayType == "alipay" {
 
+		if !exist {
+			rest.rc.Error(c, "请先授权支付宝小程序！", nil)
+			return
+		}
+
+		log := model.PayLog{}
+		tx := cmf.NewDb().Where("order_id = ?", data.OrderId).First(&log)
+
+		if tx.Error != nil {
+			cmfLog.Error(tx.Error.Error())
+			rest.rc.Error(c, err.Error(), nil)
+		}
+
+		bizContent := make(map[string]interface{}, 0)
+		bizContent["out_trade_no"] = data.OrderId
+		bizContent["trade_no"] = data.TradeNo
+		bizContent["refund_amount"] = log.TotalAmount
+		refundResult := new(payment.Common).Refund(bizContent)
+
+		if refundResult.Response.Code != "10000" {
+			rest.rc.Error(c, "退款失败！", refundResult.Response.SubMsg)
+			return
+		}
 	}
 
 	tx := cmf.NewDb().Model(&resModel.FoodOrder{}).Where("id = ?", data.Id).Update("order_status", "TRADE_REFUND")
@@ -457,5 +490,87 @@ func (rest *Index) Refund(c *gin.Context) {
 	}
 
 	rest.rc.Success(c, "退款成功！", nil)
+
+}
+
+/**
+ * @Author return <1140444693@qq.com>
+ * @Description 接单拒单
+ * @Date 2021/3/12 21:21:17
+ * @Param
+ * @return
+ **/
+
+func (rest *Index) ReceivedOrRefused(c *gin.Context) {
+
+	var rewrite struct {
+		Id int `uri:"id"`
+	}
+
+	if err := c.ShouldBindUri(&rewrite); err != nil {
+		c.JSON(400, gin.H{"msg": err.Error()})
+		return
+	}
+
+	mid, _ := c.Get("mid")
+
+	var query = []string{"fo.mid = ?", " fo.id = ? "}
+	var queryArgs = []interface{}{mid, rewrite.Id, "TRADE_SUCCESS"}
+
+	data, err := new(resModel.FoodOrder).ShowByStore(query, queryArgs)
+
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
+	if data.Id == 0 {
+		rest.rc.Error(c, "订单不存在", nil)
+		return
+	}
+
+	if !((data.OrderStatus == "TRADE_SUCCESS" && data.DeliveryStatus == "") || data.OrderStatus == "TRADE_REFUSED") {
+		rest.rc.Error(c, "订单状态不正确", nil)
+		return
+	}
+
+	os := c.PostForm("order_status")
+	if os == "" {
+		rest.rc.Error(c, "订单类型不能为空！", nil)
+		return
+	}
+
+	orderStatus := ""
+	deliveryStatus := ""
+
+	msg := ""
+	if os == "0" {
+		orderStatus = "TRADE_REFUSED"
+		msg = "拒单成功！"
+	}
+
+	if os == "1" {
+		orderStatus = "TRADE_SUCCESS"
+		deliveryStatus = "TRADE_RECEIVED"
+		msg = "接单成功！"
+	}
+
+	if orderStatus == "" {
+		rest.rc.Error(c, "订单类型不正确！", nil)
+		return
+	}
+
+	tx := cmf.NewDb().Where("mid = ? AND id = ?", mid, data.Id).Updates(&resModel.FoodOrder{
+		OrderStatus:    orderStatus,
+		DeliveryStatus: deliveryStatus,
+	})
+
+	if tx.Error != nil {
+		cmfLog.Error(tx.Error.Error())
+		rest.rc.Error(c, tx.Error.Error(), nil)
+		return
+	}
+
+	rest.rc.Success(c, msg, nil)
 
 }

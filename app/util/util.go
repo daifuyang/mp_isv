@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	cmf "github.com/gincmf/cmf/bootstrap"
+	cmfUtil "github.com/gincmf/cmf/util"
+	uuid "github.com/nu7hatch/gouuid"
 	"github.com/pjebs/optimus-go"
 	"log"
 	"math"
@@ -24,55 +26,6 @@ import (
 func CurrentAdminId(c *gin.Context) string {
 	userId, _ := c.Get("user_id")
 	return userId.(string)
-}
-
-type role struct {
-	Id   int    `json:"id"`
-	Name string `json:"name"`
-}
-
-// 获取当前用户角色
-func CurrentRole(c *gin.Context) []role {
-	userId, _ := c.Get("user_id")
-	userIdInt, _ := strconv.Atoi(userId.(string))
-	return GetRoleById(userIdInt)
-}
-
-// 根据用户id获取所有角色
-func GetRoleById(userId int) []role {
-	var result []role
-	prefix := cmf.Conf().Database.Prefix
-	cmf.NewDb().Table(prefix+"role_user ru").Select("r.id,r.name").
-		Joins("INNER JOIN "+prefix+"role r ON ru.role_id = r.id").
-		Where("user_id = ?", userId).
-		Scan(&result)
-	return result
-}
-
-// 是否超级管理员
-func SuperRole(c *gin.Context, t int) bool {
-	type resultStruct struct {
-		Id   int    `json:"id"`
-		name string `json:"name"`
-	}
-	var result []resultStruct
-	userId, _ := c.Get("user_id")
-
-	if userId == "1" {
-		return true
-	}
-
-	prefix := cmf.Conf().Database.Prefix
-	cmf.NewDb().Table(prefix+"role_user ru").Select("r.id,r.name").
-		Joins("INNER JOIN "+prefix+"role r ON ru.role_id = r.id").
-		Where("ru.user_id = ?", userId).
-		Scan(&result)
-	for _, v := range result {
-		if v.Id == t {
-			return true
-		}
-	}
-	return false
 }
 
 // 获取真实路径
@@ -345,6 +298,73 @@ func isLeapYear(year int) bool { //y == 2000, 2004
 	if year%4 == 0 && year%100 != 0 || year%400 == 0 {
 		return true
 	}
-
 	return false
 }
+
+func UploadFileInfo(dirName string) (filename string, filepath string) {
+
+	t := time.Now()
+	timeArr := []int{t.Year(), int(t.Month()), t.Day()}
+	var timeDir string
+	for key, timeInt := range timeArr {
+		current := strconv.Itoa(timeInt)
+		if key > 0 {
+			if len(current) <= 1 {
+				current = "0" + current
+			}
+		}
+		// tempStr := "/" + current
+		timeDir += current
+	}
+
+	fileUuid, err := uuid.NewV4()
+
+	publicPath := "public/uploads/"
+
+	filename = dirName + "/" + timeDir + "/" + cmfUtil.GetMd5(fileUuid.String()) + ".png"
+
+	uploadPath := publicPath + dirName + "/" + timeDir + "/"
+
+	_, err = os.Stat(uploadPath)
+	if err != nil {
+		os.MkdirAll(uploadPath, os.ModePerm)
+	}
+
+	filepath = publicPath + filename
+
+	return
+}
+
+/*func GetUploadFileName(mid int) string {
+
+	t := time.Now()
+	timeArr := []int{t.Year(), int(t.Month()), t.Day()}
+
+	var timeDir string
+	for key, timeInt := range timeArr {
+
+		current := strconv.Itoa(timeInt)
+		if key > 0 {
+			if len(current) <= 1 {
+				current = "0" + current
+			}
+		}
+		// tempStr := "/" + current
+		timeDir += current
+	}
+
+	temPath := "default"
+
+	if mid > 0 {
+		temPath = "tenant/" + strconv.Itoa(mid)
+	}
+
+	insertKey := "mp_isv:filename:"+strconv.Itoa(mid)
+	filename := EncryptUuid(insertKey,"",0)
+
+	filepath := temPath + "/" + filename + ".png"
+
+	return filepath
+
+}
+*/

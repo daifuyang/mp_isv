@@ -46,7 +46,6 @@ func (_ *role) AutoMigrate() {
 		cmf.NewDb().Where(model.Role{Name: v.Name}).FirstOrCreate(&v)
 	}
 
-	// 添加role_user关系表
 	cmf.NewDb().AutoMigrate(&model.RoleUser{})
 
 }

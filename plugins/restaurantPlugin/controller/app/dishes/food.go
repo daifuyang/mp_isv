@@ -6,9 +6,11 @@
 package dishes
 
 import (
+	"errors"
 	"gincmf/plugins/restaurantPlugin/model"
 	"github.com/gin-gonic/gin"
 	"github.com/gincmf/cmf/controller"
+	"gorm.io/gorm"
 )
 
 type Food struct {
@@ -16,10 +18,10 @@ type Food struct {
 }
 
 type foodCate struct {
-	CategoryId int    `json:"category_id"`
-	Name       string `json:"name"`
-	IsRequired int    `json:"is_required"`
-	Food []model.Food `json:"food"`
+	CategoryId int          `json:"category_id"`
+	Name       string       `json:"name"`
+	IsRequired int          `json:"is_required"`
+	Food       []model.Food `json:"food"`
 }
 
 /**
@@ -32,16 +34,25 @@ type foodCate struct {
 func (rest *Food) List(c *gin.Context) {
 
 	mid, _ := c.Get("mid")
-
 	storeId, _ := c.Get("store_id")
+	scene := c.DefaultQuery("scene", "1")
+
+	if !(scene == "1" || scene == "2") {
+		rest.rc.Error(c, "场景参数不正确", nil)
+		return
+	}
+
 	// 获取门店参数
 	category := model.FoodCategory{}
 
 	var query []string
 	var queryArgs []interface{}
 
-	query = append(query, "mid = ? AND store_id = ? AND delete_at = ? AND status = 1")
+	query = append(query, "mid = ? AND store_id = ? AND delete_at = ? AND status = ?")
 	queryArgs = append(queryArgs, mid, storeId, 0, 1)
+
+	query = append(query, "(scene = 0 OR scene = ?)")
+	queryArgs = append(queryArgs, scene)
 
 	categoryData, err := category.List(query, queryArgs)
 	if err != nil {
@@ -50,8 +61,17 @@ func (rest *Food) List(c *gin.Context) {
 	}
 
 	// 获取全部菜品
+	var foodQuery []string
+	var foodQueryArgs []interface{}
+
+	foodQuery = append(foodQuery, "f.mid = ? AND fc.store_id = ? AND f.status = ? AND f.delete_at = ? AND (inventory = -1 || inventory > 0)")
+	foodQueryArgs = append(foodQueryArgs, mid, storeId, 1, 0)
+
+	foodQuery = append(foodQuery, "(f.scene = 0 OR f.scene = ?)")
+	foodQueryArgs = append(foodQueryArgs, scene)
+
 	food := model.Food{}
-	foodData, err := food.ListByCategory([]string{"f.mid = ? AND fc.store_id = ? AND f.status = ? AND f.delete_at = ?"}, []interface{}{mid, storeId, 1, 0})
+	foodData, err := food.ListByCategory(foodQuery, foodQueryArgs)
 
 	if err != nil {
 		rest.rc.Error(c, "获取菜品错误！", err.Error())
@@ -153,8 +173,18 @@ func (rest *Food) Sku(c *gin.Context) {
 	data, err := fSku.Show(query, queryArgs)
 
 	if err != nil {
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			rest.rc.Error(c, "该内容不存在！", nil)
+			return
+		}
 		rest.rc.Error(c, err.Error(), nil)
 		return
 	}
+
+	if data.Inventory == 0 {
+		rest.rc.Error(c, "改规格商品库存不足，请稍后再试！", nil)
+		return
+	}
+
 	rest.rc.Success(c, "获取成功！", data)
 }

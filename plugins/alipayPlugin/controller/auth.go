@@ -57,9 +57,14 @@ func (rest *Auth) OutAuthQrcode(c *gin.Context) {
 	mid, _ := c.Get("mid")
 	if mid == nil {
 		rest.rc.Error(c, "小程序不存在！", nil)
+		return
 	}
 
-	tenant := saasModel.CurrentTenant(c)
+	tenant, err := saasModel.CurrentTenant(c)
+	if err != nil {
+		rest.rc.Error(c, "该租户不存在！", nil)
+		return
+	}
 
 	stateMap := make(map[string]string, 0)
 	stateMap["tenant_id"] = strconv.Itoa(tenant.TenantId)
@@ -211,7 +216,7 @@ func (rest *Auth) Redirect(c *gin.Context) {
 
 	}
 
-	fmt.Println("response",response)
+	fmt.Println("response", response)
 
 	rest.rc.Error(c, "授权失败！"+response.SubMsg, response)
 }

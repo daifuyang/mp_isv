@@ -11,7 +11,6 @@ import (
 	"github.com/gin-gonic/gin"
 	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
-	"strconv"
 	"time"
 )
 
@@ -46,9 +45,9 @@ func (rest *AuthAccess) Show(c *gin.Context) {
 
 	cmf.NewDb().Where("role_id = ?", role.Id).Find(&access)
 
-	var rule []int
+	var rule []string
 	for _, v := range access {
-		rule = append(rule, v.RuleId)
+		rule = append(rule, v.RuleName)
 	}
 
 	fmt.Println("rule", rule)
@@ -116,23 +115,23 @@ func (rest *AuthAccess) Edit(c *gin.Context) {
 
 	// 数据库中不包含的值
 	for _, v := range access {
-		ruleId := strconv.Itoa(v.RuleId)
-		if !inArray(ruleId, arrTemp) {
-			cmf.NewDb().Where("rule_id = ?", ruleId).Delete(&model.AuthAccess{})
+		ruleName := v.RuleName
+		if !inArray(ruleName, arrTemp) {
+			cmf.NewDb().Where("rule_name = ?", ruleName).Delete(&model.AuthAccess{})
 		}
 	}
 
 	// 筛查出待添加的内容
 	arrTemp = make([]interface{}, 0)
 	for _, v := range access {
-		ruleId := strconv.Itoa(v.RuleId)
-		arrTemp = append(arrTemp, ruleId)
+		ruleName := v.RuleName
+		arrTemp = append(arrTemp, ruleName)
 	}
 
 	for _, v := range roleAccess {
 		if !inArray(v, arrTemp) {
-			ruleId, _ := strconv.Atoi(v)
-			cmf.NewDb().Create(&model.AuthAccess{RoleId: rewrite.Id, RuleId: ruleId})
+			ruleName := v
+			cmf.NewDb().Create(&model.AuthAccess{RoleId: rewrite.Id, RuleName: ruleName})
 		}
 	}
 
@@ -182,12 +181,12 @@ func (rest *AuthAccess) Store(c *gin.Context) {
 	}
 
 	for _, v := range roleAccess {
-		ruleId, _ := strconv.Atoi(v)
+		ruleName := v
 		roleAccess := model.AuthAccess{
-			RoleId: role.Id,
-			RuleId: ruleId,
+			RoleId:   role.Id,
+			RuleName: ruleName,
 		}
-		cmf.NewDb().Where("role_id = ? AND rule_id = ?", role.Id, ruleId).FirstOrCreate(&roleAccess)
+		cmf.NewDb().Where("role_id = ? AND rule_name = ?", role.Id, ruleName).FirstOrCreate(&roleAccess)
 	}
 
 	rest.rc.Success(c, "操作成功！", role.Id)

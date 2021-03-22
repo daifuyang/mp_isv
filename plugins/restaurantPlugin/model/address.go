@@ -11,6 +11,7 @@ type Address struct {
 	Id        int     `json:"id"`
 	Mid       int     `gorm:"type:bigint(20);comment:对应小程序id;not null" json:"mid"`
 	Name      string  `gorm:"type:varchar(40);not null" json:"name"`
+	UserId    int     `gorm:"type:bigint(20);comment:所属用户id;not null" json:"user_id"`
 	Gender    int     `gorm:"type:tinyint(3);comment:性别;default:0;comment:性别;0:保密,1:男,2:女;not null" json:"gender"`
 	Mobile    int     `gorm:"type:varchar(20);comment:手机号;not null" json:"mobile"`
 	Address   string  `gorm:"type:varchar(255);comment:地址;not null" json:"address"`

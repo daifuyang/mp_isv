@@ -7,6 +7,7 @@ package card
 
 import (
 	"encoding/json"
+	"errors"
 	"gincmf/app/util"
 	"gincmf/plugins/restaurantPlugin/model"
 	saasModel "gincmf/plugins/saasPlugin/model"
@@ -16,6 +17,7 @@ import (
 	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
 	"github.com/gincmf/cmf/data"
+	"gorm.io/gorm"
 	"strconv"
 	"time"
 )
@@ -31,7 +33,7 @@ func (rest *Index) Show(c *gin.Context) {
 	card := model.CardTemplate{}
 	tx := cmf.NewDb().Where("id = ? AND mid = ?", "1", mid).First(&card)
 
-	if tx.Error != nil {
+	if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, tx.Error.Error(), nil)
 		return
 	}

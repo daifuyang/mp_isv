@@ -165,7 +165,7 @@ func (model FoodSku) FirstOrSave() (FoodSku, error) {
 	} else {
 
 		// 查看编码是否为唯一
-		tx := model.Db.Debug().Where("(attr_post = ? || (code = ? && code != '')) AND  sku_id != ?", model.AttrPost, model.Code, foodSku.SkuId).First(&FoodSku{})
+		tx := model.Db.Where("(attr_post = ? || (code = ? && code != '')) AND  sku_id != ?", model.AttrPost, model.Code, foodSku.SkuId).First(&FoodSku{})
 		if tx.RowsAffected > 0 {
 			return foodSku, errors.New(model.AttrValue + "规格分类或编码已存在")
 		}

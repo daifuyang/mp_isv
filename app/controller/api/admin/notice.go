@@ -6,15 +6,11 @@
 package admin
 
 import (
-	"encoding/json"
-	"gincmf/app/middleware/socket"
 	"gincmf/app/model"
 	"github.com/gin-gonic/gin"
 	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
 	"github.com/gorilla/websocket"
-	"log"
-	"net/http"
 )
 
 type Notice struct {
@@ -35,7 +31,7 @@ var clientsMap = make(map[Client]bool)
 	1.新订单通知（堂食，外卖）
 	2.门店审核通知
 */
-func (rest *Notice) WsGet(w http.ResponseWriter, r *http.Request) {
+/*func (rest *Notice) WsGet(w http.ResponseWriter, r *http.Request) {
 
 	var upgrader = websocket.Upgrader{
 		// 允许跨域
@@ -122,7 +118,7 @@ func (rest *Notice) WsGet(w http.ResponseWriter, r *http.Request) {
 	}
 
 }
-
+*/
 func (rest *Notice) Get(c *gin.Context) {
 	result, err := new(model.AdminNotice).Get(c, nil, nil)
 

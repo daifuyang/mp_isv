@@ -11,6 +11,7 @@ import (
 	"gincmf/app/util"
 	"gincmf/plugins/portalPlugin/model"
 	"github.com/gin-gonic/gin"
+	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
 	"strings"
 )
@@ -139,7 +140,7 @@ func (rest *Post) Show(c *gin.Context) {
 	var query = []string{"mid = ?", "id = ?", "delete_at = ?"}
 	var queryArgs = []interface{}{mid, id, 0}
 
-	post, err := model.PortalPost{}.Show(query, queryArgs)
+	post, err := new(model.PortalPost).Show(query, queryArgs)
 
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)
@@ -168,10 +169,6 @@ func (rest *Post) Show(c *gin.Context) {
 		result.Photos = make([]model.Path, 0)
 	}
 
-	if len(result.Accessories) == 0 {
-		result.Accessories = make([]model.Path, 0)
-	}
-
 	if len(result.Files) == 0 {
 		result.Files = make([]model.Path, 0)
 	}
@@ -184,6 +181,10 @@ func (rest *Post) Show(c *gin.Context) {
 	result.ThumbPrevPath = util.GetFileUrl(result.Thumbnail)
 	result.AudioPrevPath = util.GetFileUrl(result.Audio)
 	result.VideoPrevPath = util.GetFileUrl(result.Video)
+
+	// 更新点击率
+	post.PostHits = post.PostHits + 1
+	cmf.NewDb().Updates(&post)
 
 	rest.rc.Success(c, "获取成功！", result)
 }

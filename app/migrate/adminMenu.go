@@ -4,10 +4,16 @@
  */
 package migrate
 
+import (
+	appModel "gincmf/app/model"
+	cmf "github.com/gincmf/cmf/bootstrap"
+)
+
 type AdminMenu struct {
 	Migrate
 }
 
 func (_ *AdminMenu) AutoMigrate() {
-
+	cmf.Db().Migrator().DropTable(&appModel.AdminMenu{})
+	cmf.Db().AutoMigrate(&appModel.AdminMenu{})
 }

@@ -51,7 +51,7 @@ type FoodOrder struct {
 	TotalAmount     float64           `gorm:"-" json:"total_amount"`
 	DeskId          int               `gorm:"type:int(11);comment:桌号id" json:"desk_id"`
 	DeskName        string            `gorm:"type:varchar(40);comment:桌位名称详情" json:"desk_name"`
-	UserId          int               `gorm:"type:int(11);comment:下单人信息" json:"user_id"`
+	UserId          int               `gorm:"type:bigint(20);comment:下单人信息" json:"user_id"`
 	Name            string            `gorm:"type:varchar(20);comment:用户预留姓名" json:"name"`
 	Mobile          string            `gorm:"type:varchar(11);comment:用户预留手机号;not null" json:"mobile"`
 	Address         string            `gorm:"type:varchar(255);comment:用户预留收货地址" json:"address"`
@@ -61,8 +61,10 @@ type FoodOrder struct {
 	CreateTime      string            `gorm:"-" json:"create_time"`
 	FinishedTime    string            `gorm:"-" json:"finished_time"`
 	TotalCount      int               `gorm:"-" json:"total_count"`
-	OrderStatus     string            `gorm:"type:varchar(20);comment:订单状态（WAIT_BUYER_PAY => 待支付，TRADE_SUCCESS => 待使用，TRADE_FINISHED=> 已完成，TRADE_CLOSED => 已关闭，TRADE_REFUND=>已退款）;default:WAIT_BUYER_PAY;not null" json:"order_status"`
+	OrderStatus     string            `gorm:"type:varchar(20);comment:订单状态（WAIT_BUYER_PAY => 待支付，TRADE_SUCCESS => 待使用/已支付，TRADE_FINISHED=> 已完成，TRADE_REFUSED => 已拒绝，TRADE_CLOSED => 已关闭，TRADE_REFUND=>已退款）;default:WAIT_BUYER_PAY;not null" json:"order_status"`
+	DeliveryStatus  string            `gorm:"type:varchar(20);comment:运输状态（TRADE_RECEIVED => 已接单，TRADE_DELIVERY => 运输中" json:"delivery_status"`
 	paginate        cmfModel.Paginate `gorm:"-"`
+	Db              *gorm.DB          `gorm:"-"`
 }
 
 // 定单明细表
@@ -430,4 +432,62 @@ func (model FoodOrder) Cancel(query []string, queryArgs []interface{}, appId str
 	}
 	return err
 
+}
+
+// 减库存
+func (model FoodOrder) ReduceInventory() {
+
+	db := cmf.NewDb()
+	if model.Db != nil {
+		db = model.Db
+	}
+
+	var fod []FoodOrderDetail
+	db.Where("order_id = ?", model.OrderId).Find(&fod)
+	for _, v := range fod {
+
+		var food Food
+		tx := cmf.NewDb().Where("id = ?", v.FoodId).First(&food)
+		if tx.Error != nil {
+			continue
+		}
+
+		foodInventory := food.Inventory
+		if foodInventory != -1 {
+			foodInventory -= v.Count
+			if foodInventory < 0 {
+				foodInventory = 0
+			}
+		}
+
+		// 更新商品库存
+		db.Model(&food).Where("id = ?", v.FoodId).Update("inventory", foodInventory)
+
+		if v.SkuId > 0 {
+			var foodSku FoodSku
+
+			tx = db.Where("sku_id = ?", v.SkuId).First(&foodSku)
+
+			if tx.Error != nil {
+				continue
+			}
+
+			skuInventory := foodSku.Inventory
+
+			if skuInventory != -1 {
+				skuInventory -= v.Count
+				if skuInventory < 0 {
+					skuInventory = 0
+				}
+			}
+
+			// 更新商品规格库存
+			tx = db.Model(&foodSku).Update("inventory", skuInventory)
+			if tx.Error != nil {
+				continue
+			}
+
+		}
+
+	}
 }

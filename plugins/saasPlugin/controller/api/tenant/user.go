@@ -7,8 +7,10 @@ package tenant
 
 import (
 	"gincmf/app/util"
+	resModel "gincmf/plugins/restaurantPlugin/model"
 	"gincmf/plugins/saasPlugin/migrate"
 	saasModel "gincmf/plugins/saasPlugin/model"
+	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
@@ -100,6 +102,7 @@ func (rest *User) Register(c *gin.Context) {
 	result := cmf.Db().Create(&tenant)
 
 	if result.RowsAffected > 0 {
+
 		go func() {
 			dbName := "tenant_" + strconv.Itoa(tenantId)
 
@@ -110,7 +113,15 @@ func (rest *User) Register(c *gin.Context) {
 			// 调用saas初始化
 			migrate.AutoMigrate()
 
-			// 创建当前租户的七牛云空间
+			adminUser := saasModel.AdminUser{
+				UserLogin: mobile,
+				Mobile:    mobile,
+				UserPass:  password,
+				CreateAt:  time.Now().Unix(),
+			}
+
+			adminUser.Init()
+
 		}()
 
 		rest.rc.Success(c, "注册成功！", nil)
@@ -123,13 +134,114 @@ func (rest *User) Register(c *gin.Context) {
 
 /**
  * @Author return <1140444693@qq.com>
+ * @Description 修改租户信息
+ * @Date 2021/3/19 16:7:18
+ * @Param
+ * @return
+ **/
+func (rest *User) Edit(c *gin.Context) {
+	var rewrite struct {
+		Id int `uri:"id"`
+	}
+	if err := c.ShouldBindUri(&rewrite); err != nil {
+		c.JSON(400, gin.H{"msg": err.Error()})
+		return
+	}
+
+	aliasName := c.PostForm("alias_name")
+	if aliasName == "" {
+		rest.rc.Error(c, "公司别名不能为空！", nil)
+		return
+	}
+
+	userLogin := c.PostForm("user_login")
+	if userLogin == "" {
+		rest.rc.Error(c, "用户名不能为空！", nil)
+		return
+	}
+
+	password := c.PostForm("user_pass")
+
+	email := c.PostForm("user_email")
+
+	mobile := c.PostForm("mobile")
+
+	realName := c.PostForm("user_realname")
+
+	tenant := saasModel.Tenant{}
+
+	result := cmf.NewDb().Where("user_login = ?", userLogin).First(&tenant)
+	if result.RowsAffected == 0 {
+		rest.rc.Error(c, "用户不存在！", nil)
+		return
+	}
+
+	if aliasName != strconv.Itoa(tenant.TenantId) {
+		tenant.AliasName = aliasName
+	}
+
+	tenant.Mobile = mobile
+	tenant.UserRealName = realName
+	tenant.UserLogin = userLogin
+	tenant.UserEmail = email
+	tenant.UpdateAt = time.Now().Unix()
+	tenant.UserStatus = 1
+
+	if password != "" {
+		tenant.UserPass = cmfUtil.GetMd5(password)
+	}
+
+	err := cmf.Db().Save(&tenant).Error
+	if err != nil {
+		rest.rc.Error(c, "更新用户出错，请联系管理员！！", nil)
+		return
+	}
+
+	session := sessions.Default(c)
+	session.Delete("tenant")
+	session.Save()
+
+	rest.rc.Success(c, "更新成功！", nil)
+}
+
+/**
+ * @Author return <1140444693@qq.com>
  * @Description 获取当前租户个人信息
  * @Date 2020/10/30 20:44:09
  * @Param
  * @return
  **/
+func (rest *User) CurrentTenant(c *gin.Context) {
+	// 获取当前用户
+	currentTenant, err := saasModel.CurrentTenant(c)
+	if err != nil {
+		rest.rc.Error(c, "该租户不存在！", nil)
+		return
+	}
+
+	if currentTenant.AliasName == "" {
+		currentTenant.AliasName = strconv.Itoa(currentTenant.TenantId)
+	}
+
+	rest.rc.Success(c, "获取成功", currentTenant)
+}
+
 func (rest *User) CurrentUser(c *gin.Context) {
 	// 获取当前用户
-	currentTenant := saasModel.CurrentTenant(c)
-	rest.rc.Success(c, "获取成功", currentTenant)
+	var currentUser = new(resModel.User).CurrentUser(c)
+
+	aliasName, _ := c.Get("aliasName")
+
+	var result struct {
+		resModel.User
+		AliasName string `json:"alias_name"`
+		TenantId  string `json:"tenant_id"`
+	}
+
+	tenantId, _ := c.Get("tenant_id")
+	result.User = currentUser
+	result.TenantId = strconv.Itoa(tenantId.(int))
+	result.AliasName = aliasName.(string)
+
+	controller.RestController{}.Success(c, "获取成功", result)
 }

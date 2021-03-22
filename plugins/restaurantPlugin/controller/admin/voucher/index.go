@@ -149,8 +149,16 @@ func (rest *Index) Edit(c *gin.Context) {
 	businessJson := saasModel.Options("business_info", mid.(int))
 	bi := model.BusinessInfo{}
 	_ = json.Unmarshal([]byte(businessJson), &bi)
-	if bi.BrandName == "" || bi.BrandLogo == "" || bi.Mobile == "" {
-		rest.rc.Error(c, "请先完善基本信息！", nil)
+	if bi.BrandName == "" {
+		rest.rc.Error(c, "请先完善品牌信息！", nil)
+		return
+	}
+	if bi.BrandLogo == "" {
+		rest.rc.Error(c, "请先完善品牌LOGO！", nil)
+		return
+	}
+	if bi.Mobile == "" {
+		rest.rc.Error(c, "请先完善客服电话！", nil)
 		return
 	}
 
@@ -557,7 +565,7 @@ func (rest *Index) SyncToAlipay(bizContent map[string]interface{}, totalAmount f
 		return result.Response.TemplateId, nil
 	} else {
 		// 创建失败
-		return "", errors.New("创建失败")
+		return "", errors.New("创建失败！" + result.Response.SubMsg)
 	}
 }
 

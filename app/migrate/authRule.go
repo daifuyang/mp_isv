@@ -16,4 +16,6 @@ type authRule struct {
 func (_ *authRule) AutoMigrate() {
 	cmf.NewDb().Migrator().DropTable(&model.AuthRule{})
 	cmf.NewDb().AutoMigrate(model.AuthRule{})
+	cmf.NewDb().Migrator().DropTable(&model.AuthRuleApi{})
+	cmf.NewDb().AutoMigrate(model.AuthRuleApi{})
 }

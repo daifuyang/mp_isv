@@ -11,6 +11,7 @@ import (
 Author:frank
 Desc  :后台菜单列表
 */
+
 type AdminMenu struct {
 	Id         int     `json:"id"`
 	UniqueName string  `gorm:"type:varchar(30);comment:唯一名称" json:"unique_name"`
@@ -22,15 +23,21 @@ type AdminMenu struct {
 	ListOrder  float64 `gorm:"type:float;comment:排序;default:10000" json:"list_order"`
 }
 
-type tempAdminMenu struct {
-	UniqueName string  `gorm:"type:varchar(30);comment:唯一名称" json:"unique_name"`
-	Name       string  `gorm:"type:varchar(30);comment:路由名称" json:"name"`
-	Icon       string  `gorm:"type:varchar(30);comment:图标名称" json:"icon"`
-	Path       string  `gorm:"type:varchar(100);comment:路由路径" json:"path"`
-	Title      string  `gorm:"type:varchar(30);comment:规则描述" json:"title"`
-	HideInMenu int     `gorm:"type:tinyint(3);comment:菜单中隐藏;default:0" json:"hide_in_menu"`
-	ListOrder  float64 `gorm:"type:float;comment:排序;default:10000" json:"list_order"`
-	Children   []tempAdminMenu
+// 配置菜单结构体
+type ruleApi struct {
+	Url   string `gorm:"type:varchar(100);comment:规则唯一英文标识,全小写" json:"url"`
+	Param string `gorm:"type:varchar(100);comment:额外url参数" json:"param"`
+}
+type confAdminMenu struct {
+	UniqueName string          `gorm:"type:varchar(30);comment:唯一名称" json:"unique_name"`
+	Name       string          `gorm:"type:varchar(30);comment:路由名称" json:"name"`
+	Icon       string          `gorm:"type:varchar(30);comment:图标名称" json:"icon"`
+	Path       string          `gorm:"type:varchar(100);comment:路由路径" json:"path"`
+	Title      string          `gorm:"type:varchar(30);comment:规则描述" json:"title"`
+	HideInMenu int             `gorm:"type:tinyint(3);comment:菜单中隐藏;default:0" json:"hide_in_menu"`
+	ListOrder  float64         `gorm:"type:float;comment:排序;default:10000" json:"list_order"`
+	RuleApi    []ruleApi       `gorm:"-" json:"rule_api"`
+	Children   []confAdminMenu `json:"children;omitempty"`
 }
 
 type AuthorizeMenu struct {
@@ -71,8 +78,9 @@ func EditAdminMenu(id int, pid int, uniName string, name string, path string, hi
 	}
 }
 
+// 自动生成菜单和权限控制
 func AutoAdminMenu() {
-	var adminMenus []tempAdminMenu
+	var adminMenus []confAdminMenu
 
 	bytes, err := ioutil.ReadFile("./data/conf/menu.json")
 	if err != nil {
@@ -94,7 +102,7 @@ func AutoAdminMenu() {
  * @return
  **/
 
-func recursionAddMenu(menus []tempAdminMenu, parentId int) {
+func recursionAddMenu(menus []confAdminMenu, parentId int) {
 
 	// 增加当前层级
 	for _, v := range menus {
@@ -124,15 +132,38 @@ func recursionAddMenu(menus []tempAdminMenu, parentId int) {
 		if title == "" {
 			title = v.Name
 		}
-		inRule(v.UniqueName, v.Title)
+		inRule(v.UniqueName, v.Title,v.RuleApi)
 	}
 }
 
-func inRule(name string, title string) {
+func inRule(name string, title string, ruleApi []ruleApi)  {
+
 	authRule := AuthRule{
 		Name:  name,
 		Title: title,
 	}
+
 	// 加入到authRule规则表
-	cmf.NewDb().Where("name = ?", name).FirstOrCreate(&authRule)
+	tx := cmf.NewDb().Where("name = ?", name).FirstOrCreate(&authRule)
+	if tx.Error != nil {
+		return
+	}
+
+	var rApi = make([]AuthRuleApi,0)
+
+	for _,v := range ruleApi{
+		rApi = append(rApi,AuthRuleApi{
+			AuthRuleName: authRule.Name,
+			Url:v.Url,
+			Param: v.Param,
+		})
+	}
+
+	if len(rApi) > 0 {
+		tx = cmf.NewDb().Debug().Create(&rApi)
+		if tx.Error != nil {
+			return
+		}
+	}
+
 }

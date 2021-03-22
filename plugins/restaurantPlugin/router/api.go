@@ -6,11 +6,11 @@
 package router
 
 import (
-	"fmt"
 	"gincmf/app/middleware"
 	AliMiddle "gincmf/plugins/alipayPlugin/middleware"
 	"gincmf/plugins/restaurantPlugin/controller/admin/action"
 	"gincmf/plugins/restaurantPlugin/controller/admin/card"
+	"gincmf/plugins/restaurantPlugin/controller/admin/dashboard"
 	"gincmf/plugins/restaurantPlugin/controller/admin/desk"
 	"gincmf/plugins/restaurantPlugin/controller/admin/dishes"
 	"gincmf/plugins/restaurantPlugin/controller/admin/member"
@@ -32,17 +32,14 @@ import (
 	rtVoucher "gincmf/plugins/restaurantPlugin/controller/app/voucher"
 	rtMiddle "gincmf/plugins/restaurantPlugin/middleware"
 	cmf "github.com/gincmf/cmf/bootstrap"
-	"github.com/gorilla/websocket"
-	"log"
-	"net/http"
-	"strconv"
-	"time"
 )
 
 func ApiListenRouter() {
 	// 注册后台菜单路由
-	adminGroup := cmf.Group("api/v1/admin", middleware.ValidationBearerToken, middleware.ValidationAdmin, middleware.TenantDb, middleware.AllowCors, middleware.ValidationMerchant, middleware.ApiBaseController, middleware.Rbac)
+	adminGroup := cmf.Group("api/v1/admin", middleware.ValidationBearerToken, middleware.ValidationAdmin, middleware.TenantDb, middleware.AllowCors, middleware.ValidationMerchant, middleware.ApiBaseController,middleware.Rbac)
 	{
+		adminGroup.Get("/dashboard/analysis", new(dashboard.Dashboard).DashboardCard)
+		adminGroup.Get("/dashboard/sales_ranking", new(dashboard.Dashboard).DashboardSales)
 		// 菜单管理
 		adminGroup.Get("/dishes/store", new(store.Index).IndexWithFoodCount)
 		adminGroup.Rest("/dishes/food", new(dishes.Food))
@@ -64,7 +61,7 @@ func ApiListenRouter() {
 		adminGroup.Get("/store/list", new(store.Index).List)
 		adminGroup.Rest("/store/index", new(store.Index), AliMiddle.UseAlipay)
 
-		adminGroup.Get("/store/order/query/:id", AliMiddle.ValidationAlipay, new(store.Index).QueryStatus)
+		adminGroup.Get("/store/order/query/:id", new(store.Index).QueryStatus, AliMiddle.ValidationAlipay)
 
 		// 订单管理
 		adminGroup.Get("/order/index", new(order.Index).Index)
@@ -82,10 +79,13 @@ func ApiListenRouter() {
 		adminGroup.Post("/order/confirm", new(order.Index).Confirm)
 
 		// 用户申请取消订单
-		adminGroup.Post("/order/cancel", AliMiddle.UseAlipay, new(order.Index).Cancel)
+		adminGroup.Post("/order/cancel", new(order.Index).Cancel, AliMiddle.UseAlipay)
 
 		// 发起退款
-		adminGroup.Post("/order/refund/:id",AliMiddle.UseAlipay, new(order.Index).Refund)
+		adminGroup.Post("/order/refund/:id", new(order.Index).Refund, AliMiddle.UseAlipay)
+
+		// 接单或拒单
+		adminGroup.Post("/order/received_or_refused/:id", new(order.Index).ReceivedOrRefused, AliMiddle.UseAlipay)
 
 		// 堂食基本设置
 		adminGroup.Get("/settings/eat_in/:id", new(settings.EatIn).Show)
@@ -105,7 +105,7 @@ func ApiListenRouter() {
 
 		// 商户基本信息设置
 		adminGroup.Get("/settings/business_info", new(settings.Common).Show)
-		adminGroup.Post("/settings/business_info", AliMiddle.UseAlipay, AliMiddle.AppAuthToken, new(settings.Common).Edit)
+		adminGroup.Post("/settings/business_info", new(settings.Common).Edit, AliMiddle.UseAlipay, AliMiddle.AppAuthToken)
 
 		// 优惠券
 		adminGroup.Rest("/voucher", new(voucher.Index), AliMiddle.UseAlipay)
@@ -113,16 +113,16 @@ func ApiListenRouter() {
 		// 优惠券列表，无需分页
 
 		// 会员卡
-		adminGroup.Get("/card", AliMiddle.UseAlipay, new(card.Index).Show)
-		adminGroup.Post("/card", AliMiddle.UseAlipay, new(card.Index).Edit)
-		adminGroup.Get("/card/level", AliMiddle.UseAlipay, new(card.Level).Show)
-		adminGroup.Post("/card/level", AliMiddle.UseAlipay, new(card.Level).Edit)
+		adminGroup.Get("/card", new(card.Index).Show, AliMiddle.UseAlipay)
+		adminGroup.Post("/card", new(card.Index).Edit, AliMiddle.UseAlipay)
+		adminGroup.Get("/card/level", new(card.Level).Show, AliMiddle.UseAlipay)
+		adminGroup.Post("/card/level", new(card.Level).Edit, AliMiddle.UseAlipay)
 
 		// 会员
 		adminGroup.Rest("/member", new(member.Index), AliMiddle.UseAlipay)
 
 		// 发券
-		adminGroup.Post("/voucher_send", AliMiddle.UseAlipay, AliMiddle.AppAuthToken, new(voucher.Index).Send)
+		adminGroup.Post("/voucher_send", new(voucher.Index).Send, AliMiddle.UseAlipay, AliMiddle.AppAuthToken)
 
 		// 打印机
 		adminGroup.Rest("/printer", new(printer.Printer))
@@ -131,15 +131,15 @@ func ApiListenRouter() {
 	}
 
 	// 小程序路由注册
-	appGroup := cmf.Group("api/v1/app", middleware.ValidationMp, middleware.ApiBaseController)
+	appGroup := cmf.Group("api/v1/app", middleware.ApiBaseController, middleware.ValidationMp)
 	{
 		// 获取小程序用户
-		appGroup.Get("/user/detail", middleware.ValidationBindMobile, new(rtUser.User).Show)
-		appGroup.Post("/user/save", middleware.ValidationOpenId, new(rtUser.User).Save)
-		appGroup.Post("/user/save/mobile", middleware.ValidationOpenId, new(rtUser.User).SaveMobile)
+		appGroup.Get("/user/detail", new(rtUser.User).Show, middleware.ValidationBindMobile)
+		appGroup.Post("/user/save", new(rtUser.User).Save, middleware.ValidationOpenId)
+		appGroup.Post("/user/save/mobile", new(rtUser.User).SaveMobile, middleware.ValidationOpenId)
 
 		// 绑定手机号
-		appGroup.Post("/user/bind/mobile", middleware.ValidationOpenId, new(rtUser.User).BindMpMobile)
+		appGroup.Post("/user/bind/mobile", new(rtUser.User).BindMpMobile, middleware.ValidationOpenId)
 
 		// 门店列表
 		appGroup.Get("/store", new(rtStore.Index).List)
@@ -149,102 +149,65 @@ func ApiListenRouter() {
 		appGroup.Get("/desk/:id", new(rtDesk.Desk).Show)
 
 		// 菜品分类
-		appGroup.Get("/dishes/category", rtMiddle.ValidationStore, new(rtDishes.Category).List)
+		appGroup.Get("/dishes/category", new(rtDishes.Category).List, rtMiddle.ValidationStore)
 
 		// 菜品列表
-		appGroup.Get("/dishes/food", rtMiddle.ValidationStore, new(rtDishes.Food).List)
-		appGroup.Get("/dishes/food/:id", rtMiddle.ValidationStore, new(rtDishes.Food).Detail)
-		appGroup.Get("/dishes/food/:id/sku", rtMiddle.ValidationStore, new(rtDishes.Food).Sku)
+		appGroup.Get("/dishes/food", new(rtDishes.Food).List, rtMiddle.ValidationStore)
+		appGroup.Get("/dishes/food/:id", new(rtDishes.Food).Detail, rtMiddle.ValidationStore)
+		appGroup.Get("/dishes/food/:id/sku", new(rtDishes.Food).Sku, rtMiddle.ValidationStore)
 
 		// 获取订单列表
-		appGroup.Get("/order/list", middleware.ValidationBindMobile, new(rtOrder.Order).Get)
-		appGroup.Get("/order/detail/:id", middleware.ValidationBindMobile, new(rtOrder.Order).Show)
+		appGroup.Get("/order/list", new(rtOrder.Order).Get, middleware.ValidationBindMobile)
+		appGroup.Get("/order/detail/:id", new(rtOrder.Order).Show, middleware.ValidationBindMobile)
 
 		// 	取消订单
-		appGroup.Get("/order/cancel/:id", middleware.ValidationBindMobile, new(rtOrder.Order).Cancel)
+		appGroup.Get("/order/cancel/:id", new(rtOrder.Order).Cancel, middleware.ValidationBindMobile)
 
 		// 会员卡开通订单列表
-		appGroup.Get("/order/card", middleware.ValidationBindMobile, new(rtCard.Order).Get)
+		appGroup.Get("/order/card", new(rtCard.Order).Get, middleware.ValidationBindMobile)
 
 		// 创建订单
-		appGroup.Post("/order/pre_create", middleware.ValidationBindMobile, AliMiddle.AppAuthToken, rtMiddle.ValidationStore, new(rtOrder.Order).PreCreate)
+		appGroup.Post("/order/pre_create", new(rtOrder.Order).PreCreate, middleware.ValidationBindMobile, AliMiddle.AppAuthToken, rtMiddle.ValidationStore)
 
 		// 支付宝订单支付完成回调url
-		appGroup.Post("/alipay/receive_notify", AliMiddle.AppAuthToken, new(rtOrder.Order).ReceiveNotify)
-		appGroup.Rest("/address", new(address.Address))
+		appGroup.Post("/alipay/receive_notify", new(rtOrder.Order).ReceiveNotify, AliMiddle.AppAuthToken)
+		appGroup.Rest("/address", new(address.Address), middleware.ValidationBindMobile)
 
 		// 获取开卡连接
-		appGroup.Get("/card/apply", middleware.ValidationBindMobile, AliMiddle.AppAuthToken, new(rtCard.Card).Apply)
+		appGroup.Get("/card/apply", new(rtCard.Card).Apply, middleware.ValidationBindMobile, AliMiddle.AppAuthToken)
 		// 申请开通会员卡
-		appGroup.Get("/card/detail", middleware.ValidationBindMobile, AliMiddle.AppAuthToken, new(rtCard.Card).VipDetail)
-		appGroup.Post("/card/send", middleware.ValidationBindMobile, AliMiddle.AppAuthToken, new(rtCard.Card).Send)
+		appGroup.Get("/card/detail", new(rtCard.Card).VipDetail, middleware.ValidationBindMobile, AliMiddle.AppAuthToken)
+		appGroup.Post("/card/send", new(rtCard.Card).Send, middleware.ValidationBindMobile, AliMiddle.AppAuthToken)
 
 		// 同步卡券到支付宝卡包
-		appGroup.Post("/card/sync/alipay", middleware.ValidationBindMobile, AliMiddle.AppAuthToken, new(rtCard.Card).SyncCardToAlipay)
+		appGroup.Post("/card/sync/alipay", new(rtCard.Card).SyncCardToAlipay, middleware.ValidationBindMobile, AliMiddle.AppAuthToken)
 
 		// 优惠券
-		appGroup.Get("/voucher", middleware.ValidationBindMobile, AliMiddle.AppAuthToken, new(rtVoucher.Voucher).Get)
+		appGroup.Get("/voucher", new(rtVoucher.Voucher).Get, middleware.ValidationBindMobile, AliMiddle.AppAuthToken)
 
 		// 优惠券列表
-		appGroup.Get("/voucher/list", middleware.ValidationBindMobile, AliMiddle.AppAuthToken, new(rtVoucher.Voucher).List)
+		appGroup.Get("/voucher/list", new(rtVoucher.Voucher).List, middleware.ValidationBindMobile, AliMiddle.AppAuthToken)
 
 		// 优惠券核销异步通知
-		appGroup.Post("/alipay/voucher/receive_notify", AliMiddle.AppAuthToken, new(rtVoucher.Voucher).ReceiveNotify)
+		appGroup.Post("/alipay/voucher/receive_notify", new(rtVoucher.Voucher).ReceiveNotify, AliMiddle.AppAuthToken)
 
 		// 充值
-		appGroup.Get("/recharge/detail", middleware.ValidationBindMobile, new(rtRecharge.Recharge).Show)
-		appGroup.Post("/recharge/pay", middleware.ValidationBindMobile, AliMiddle.AppAuthToken, new(rtRecharge.Recharge).Pay)
-		appGroup.Get("/recharge/order", middleware.ValidationBindMobile, new(rtRecharge.Recharge).Order)
+		appGroup.Get("/recharge/detail", new(rtRecharge.Recharge).Show, middleware.ValidationBindMobile)
+		appGroup.Post("/recharge/pay", new(rtRecharge.Recharge).Pay, middleware.ValidationBindMobile, AliMiddle.AppAuthToken)
+		appGroup.Get("/recharge/order", new(rtRecharge.Recharge).Order, middleware.ValidationBindMobile)
 
 		// 积分明细
-		appGroup.Get("/score/log", middleware.ValidationBindMobile, new(rtScore.Score).Score)
+		appGroup.Get("/score/log", new(rtScore.Score).Score, middleware.ValidationBindMobile)
 
 		// 储值明细
-		appGroup.Get("/recharge/log", middleware.ValidationBindMobile, new(rtRecharge.Log).Get)
+		appGroup.Get("/recharge/log", new(rtRecharge.Log).Get, middleware.ValidationBindMobile)
 
 		// 获取堂食预约
-		appGroup.Get("/appointment", rtMiddle.ValidationStore, new(common.Appointment).Show)
+		appGroup.Get("/appointment", new(common.Appointment).Show, rtMiddle.ValidationStore)
 
 	}
 
-	cmf.Get("api/v1/admin/action/options", middleware.ValidationBearerToken, middleware.ValidationMerchant, new(action.Page).Options)
-	cmf.Get("api/v1/admin/action/userinfo", middleware.ValidationBearerToken, middleware.ValidationMerchant, new(action.USerInfo).Options)
+	cmf.Get("api/v1/admin/action/options", new(action.Page).Options, middleware.ValidationBearerToken, middleware.ValidationMerchant)
+	cmf.Get("api/v1/admin/action/userinfo", new(action.USerInfo).Options, middleware.ValidationBearerToken, middleware.ValidationMerchant)
 
-	// 注册webSocket
-	cmf.Socket("/socket/v1/admin/order", new(order.Index).Order)
-
-	cmf.Socket("/test", func(w http.ResponseWriter, r *http.Request) {
-
-		var upgrader = websocket.Upgrader{
-			// 允许跨域
-			CheckOrigin: func(r *http.Request) bool {
-				return true
-			},
-		} // use default options
-
-		c, err := upgrader.Upgrade(w, r, nil)
-		if err != nil {
-			log.Print("upgrade:", err)
-			return
-		}
-
-		defer c.Close()
-
-		mt, message, err := c.ReadMessage()
-		if err != nil {
-			log.Println("read:", err)
-		}
-
-		fmt.Println("accept", string(message))
-
-		for {
-			err = c.WriteMessage(mt, []byte(strconv.Itoa(mt)+"hello world"))
-			if err != nil {
-				log.Println("write:", err)
-				return
-			}
-
-			time.Sleep(1 * time.Second)
-		}
-	})
 }

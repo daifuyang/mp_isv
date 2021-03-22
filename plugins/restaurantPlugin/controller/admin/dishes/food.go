@@ -496,12 +496,6 @@ func (rest Food) Edit(c *gin.Context) {
 	tx.SavePoint("sp1")
 
 	food.Db = tx
-	food, err = food.Update()
-	if err != nil {
-		tx.Rollback()
-		rest.rc.Error(c, err.Error(), nil)
-		return
-	}
 
 	// 更新所在分类
 	categoryArr := strings.Split(category, ",")
@@ -553,9 +547,12 @@ func (rest Food) Edit(c *gin.Context) {
 
 	}
 
+	// 总库存
+	foodInventory := inventoryInt
 	if useSkuInt == 1 {
 
-		//
+		foodInventory = 0
+
 		var attrQuery []string
 		var attrQueryArgs []interface{}
 
@@ -630,8 +627,12 @@ func (rest Food) Edit(c *gin.Context) {
 				Db:               tx,
 			}
 
+			foodInventory += v.Inventory
 			skus = append(skus, sku)
 		}
+
+		food.Inventory = foodInventory
+		food.DefaultInventory = foodInventory
 
 		skuDelQuery = append(skuDelQuery, "food_id = ?")
 		skuDelQueryStr := strings.Join(skuDelQuery, " AND ")
@@ -651,6 +652,13 @@ func (rest Food) Edit(c *gin.Context) {
 				rest.rc.Error(c, err.Error(), nil)
 				return
 			}
+		}
+
+		food, err = food.Update()
+		if err != nil {
+			tx.Rollback()
+			rest.rc.Error(c, err.Error(), nil)
+			return
 		}
 
 	}
@@ -1058,7 +1066,11 @@ func (rest Food) Store(c *gin.Context) {
 
 	}
 
+	foodInventory := inventoryInt
+
 	if useSkuInt == 1 {
+
+		foodInventory = 0
 		// 解析多规格
 		var skuMap []skuJson
 		json.Unmarshal(skuBytes, &skuMap)
@@ -1128,6 +1140,8 @@ func (rest Food) Store(c *gin.Context) {
 				Db:               tx,
 			}
 
+			foodInventory += v.Inventory
+
 			_, err := sku.FirstOrSave()
 
 			if err != nil {
@@ -1137,6 +1151,17 @@ func (rest Food) Store(c *gin.Context) {
 			}
 
 		}
+	}
+
+	// 更新库存
+	food.Inventory = foodInventory
+	food.DefaultInventory = foodInventory
+
+	food, err = food.Update()
+	if err != nil {
+		tx.Rollback()
+		rest.rc.Error(c, err.Error(), nil)
+		return
 	}
 
 	tx.Commit()

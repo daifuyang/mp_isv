@@ -19,11 +19,6 @@ import (
 	"time"
 )
 
-type MigrateUser struct {
-	model.User
-	Mid          int     `gorm:"type:bigint(20);comment:对应小程序id;not null" json:"mid"`
-}
-
 type User struct {
 	model.User
 	Mid          int     `gorm:"type:bigint(20);comment:对应小程序id;not null" json:"mid"`
@@ -50,11 +45,6 @@ type ThirdPart struct {
 	Type   string `gorm:"type:varchar(10);not null" json:"type"`
 	UserId int    `gorm:"type:int(11);not null" json:"user_id"`
 	OpenId string `gorm:"type:varchar(20);not null" json:"open_id"`
-}
-
-func (model *User) AutoMigrate() {
-	cmf.NewDb().AutoMigrate(&MigrateUser{})
-	cmf.NewDb().AutoMigrate(&ThirdPart{})
 }
 
 func (model *User) Show(query []string, queryArgs []interface{}) (User, error) {
@@ -106,7 +96,7 @@ func (model *User) Show(query []string, queryArgs []interface{}) (User, error) {
 
 func (model *User) ThirdPartIndex(c *gin.Context, query []string, queryArgs []interface{}) (cmfModel.Paginate, error) {
 
-	current, pageSize, err := model.paginate.Default(c)
+	current, pageSize, err := new(cmfModel.Paginate).Default(c)
 
 	if err != nil {
 		return cmfModel.Paginate{}, err
@@ -251,4 +241,32 @@ func (model UserPart) Show(query []string, queryArgs []interface{}) (UserPart, e
 	}
 
 	return up, nil
+}
+
+func (model *User) CurrentUser(c *gin.Context) User {
+	u := User{}
+	session := sessions.Default(c)
+	user := session.Get("user")
+	userId, _ := c.Get("user_id")
+
+	userIdInt, _ := userId.(int)
+
+	if user == nil {
+		cmf.NewDb().First(&u, "id = ? AND user_type = 1 AND user_status = 1 AND  delete_at = 0", userId)
+		jsonBytes, _ := json.Marshal(u)
+		session.Set("user", string(jsonBytes))
+		session.Save()
+	} else {
+		jsonBytes := user.(string)
+		json.Unmarshal([]byte(jsonBytes), &u)
+		if u.Id == 0 || u.Id != userIdInt {
+			u = User{}
+			cmf.NewDb().First(&u, "id = ? AND user_type = 1 AND user_status = 1 AND  delete_at = 0", userId)
+			jsonBytes, _ := json.Marshal(u)
+			session.Set("user", string(jsonBytes))
+			session.Save()
+			return u
+		}
+	}
+	return u
 }

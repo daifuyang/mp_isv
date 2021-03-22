@@ -5,7 +5,17 @@
     "path": "/app/:mid/dashboard",
     "icon": "icondashboard",
     "hide_in_menu": 0,
-    "list_order": 1
+    "list_order": 1,
+    "rule_api": [
+      {
+        "url": "/api/v1/admin/dashboard/analysis",
+        "param": ""
+      },
+      {
+        "url": "/api/v1/admin/dashboard/sales_ranking",
+        "param": ""
+      }
+    ]
   },
   {
     "unique_name": "app/published",
@@ -55,7 +65,17 @@
         "path": "/app/:mid/order/business",
         "icon": "",
         "hide_in_menu": 0,
-        "list_order": 10000
+        "list_order": 10000,
+        "rule_api": [
+          {
+            "url": "/api/v1/admin/dishes/store",
+            "param": ""
+          },
+          {
+            "url": "/api/v1/admin/order/index",
+            "param": ""
+          }
+        ]
       },
       {
         "unique_name": "app/order/member",
@@ -331,6 +351,14 @@
     "hide_in_menu": 0,
     "list_order": 100,
     "children": [
+      {
+        "unique_name": "app/user/settings",
+        "name": "个人设置",
+        "path": "/app/:mid/user/settings",
+        "icon": "",
+        "hide_in_menu": 1,
+        "list_order": 1
+      },
       {
         "unique_name": "app/user/index",
         "name": "账号设置",

@@ -66,10 +66,10 @@ func (rest MpIsvAuth) Show(c *gin.Context) {
 
 }
 
-func (rest MpIsvAuth) GetAuth(mid interface{}, tenant int, t string) (AlipayAuthResult, error) {
+func (rest MpIsvAuth) GetAuth(mid interface{}, tenantId int, t string) (AlipayAuthResult, error) {
 
 	query := []string{"mp_id = ?", "tenant_id = ?", "type = ?"}
-	queryArgs := []interface{}{mid, tenant, t}
+	queryArgs := []interface{}{mid, tenantId, t}
 
 	isvAuth := model.MpIsvAuth{}
 
@@ -129,10 +129,25 @@ func (rest MpIsvAuth) GetAuth(mid interface{}, tenant int, t string) (AlipayAuth
 	vResult := new(mini.Version).VersionListQuery(bizContent)
 
 	appVersion := ""
+	status := ""
 	if vResult.Response.Code == "10000" {
 
 		if len(vResult.Response.AppVersions) > 0 {
-			appVersion = vResult.Response.AppVersions[0]
+			end := len(vResult.Response.AppVersions) - 1
+			if end >= 0 {
+				appVersion = vResult.Response.AppVersions[end]
+
+				bizContent := make(map[string]interface{}, 0)
+				bizContent["app_version"] = appVersion
+				queryResult := new(mini.Audit).DetailQuery(bizContent)
+
+				if queryResult.Response.Code == "10000" {
+					if queryResult.Response.Status == "RELEASE" {
+						status = "online"
+					}
+				}
+
+			}
 		}
 
 		if appVersion != "" {
@@ -142,7 +157,6 @@ func (rest MpIsvAuth) GetAuth(mid interface{}, tenant int, t string) (AlipayAuth
 				vResult := new(mini.Version).ExperienceQuery(bizContent)
 
 				if vResult.Response.Code == "10000" {
-
 					upMpTheme.AlipayExpQrCodeUrl = vResult.Response.ExpQrCodeUrl
 					tx := cmf.NewDb().Where("id = ?", mpTheme.Id).Updates(&upMpTheme)
 					if tx.Error != nil {
@@ -152,18 +166,34 @@ func (rest MpIsvAuth) GetAuth(mid interface{}, tenant int, t string) (AlipayAuth
 
 			}
 
-			version := saasModel.MpThemeVersion{
+			version := saasModel.MpThemeVersion{}
+
+			tx := cmf.NewDb().Where("version = ?", appVersion).First(&version)
+
+			if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
+				return result, err
+			}
+
+			vData := saasModel.MpThemeVersion{
 				Mid:             mid.(int),
 				TemplateId:      app.TemplateAppId,
 				TemplateVersion: app.Version,
 				Version:         appVersion,
-				CreateAt:        time.Now().Unix(),
+				Status:          status,
 			}
 
-			tx := cmf.NewDb().Where("version = ?", appVersion).FirstOrCreate(&version)
-
-			if tx.Error != nil {
-				return result, err
+			if tx.RowsAffected == 0 {
+				vData.CreateAt = time.Now().Unix()
+				tx := cmf.NewDb().Create(&vData)
+				if tx.Error != nil {
+					return result, err
+				}
+			} else {
+				vData.UpdateAt = time.Now().Unix()
+				tx := cmf.NewDb().Where("id  = ?", version.Id).Updates(&vData)
+				if tx.Error != nil {
+					return result, err
+				}
 			}
 		}
 

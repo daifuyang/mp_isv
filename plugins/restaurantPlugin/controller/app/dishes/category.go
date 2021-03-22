@@ -21,6 +21,13 @@ func (rest *Category) List(c *gin.Context) {
 
 	storeId, _ := c.Get("store_id")
 
+	scene := c.DefaultQuery("scene", "1")
+
+	if !(scene == "1" || scene == "2") {
+		rest.rc.Error(c, "场景参数不正确", nil)
+		return
+	}
+
 	category := model.FoodCategory{}
 
 	var query []string
@@ -28,6 +35,9 @@ func (rest *Category) List(c *gin.Context) {
 
 	query = append(query, "mid = ? AND store_id = ? AND delete_at = ? AND status = ?")
 	queryArgs = append(queryArgs, mid, storeId, 0, 1)
+
+	query = append(query, "(scene = 0 OR scene = ?)")
+	queryArgs = append(queryArgs, scene)
 
 	data, err := category.ListByStore(query, queryArgs)
 

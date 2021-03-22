@@ -6,12 +6,16 @@
 package admin
 
 import (
+	"errors"
 	"fmt"
 	"gincmf/app/model"
+	resModel "gincmf/plugins/restaurantPlugin/model"
 	"github.com/gin-gonic/gin"
 	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
 	"github.com/gincmf/cmf/util"
+	"gorm.io/gorm"
+	"regexp"
 	"strconv"
 	"time"
 )
@@ -22,8 +26,10 @@ type User struct {
 
 func (rest *User) Get(c *gin.Context) {
 
-	query := []string{"user_type = ?"}
-	queryArgs := []interface{}{"1"}
+	mid, _ := c.Get("mid")
+
+	query := []string{"user_type = ?", "mid = ?"}
+	queryArgs := []interface{}{"1", mid}
 
 	userLogin := c.Query("user_login")
 	if userLogin != "" {
@@ -43,7 +49,7 @@ func (rest *User) Get(c *gin.Context) {
 		queryArgs = append(queryArgs, "%"+userEmail+"%")
 	}
 
-	user := model.User{}
+	user := resModel.User{}
 	data, err := user.Get(c, query, queryArgs)
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)
@@ -54,6 +60,7 @@ func (rest *User) Get(c *gin.Context) {
 }
 
 func (rest *User) Show(c *gin.Context) {
+
 	var rewrite struct {
 		Id int `uri:"id"`
 	}
@@ -62,14 +69,24 @@ func (rest *User) Show(c *gin.Context) {
 		return
 	}
 
-	query := "id = ? AND user_type = ?"
-	queryArgs := []interface{}{rewrite.Id, "1"}
+	mid, _ := c.Get("mid")
 
-	user := model.User{}
-	cmf.NewDb().Where(query, queryArgs...).First(&user)
+	query := "id = ? AND user_type = ? AND mid = ?"
+	queryArgs := []interface{}{rewrite.Id, "1", mid}
+
+	user := resModel.User{}
+	tx := cmf.NewDb().Where(query, queryArgs...).First(&user)
+	if tx.Error != nil {
+		if errors.Is(tx.Error, gorm.ErrRecordNotFound) {
+			rest.rc.Error(c, "该管理员不存在！", nil)
+			return
+		}
+		rest.rc.Error(c, tx.Error.Error(), nil)
+		return
+	}
 
 	type resultStruct struct {
-		model.User
+		resModel.User
 		RoleIds []int `json:"role_ids"`
 	}
 
@@ -90,6 +107,7 @@ func (rest *User) Show(c *gin.Context) {
 }
 
 func (rest *User) Edit(c *gin.Context) {
+
 	var rewrite struct {
 		Id int `uri:"id"`
 	}
@@ -98,9 +116,18 @@ func (rest *User) Edit(c *gin.Context) {
 		return
 	}
 
+	mid, _ := c.Get("mid")
+
 	userLogin := c.PostForm("user_login")
 	if userLogin == "" {
 		rest.rc.Error(c, "用户名不能为空！", nil)
+		return
+	}
+
+	r, _ := regexp.Compile("^[\u4e00-\u9fa5_a-zA-Z0-9]+$")
+	b := r.MatchString(userLogin)
+	if !b {
+		rest.rc.Error(c, "用户名只能包含中文英文数字和下划线！", nil)
 		return
 	}
 
@@ -118,13 +145,7 @@ func (rest *User) Edit(c *gin.Context) {
 		return
 	}
 
-	departmentId := c.PostForm("department_id")
-	if departmentId == "" {
-		rest.rc.Error(c, "所在部门不能为空！", nil)
-		return
-	}
-
-	user := model.User{}
+	user := resModel.User{}
 
 	result := cmf.NewDb().Where("user_login = ?", userLogin).First(&user)
 	if result.RowsAffected == 0 {
@@ -132,6 +153,7 @@ func (rest *User) Edit(c *gin.Context) {
 		return
 	}
 
+	user.Mid = mid.(int)
 	user.UserType = 1
 	user.Mobile = mobile
 	user.UserRealName = realName
@@ -140,7 +162,7 @@ func (rest *User) Edit(c *gin.Context) {
 	user.UpdateAt = time.Now().Unix()
 	user.UserStatus = 1
 
-	if user.UserPass != "" {
+	if password != "" {
 		user.UserPass = util.GetMd5(password)
 	}
 
@@ -168,9 +190,18 @@ func (rest *User) Edit(c *gin.Context) {
 
 func (rest *User) Store(c *gin.Context) {
 
+	mid, _ := c.Get("mid")
+
 	userLogin := c.PostForm("user_login")
 	if userLogin == "" {
 		rest.rc.Error(c, "用户名不能为空！", nil)
+		return
+	}
+
+	r, _ := regexp.Compile("^[\u4e00-\u9fa5_a-zA-Z0-9]+$")
+	b := r.MatchString(userLogin)
+	if !b {
+		rest.rc.Error(c, "用户名只能包含中文英文数字和下划线！", nil)
 		return
 	}
 
@@ -191,15 +222,18 @@ func (rest *User) Store(c *gin.Context) {
 		return
 	}
 
-	user := model.User{
-		UserType:     1,
-		CreateAt:     time.Now().Unix(),
-		Mobile:       mobile,
-		UserRealName: realName,
-		UserLogin:    userLogin,
-		UserPass:     util.GetMd5(password),
-		UserEmail:    email,
-		UserStatus:   1,
+	user := resModel.User{
+		Mid: mid.(int),
+		User: model.User{
+			UserType:     1,
+			CreateAt:     time.Now().Unix(),
+			Mobile:       mobile,
+			UserRealName: realName,
+			UserLogin:    userLogin,
+			UserPass:     util.GetMd5(password),
+			UserEmail:    email,
+			UserStatus:   1,
+		},
 	}
 
 	result := cmf.NewDb().Where("user_login = ?", userLogin).First(&model.User{})
@@ -240,13 +274,15 @@ func (rest *User) CurrentUser(c *gin.Context) {
 	// 获取当前用户
 	var currentUser = new(model.User).CurrentUser(c)
 
-	type temp struct {
+	aliasName, _ := c.Get("aliasName")
+
+	var result struct {
 		model.User
+		AliasName string `json:"alias_name"`
 	}
 
-	result := temp{
-		User: currentUser,
-	}
+	result.User = currentUser
+	result.AliasName = aliasName.(string)
 
 	controller.RestController{}.Success(c, "获取成功", result)
 }

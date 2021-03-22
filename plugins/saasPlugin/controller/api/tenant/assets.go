@@ -321,8 +321,11 @@ func handleUpload(c *gin.Context, file *multipart.FileHeader, fileType string) (
 	fileTypeInt, _ := strconv.Atoi(fileType)
 	//保存到数据库
 
-	// 同步到七牛云
-	key, err := new(cmf.QiNiu).UploadFile(filePath, util.GetAbsPath(filePath))
+	key := filePath
+	if cmf.QiuNiuConf().Enabled {
+		// 同步到七牛云
+		key, err = new(cmf.QiNiu).UploadFile(filePath, util.GetAbsPath(filePath))
+	}
 
 	fmt.Println("key", key)
 	fmt.Println("err", err)

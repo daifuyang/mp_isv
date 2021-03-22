@@ -12,7 +12,7 @@ type option struct {
 
 func (m *option) AutoMigrate() {
 	cmf.Db().AutoMigrate(&model.Option{})
-	siteResult := cmf.NewDb().First(&model.Option{}, "option_name = ?", "site_info") // 查询
+	siteResult := cmf.Db().First(&model.Option{}, "option_name = ?", "site_info") // 查询
 	if siteResult.Error != nil {
 		//初始化默认json
 		siteInfo := &model.SiteInfo{}

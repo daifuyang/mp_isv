@@ -19,6 +19,13 @@ func (rest *Role) Get(c *gin.Context) {
 	var query []string
 	var queryArgs []interface{}
 
+	mid, exist := c.Get("mid")
+
+	if exist {
+		query = append(query, "mid = ?")
+		queryArgs = append(queryArgs, mid)
+	}
+
 	//  用户状态
 	status := c.Query("status")
 	if status != "" {

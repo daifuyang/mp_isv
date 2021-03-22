@@ -15,7 +15,7 @@ func (u *user) AutoMigrate() {
 	cmf.Db().AutoMigrate(&model.User{})
 	cmf.Db().AutoMigrate(&model.ThirdPart{})
 
-	userResult := cmf.NewDb().First(&model.User{}, "user_login = ?", "admin") // 查询
+	userResult := cmf.Db().First(&model.User{}, "user_login = ?", "admin") // 查询
 	if userResult.RowsAffected == 0 {
 		//新增一条管理员数据
 		cmf.Db().Create(&model.User{UserType: 1, UserLogin: "admin", UserPass: util.GetMd5("123456"), LastLoginAt: time.Now().Unix(), CreateAt: time.Now().Unix()})

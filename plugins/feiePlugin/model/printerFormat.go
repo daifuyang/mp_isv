@@ -86,7 +86,6 @@ func (model *PrinterFormat) Format(t string) string {
 
 	content += "<RIGHT><BOLD>优惠券：-￥" + model.CouponFee + "</BOLD></RIGHT>"
 
-
 	if model.OrderType > 2 && model.BoxFee != "" {
 		content += "<RIGHT>餐盒费：￥" + model.BoxFee + "</RIGHT>"
 	}

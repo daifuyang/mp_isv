@@ -73,8 +73,7 @@ func RegisterOauthRouter(handlers ...gin.HandlerFunc) {
 	manager.MapClientStorage(clientStore)
 	Srv = server.NewServer(server.NewConfig(), manager)
 
-	tokenHandlers := handlers
-	tokenHandlers = append(tokenHandlers, func(c *gin.Context) {
+	cmf.Post("api/oauth/token", func(c *gin.Context) {
 
 		Srv.SetPasswordAuthorizationHandler(func(username, password string) (userID string, err error) {
 
@@ -171,12 +170,9 @@ func RegisterOauthRouter(handlers ...gin.HandlerFunc) {
 		session.Save()
 
 		c.JSON(http.StatusOK, token)
-	})
+	}, handlers...)
 
-	cmf.Post("api/oauth/token", tokenHandlers...)
-
-	refreshHandlers := handlers
-	refreshHandlers = append(refreshHandlers, func(c *gin.Context) {
+	cmf.Post("api/oauth/refresh", func(c *gin.Context) {
 
 		grantType := c.Query("grant_type")
 		if grantType != "refresh_token" {
@@ -202,18 +198,7 @@ func RegisterOauthRouter(handlers ...gin.HandlerFunc) {
 		}
 
 		c.JSON(http.StatusOK, tk)
-	})
-
-	cmf.Post("api/oauth/refresh", refreshHandlers...)
-
-	tokenHandlers = handlers
-	tokenHandlers = append(tokenHandlers, func(c *gin.Context) {
-		fmt.Println("token request")
-		err := Srv.HandleTokenRequest(c.Writer, c.Request)
-		if err != nil {
-			panic(err.Error())
-		}
-	})
+	}, handlers...)
 
 	cmf.Post("/token", func(c *gin.Context) {
 		err := Srv.HandleTokenRequest(c.Writer, c.Request)

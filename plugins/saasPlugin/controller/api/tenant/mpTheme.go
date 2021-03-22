@@ -18,6 +18,7 @@ import (
 	"github.com/gincmf/cmf/controller"
 	"gorm.io/gorm"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -27,6 +28,8 @@ type MpTheme struct {
 
 func (rest *MpTheme) Get(c *gin.Context) {
 	var mpTheme []model.MpTheme
+
+	superRole := model.SuperRole(c)
 
 	current := c.DefaultQuery("current", "1")
 	pageSize := c.DefaultQuery("pageSize", "10")
@@ -44,9 +47,39 @@ func (rest *MpTheme) Get(c *gin.Context) {
 		return
 	}
 
+	var query = []string{"delete_at = ?"}
+	var queryArgs = []interface{}{0}
+
+	// 不是超级管理只能查看授权的目录
+
 	var total int64 = 0
-	cmf.NewDb().First(&mpTheme).Count(&total)
-	result := cmf.NewDb().Where("delete_at = 0").Limit(intPageSize).Offset((intCurrent - 1) * intPageSize).Order("id desc").Find(&mpTheme)
+	var tx *gorm.DB
+	if superRole {
+
+		queryStr := strings.Join(query, " AND ")
+		cmf.NewDb().Where(queryStr, queryArgs...).First(&mpTheme).Count(&total)
+		tx = cmf.NewDb().Where(queryStr, queryArgs...).Limit(intPageSize).Offset((intCurrent - 1) * intPageSize).Order("id desc").Find(&mpTheme)
+
+	} else {
+
+		userId, _ := c.Get("user_id")
+		query = append(query, "admin_user_id = ?")
+		queryArgs = append(queryArgs, userId)
+
+		queryStr := strings.Join(query, " AND ")
+		prefix := cmf.Conf().Database.Prefix
+		cmf.NewDb().Table(prefix+"mp_theme theme").
+			Joins("INNER JOIN "+prefix+"theme_admin_user_post p ON p.mid = theme.mid").
+			Where(queryStr, queryArgs...).
+			First(&mpTheme).Count(&total)
+
+		tx = cmf.NewDb().Debug().Table(prefix+"mp_theme as theme").
+			Joins("INNER JOIN "+prefix+"mp_theme_admin_user_post p ON p.mid = theme.mid").
+			Where(queryStr, queryArgs...).
+			Limit(intPageSize).Offset((intCurrent - 1) * intPageSize).
+			Order("theme.id desc").Find(&mpTheme)
+
+	}
 
 	type tempStruct struct {
 		model.MpTheme
@@ -90,8 +123,8 @@ func (rest *MpTheme) Get(c *gin.Context) {
 
 	}
 
-	if result.Error != nil {
-		rest.rc.Error(c, result.Error.Error(), nil)
+	if tx.Error != nil {
+		rest.rc.Error(c, tx.Error.Error(), nil)
 		return
 	}
 
@@ -125,7 +158,7 @@ func (rest *MpTheme) ShowByMid(c *gin.Context) {
 	mid, _ := c.Get("mid")
 
 	mp := model.MpTheme{}
-	cmf.NewDb().Debug().Where("mid = ?", mid).First(&mp)
+	cmf.NewDb().Where("mid = ?", mid).First(&mp)
 
 	rest.rc.Success(c, "获取成功！", mp)
 
@@ -192,8 +225,8 @@ func (rest *MpTheme) Store(c *gin.Context) {
 
 	themeIdStr := c.PostForm("theme_id")
 	themeId, _ := strconv.Atoi(themeIdStr)
-	tenantIdStr, _ := c.Get("user_id")
-	tenantId, _ := strconv.Atoi(tenantIdStr.(string))
+	ItenantId, _ := c.Get("tenant_id")
+	tenantId, _ := strconv.Atoi(ItenantId.(string))
 
 	// 判断当前用户开通的门户数
 	var count int64 = 0
@@ -270,6 +303,9 @@ func (rest *MpTheme) Store(c *gin.Context) {
 		return
 	}
 
+	// 初始化角色
+	new(saasModel.Role).Init(mid)
+
 	rest.rc.Success(c, "创建成功！", mpTheme)
 }
 
@@ -332,7 +368,11 @@ func (rest *MpTheme) UnOauth(c *gin.Context) {
 		return
 	}
 
-	tenant := model.CurrentTenant(c)
+	tenant, err := model.CurrentTenant(c)
+	if err != nil {
+		rest.rc.Error(c, "该租户不存在！", nil)
+		return
+	}
 
 	oauth := appModel.MpIsvAuth{}
 

@@ -26,22 +26,21 @@ func StartMigrate() {
 	new(option).AutoMigrate()
 	new(mpIsvAuth).AutoMigrate()
 	new(tenant).AutoMigrate()
-	//new(AdminMenu).AutoMigrate()
+	new(AdminMenu).AutoMigrate()
 	new(Region).AutoMigrate()
 	new(shopCategory).AutoMigrate()
 	new(model.MiniCategory).AutoMigrate()
+	new(model.Qrcode).AutoMigrate()
 
-	StartTenantMigrate()
-}
-
-// 租户表迁移
-func StartTenantMigrate() {
 	new(role).AutoMigrate()
 	new(authAccess).AutoMigrate()
 	new(authRule).AutoMigrate()
-	new(model.PayLog).AutoMigrate()
+	new(PayLog).AutoMigrate()
 	new(model.AdminNotice).AutoMigrate()
 	new(model.ScoreLog).AutoMigrate()
 	new(model.ExpLog).AutoMigrate()
 	new(model.RechargeLog).AutoMigrate()
+
+	model.AutoAdminMenu()
+
 }

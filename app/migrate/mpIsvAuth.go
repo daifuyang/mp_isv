@@ -15,7 +15,7 @@ type mpIsvAuth struct {
 }
 
 func (_ *mpIsvAuth) AutoMigrate() {
-	cmf.NewDb().AutoMigrate(&model.MpIsvAuth{})
+	cmf.Db().AutoMigrate(&model.MpIsvAuth{})
 
 	// 检查索引
 	b := cmf.NewDb().Migrator().HasIndex(&model.MpIsvAuth{}, "idx_id")

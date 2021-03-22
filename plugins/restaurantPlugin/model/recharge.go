@@ -35,7 +35,7 @@ type RechargeOrder struct {
 	FinishedAt   int64             `gorm:"type:int(11)" json:"finished_at"`
 	CreateTime   string            `gorm:"-" json:"create_time"`
 	FinishedTime string            `gorm:"-" json:"finished_time"`
-	OrderStatus  string            `gorm:"type:varchar(20);comment:订单状态（WAIT_BUYER_PAY => 待支付，TRADE_SUCCESS => 待使用，TRADE_FINISHED=> 已完成，TRADE_CLOSED => 已关闭，TRADE_REFUND=>已退款）;default:WAIT_BUYER_PAY;not null" json:"order_status"`
+	OrderStatus  string            `gorm:"type:varchar(20);comment:订单状态（WAIT_BUYER_PAY => 待支付，TRADE_FINISHED=> 已完成，TRADE_CLOSED => 已关闭，TRADE_REFUND=>已退款）;default:WAIT_BUYER_PAY;not null" json:"order_status"`
 	paginate     cmfModel.Paginate `gorm:"-"`
 }
 

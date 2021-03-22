@@ -113,7 +113,7 @@ func (app TestAppId) List() (appId []TestAppId) {
 	appId = []TestAppId{
 		{
 			Name:  "码上点模板",
-			AppId: "2021001192675085",
+			AppId: "", //2021001192675085
 		},
 	}
 	return

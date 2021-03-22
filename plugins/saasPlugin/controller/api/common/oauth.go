@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"gincmf/app/controller/api/common"
 	"gincmf/app/model"
+	saasModel "gincmf/plugins/saasPlugin/model"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
@@ -24,8 +25,10 @@ import (
 	"gopkg.in/oauth2.v3/models"
 	"gopkg.in/oauth2.v3/server"
 	"gopkg.in/oauth2.v3/store"
+	"gorm.io/gorm"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -72,40 +75,72 @@ func RegisterTenantRouter(handlers ...gin.HandlerFunc) {
 	manager.MapClientStorage(clientStore)
 	common.Srv = server.NewServer(server.NewConfig(), manager)
 
-	tokenHandlers := handlers
-	tokenHandlers = append(tokenHandlers, func(c *gin.Context) {
+	cmf.Post("api/tenant/token", func(c *gin.Context) {
 
 		common.Srv.SetPasswordAuthorizationHandler(func(username, password string) (userID string, err error) {
 
-			type Tenant struct {
-				Id        int    `json:"id"`
-				TenantId  string `gorm:"type:varchar(32);not null" json:"tenant_id"`
-				UserLogin string `gorm:"type:varchar(60);not null" json:"user_login"`
-				Mobile    string `gorm:"type:varchar(20);not null" json:"mobile"`
-				UserPass  string `gorm:"type:varchar(64);not null" json:"user_pass"`
-				Avatar    string `json:"avatar"`
-				CreateAt  int64  `gorm:"type:bigint(20)" json:"create_at"`
-				UpdateAt  int64  `gorm:"type:bigint(20)" json:"update_at"`
+			nameArr := strings.Split(username, "@")
+
+			var (
+				tx       *gorm.DB
+				userPass string
+				tenantId int    = 0
+				typ      string = ""
+				userId   int    = 0
+			)
+
+			if len(nameArr) == 1 {
+				typ = "main"
+				t := saasModel.Tenant{}
+				tx = cmf.Db().Debug().First(&t, "user_login = ?", username) // 查询
+				if tx.RowsAffected > 0 {
+					userId = 1
+					tenantId = t.TenantId
+					userPass = t.UserPass
+				}
 			}
 
-			t := Tenant{}
+			if len(nameArr) == 2 {
+				typ = "ram"
+				// 查询用户所属租户
+				t := saasModel.Tenant{}
+				tx = cmf.Db().First(&t, "alias_name = ?", nameArr[1]) // 查询
+				if tx.Error != nil {
+					if !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
+						return "", errors.New("该租户不存在！")
+					}
+					return "", tx.Error
+				}
 
-			userResult := cmf.Db().First(&t, "user_login = ?", username) // 查询
-			if userResult.RowsAffected > 0 {
+				tenantId = t.TenantId
+				cmf.ManualDb("tenant_" + strconv.Itoa(tenantId))
+
+				u := saasModel.AdminUser{}
+				tx = cmf.NewDb().Debug().First(&u, "user_login = ? AND user_status = 1 AND delete_at = 0", nameArr[0]) // 查询
+				if tx.RowsAffected > 0 {
+					userId = u.Id
+					userPass = u.UserPass
+				}
+			}
+			if tx.RowsAffected > 0 {
+
+				fmt.Println(util.GetMd5(password), userPass)
 				//验证密码
-				if util.GetMd5(password) == t.UserPass {
+				if util.GetMd5(password) == userPass {
 
 					// 清除用户缓存
 					session := sessions.Default(c)
 					session.Delete("tenant")
+					session.Delete("user")
 					session.Save()
 
-					userID = strconv.Itoa(t.Id)
-
+					userID = strconv.Itoa(userId)
+					userID = userID + "@" + typ + "@" + strconv.Itoa(tenantId)
 					return userID, nil
 				}
 				return "", errors.New("账号密码不正确！")
 			}
+
 			return "", errors.New("当前用户不存在！")
 		})
 
@@ -167,12 +202,9 @@ func RegisterTenantRouter(handlers ...gin.HandlerFunc) {
 		}
 
 		c.JSON(http.StatusOK, token)
-	})
+	}, handlers...)
 
-	cmf.Post("api/tenant/token", tokenHandlers...)
-
-	refreshHandlers := handlers
-	refreshHandlers = append(refreshHandlers, func(c *gin.Context) {
+	cmf.Post("api/tenant/refresh", func(c *gin.Context) {
 
 		grantType := c.Query("grant_type")
 		if grantType != "refresh_token" {
@@ -199,8 +231,7 @@ func RegisterTenantRouter(handlers ...gin.HandlerFunc) {
 
 		c.JSON(http.StatusOK, tk)
 
-	})
-	cmf.Post("api/tenant/refresh", refreshHandlers...)
+	}, handlers...)
 
 	cmf.Post("/tenant/token", func(c *gin.Context) {
 		err := common.Srv.HandleTokenRequest(c.Writer, c.Request)

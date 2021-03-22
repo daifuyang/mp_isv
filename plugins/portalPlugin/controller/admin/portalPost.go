@@ -139,13 +139,10 @@ func (rest *PortalPost) Show(c *gin.Context) {
 
 	pQuery := []string{"p.id = ? AND p.delete_at = ?"}
 	pQueryArgs := []interface{}{rewrite.Id, 0}
-	pc := model.PortalCategory{
-
-	}
+	pc := model.PortalCategory{}
 	category, err := pc.ListWithPost(pQuery, pQueryArgs)
 
 	result.Category = category
-
 	rest.rc.Success(c, "获取成功！", result)
 
 }

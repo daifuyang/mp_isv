@@ -561,32 +561,6 @@ func (model Store) AppShow(query []string, queryArgs []interface{}) (Store, erro
 	return store, nil
 }
 
-// 是否超距离
-func (model Store) OutRangeStatus() (bool, error) {
-
-	var query = []string{"id = ? AND mid = ? AND delete_at = ?"}
-	var queryArgs = []interface{}{model.Id, model.Mid, 0}
-
-	store, err := model.Show(query, queryArgs)
-	if err != nil {
-		return false, err
-	}
-
-	// 获取当前堂食配置
-	takeJson := saasModel.Options("take_out", store.Mid)
-
-	var takeOut TakeOut
-
-	_ = json.Unmarshal([]byte(takeJson), &takeOut)
-
-	store.DeliveryDistance = takeOut.DeliveryDistance
-
-	if store.Distance > store.DeliveryDistance {
-		return true, nil
-	}
-	return false, nil
-}
-
 /**
  * @Author return <1140444693@qq.com>
  * @Description 新增单个门店

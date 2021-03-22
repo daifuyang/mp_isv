@@ -8,7 +8,6 @@ import (
 	cmf "github.com/gincmf/cmf/bootstrap"
 	cmfModel "github.com/gincmf/cmf/model"
 	"gorm.io/gorm"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -171,10 +170,10 @@ func (model *User) CurrentUser(c *gin.Context) User {
 	session := sessions.Default(c)
 	user := session.Get("user")
 	userId, _ := c.Get("user_id")
-	userIdInt, _ := strconv.Atoi(userId.(string))
+	userIdInt, _ := userId.(int)
 
 	if user == nil {
-		cmf.Db().First(&u, "id = ?", userId)
+		cmf.NewDb().First(&u, "id = ? AND user_type = 1 AND user_status = 1 AND  delete_at = 0", userId)
 		jsonBytes, _ := json.Marshal(u)
 		session.Set("user", string(jsonBytes))
 		session.Save()
@@ -183,7 +182,7 @@ func (model *User) CurrentUser(c *gin.Context) User {
 		json.Unmarshal([]byte(jsonBytes), &u)
 		if u.Id == 0 || u.Id != userIdInt {
 			u = User{}
-			cmf.Db().Where("id = ?", userId).First(&u)
+			cmf.NewDb().First(&u, "id = ? AND user_type = 1 AND user_status = 1 AND  delete_at = 0", userId)
 			jsonBytes, _ := json.Marshal(u)
 			session.Set("user", string(jsonBytes))
 			session.Save()

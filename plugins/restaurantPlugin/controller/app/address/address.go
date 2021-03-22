@@ -35,6 +35,7 @@ type Address struct {
 func (rest *Address) Get(c *gin.Context) {
 
 	mid, _ := c.Get("mid")
+	userId, _ := c.Get("mp_user_id")
 
 	storeNumber := c.Query("store_number")
 
@@ -52,14 +53,14 @@ func (rest *Address) Get(c *gin.Context) {
 	}
 
 	var address []model.Address
-	result := cmf.NewDb().Debug().Where("mid = ?", mid).Order("`default` desc").Find(&address)
+	result := cmf.NewDb().Where("mid = ? AND user_id = ?", mid, userId).Order("`default` desc").Find(&address)
 
 	if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, result.Error.Error(), nil)
 		return
 	}
 
-	// 获取当前堂食配置
+	// 获取当前外卖配置
 	takeJson := saasModel.Options("takeout", store.Mid)
 	var takeOut model.TakeOut
 	_ = json.Unmarshal([]byte(takeJson), &takeOut)
@@ -139,12 +140,14 @@ func (rest *Address) Show(c *gin.Context) {
 		_ = json.Unmarshal([]byte(takeJson), &takeOut)
 	}
 
+	userId, _ := c.Get("mp_user_id")
+
 	address := model.Address{}
 	var result *gorm.DB
 	if rewrite.Id == "default" {
-		result = cmf.NewDb().Where("`default` = ? AND mid = ?", 1, mid).First(&address)
+		result = cmf.NewDb().Where("`default` = ? AND mid = ? AND user_id = ?", 1, mid, userId).First(&address)
 	} else {
-		result = cmf.NewDb().Where("id = ? AND mid = ?", rewrite.Id, mid).First(&address)
+		result = cmf.NewDb().Where("id = ? AND mid = ? AND user_id = ?", rewrite.Id, mid, userId).First(&address)
 	}
 
 	if result.Error != nil {
@@ -193,6 +196,7 @@ func (rest *Address) Show(c *gin.Context) {
 func (rest *Address) Store(c *gin.Context) {
 
 	mid, _ := c.Get("mid")
+	userId, _ := c.Get("mp_user_id")
 
 	name := c.PostForm("name")
 	if name == "" {
@@ -272,6 +276,7 @@ func (rest *Address) Store(c *gin.Context) {
 
 	address := model.Address{
 		Mid:       mid.(int),
+		UserId:    userId.(int),
 		Name:      name,
 		Gender:    genderInt,
 		Mobile:    mobileInt,
@@ -284,7 +289,7 @@ func (rest *Address) Store(c *gin.Context) {
 
 	if dInt == 1 {
 		// 取消默认
-		cmf.NewDb().Debug().Model(&model.Address{}).Where("`default`= ?", 1).Update("default", 0)
+		cmf.NewDb().Model(&model.Address{}).Where("`default`= ? AND  user_id = ?", 1, userId).Update("default", 0)
 	}
 
 	result := cmf.NewDb().Create(&address)
@@ -317,6 +322,7 @@ func (rest *Address) Edit(c *gin.Context) {
 	}
 
 	mid, _ := c.Get("mid")
+	userId, _ := c.Get("mp_user_id")
 
 	name := c.PostForm("name")
 	if name == "" {
@@ -395,7 +401,7 @@ func (rest *Address) Edit(c *gin.Context) {
 		dInt = 1
 	}
 	oAddr := model.Address{}
-	res := cmf.NewDb().Where("id = ?", rewrite.Id).First(&oAddr)
+	res := cmf.NewDb().Where("id = ? AND user_id = ?", rewrite.Id, userId).First(&oAddr)
 	if res.Error != nil {
 		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
 			rest.rc.Error(c, "该地址不存在！", nil)
@@ -408,6 +414,7 @@ func (rest *Address) Edit(c *gin.Context) {
 	address := model.Address{
 		Mid:       mid.(int),
 		Id:        oAddr.Id,
+		UserId:    userId.(int),
 		Name:      name,
 		Gender:    genderInt,
 		Mobile:    mobileInt,
@@ -453,13 +460,25 @@ func (rest *Address) Delete(c *gin.Context) {
 	}
 
 	mid, _ := c.Get("mid")
+	userId, _ := c.Get("mp_user_id")
 
 	address := model.Address{}
+	tx := cmf.NewDb().Where("id = ? AND mid = ? AND user_id = ?", rewrite.Id, mid, userId).First(&address)
+	if tx.Error != nil {
 
-	result := cmf.NewDb().Where("id = ? AND mid = ?", rewrite.Id, mid).Delete(&address)
+		if errors.Is(tx.Error, gorm.ErrRecordNotFound) {
+			rest.rc.Error(c, "地址不存在！", nil)
+			return
+		}
 
-	if result.Error != nil {
-		rest.rc.Error(c, result.Error.Error(), nil)
+		rest.rc.Error(c, tx.Error.Error(), nil)
+		return
+	}
+
+	tx = cmf.NewDb().Where("id = ? AND mid = ? AND user_id = ?", rewrite.Id, mid, userId).Delete(&address)
+
+	if tx.Error != nil {
+		rest.rc.Error(c, tx.Error.Error(), nil)
 		return
 	}
 

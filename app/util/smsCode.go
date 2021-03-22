@@ -8,7 +8,9 @@ package util
 import (
 	"errors"
 	"fmt"
+	"github.com/aliyun/alibaba-cloud-sdk-go/services/dysmsapi"
 	"math/rand"
+	"strconv"
 	"time"
 )
 
@@ -33,19 +35,19 @@ func SmsCode(mobile int) (*smsCode, error) {
 		return nil, errors.New("获取验证码过于频繁！请先验证上一次验证码！")
 	}
 
-	//client, err := dysmsapi.NewClientWithAccessKey("cn-hangzhou", "LTAIdhy1wQAGInuq", "rgr8uUn0ycorRAm79aBvK2B31pZBBd")
-	//request := dysmsapi.CreateSendSmsRequest()
-	//phone := strconv.Itoa(mobile)
-	//request.PhoneNumbers = phone
-	//request.Scheme = "https"
-	//request.SignName = "码上云"
-	//request.TemplateCode = "SMS_203678233"
-	//request.TemplateParam = `{"code":"`+smsCode+`"}`
-	//response, err := client.SendSms(request)
-	//if err != nil {
-	//	return nil,errors.New(err.Error())
-	//}
-	//fmt.Println("response",response)
+	client, err := dysmsapi.NewClientWithAccessKey("cn-hangzhou", "LTAIdhy1wQAGInuq", "rgr8uUn0ycorRAm79aBvK2B31pZBBd")
+	request := dysmsapi.CreateSendSmsRequest()
+	phone := strconv.Itoa(mobile)
+	request.PhoneNumbers = phone
+	request.Scheme = "https"
+	request.SignName = "码上云"
+	request.TemplateCode = "SMS_203678233"
+	request.TemplateParam = `{"code":"` + code + `"}`
+	response, err := client.SendSms(request)
+	if err != nil {
+		return nil, errors.New(err.Error())
+	}
+	fmt.Println("response", response)
 
 	SmsCodeArr[mobile] = &smsCode{
 		Phone:  mobile,

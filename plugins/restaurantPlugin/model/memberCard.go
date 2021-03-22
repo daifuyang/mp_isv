@@ -19,7 +19,7 @@ import (
 type MemberCard struct {
 	Id        int    `json:"id"`
 	Mid       int    `gorm:"type:bigint(20);comment:对应小程序id;not null" json:"mid"`
-	UserId    int    `gorm:"type:int(11);not null" json:"user_id"`
+	UserId    int    `gorm:"type:bigint(20);not null" json:"user_id"`
 	VipNum    string `gorm:"type:varchar(32);comment:会员号;not null" json:"vip_num"`
 	VipLevel  string `gorm:"type:varchar(10);comment:会员等级;not null" json:"vip_level"`
 	VipName   string `gorm:"type:varchar(40);comment:会员名称;not null" json:"vip_name"`
@@ -33,7 +33,6 @@ type MemberCard struct {
 	Status    int    `gorm:"type:tinyint(3);default:1;not null" json:"status"`
 }
 
-// 开卡订单
 type MemberCardOrder struct {
 	Id           int     `json:"id"`
 	Mid          int     `gorm:"type:bigint(20);comment:对应小程序id;not null" json:"mid"`
@@ -42,11 +41,6 @@ type MemberCardOrder struct {
 	TradeNo      string  `gorm:"type:varchar(60);comment:支付宝订单号;not null" json:"trade_no"`
 	VipName      string  `gorm:"type:varchar(40);comment:会员名称;not null" json:"vip_name"`
 	VipLevel     string  `gorm:"type:varchar(10);comment:会员等级;not null" json:"vip_level"`
-	UserId       int     `gorm:"->" json:"user_id"`
-	Avatar       string  `gorm:"->" json:"avatar"`
-	UserLogin    string  `gorm:"->" json:"user_login"`
-	UserNickname string  `gorm:"->" json:"user_nickname"`
-	UserRealName string  `gorm:"->" json:"user_realname"`
 	PayType      string  `gorm:"type:varchar(10);comment:第三方支付类型;not null" json:"pay_type"`
 	Fee          float64 `gorm:"type:decimal(7,2);comment:合计金额;default:0;not null" json:"fee"`
 	CreateAt     int64   `gorm:"type:bigint(20)" json:"create_at"`
@@ -54,17 +48,11 @@ type MemberCardOrder struct {
 	CreateTime   string  `gorm:"-" json:"create_time"`
 	FinishedTime string  `gorm:"-" json:"finished_time"`
 	OrderStatus  string  `gorm:"type:varchar(20);comment:订单状态（WAIT_BUYER_PAY => 待支付，TRADE_SUCCESS => 待使用，TRADE_FINISHED=> 已完成，TRADE_CLOSED => 已关闭，TRADE_REFUND=>已退款）;default:WAIT_BUYER_PAY;not null" json:"order_status"`
-	paginate     cmfModel.Paginate
-}
-
-func (model *MemberCard) AutoMigrate() {
-	cmf.NewDb().AutoMigrate(&model)
-	cmf.NewDb().AutoMigrate(&MemberCardOrder{})
-
-	prefix := cmf.Conf().Database.Prefix
-
-	cmf.NewDb().Exec("drop event if exists memberStatus")
-	cmf.NewDb().Exec("CREATE EVENT memberStatus ON SCHEDULE EVERY 1 SECOND DO UPDATE " + prefix + "member_card SET status = -1 WHERE end_at < UNIX_TIMESTAMP(NOW())")
+	UserId       int     `gorm:"type:bigint(20);not null" json:"user_id"`
+	Avatar       string  `gorm:"->" json:"avatar"`
+	UserLogin    string  `gorm:"->" json:"user_login"`
+	UserNickname string  `gorm:"->" json:"user_nickname"`
+	UserRealName string  `gorm:"->" json:"user_realname"`
 }
 
 func (model *MemberCard) Show(query []string, queryArgs []interface{}) (MemberCard, error) {
@@ -91,7 +79,7 @@ func (model *MemberCard) Show(query []string, queryArgs []interface{}) (MemberCa
 func (model *MemberCardOrder) Index(c *gin.Context, query []string, queryArgs []interface{}) (cmfModel.Paginate, error) {
 
 	// 获取默认的系统分页
-	current, pageSize, err := model.paginate.Default(c)
+	current, pageSize, err := new(cmfModel.Paginate).Default(c)
 
 	if err != nil {
 		return cmfModel.Paginate{}, err

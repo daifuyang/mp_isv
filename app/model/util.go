@@ -7,7 +7,6 @@ package model
 
 import (
 	"encoding/json"
-	"gincmf/app/util"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	cmf "github.com/gincmf/cmf/bootstrap"
@@ -72,7 +71,7 @@ func GetAuthAccess(c *gin.Context) []AuthAccessRule {
 
 		user := CurrentUser(c)
 		// 获取当前用户全部的权限列表
-		role := util.GetRoleById(user.Id)
+		role := GetRoleById(user.Id)
 		var roleIds []string
 		for _, v := range role {
 			roleIds = append(roleIds, strconv.Itoa(v.Id))
@@ -105,12 +104,62 @@ func GetAuthAccess(c *gin.Context) []AuthAccessRule {
 
 }
 
+type role struct {
+	Id   int    `json:"id"`
+	Name string `json:"name"`
+}
+
+// 获取当前用户角色
+func CurrentRole(c *gin.Context) []role {
+	userId, _ := c.Get("user_id")
+	userIdInt, _ := userId.(int)
+	return GetRoleById(userIdInt)
+}
+
+// 根据用户id获取所有角色
+func GetRoleById(userId int) []role {
+	var result []role
+	prefix := cmf.Conf().Database.Prefix
+	cmf.NewDb().Table(prefix+"role_user ru").Select("r.id,r.name").
+		Joins("INNER JOIN "+prefix+"role r ON ru.role_id = r.id").
+		Where("user_id = ?", userId).
+		Scan(&result)
+	return result
+}
+
+// 是否超级管理员
+func SuperRole(c *gin.Context, t int) bool {
+	type resultStruct struct {
+		Id   int    `json:"id"`
+		name string `json:"name"`
+	}
+	var result []resultStruct
+	userId, _ := c.Get("user_id")
+
+	if userId == "1" {
+		return true
+	}
+
+	prefix := cmf.Conf().Database.Prefix
+	cmf.NewDb().Table(prefix+"role_user ru").Select("r.id,r.name").
+		Joins("INNER JOIN "+prefix+"role r ON ru.role_id = r.id").
+		Where("ru.user_id = ?", userId).
+		Scan(&result)
+
+	for _, v := range result {
+		if v.Id == t {
+			return true
+		}
+	}
+	return false
+}
+
 func CurrentUser(c *gin.Context) User {
 	u := User{}
 	session := sessions.Default(c)
 	user := session.Get("user")
 	userId, _ := c.Get("user_id")
-	userIdInt, _ := strconv.Atoi(userId.(string))
+	userIdInt, _ := userId.(int)
 
 	if user == nil {
 		cmf.Db().First(&u, "id = ?", userId)

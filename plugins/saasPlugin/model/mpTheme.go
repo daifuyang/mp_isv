@@ -14,7 +14,7 @@ import (
 
 type MpTheme struct {
 	Id                 int     `json:"id"`
-	Mid                int     `gorm:"type:int(11);comment:小程序加密编号;not null" json:"mid"`
+	Mid                int     `gorm:"type:bigint(20);comment:小程序加密编号;not null" json:"mid"`
 	Category           int     `gorm:"type:tinyint(3);comment:小程序类型分类;not null;default:0" json:"category"`
 	Name               string  `gorm:"type:varchar(20);comment:小程序主题名称;not null" json:"name"`
 	Thumbnail          string  `gorm:"type:varchar(255);comment:小程序缩略图;not null" json:"thumbnail"`
@@ -32,6 +32,14 @@ type MpTheme struct {
 	UpdateTime         string  `gorm:"-" json:"update_time"`
 	ListOrder          float64 `gorm:"type:float;comment:排序;default:10000" json:"list_order"`
 	DeleteAt           int64   `gorm:"type:bigint(20);comment:删除时间;default:0" json:"delete_at"`
+}
+
+// 小程序和用户的关系关联表
+type MpThemeAdminUserPost struct {
+	Id          int `json:"id"`
+	AdminUserId int `gorm:"type:bigint(20);comment:管理员用户Id;not null" json:"admin_user_id"`
+	Mid         int `gorm:"type:bigint(20);comment:小程序加密编号;not null" json:"mid"`
+	Status      int `gorm:"type:tinyint(3);comment:状态;default:1" json:"status"`
 }
 
 type MpThemeVersion struct {

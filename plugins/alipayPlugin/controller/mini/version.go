@@ -14,6 +14,8 @@ import (
 	"gincmf/plugins/restaurantPlugin/model"
 	saasModel "gincmf/plugins/saasPlugin/model"
 	"github.com/gin-gonic/gin"
+	"github.com/gincmf/alipayEasySdk/data"
+	"github.com/gincmf/alipayEasySdk/merchant"
 	"github.com/gincmf/alipayEasySdk/mini"
 	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
@@ -249,6 +251,26 @@ func (rest *Version) ExperienceQuery(c *gin.Context) {
 		return
 	}
 
+	// 如果是正式版
+	if version.Status == "online" {
+
+		bizContent := make(map[string]interface{}, 0)
+		bizContent["describe"] = "扫码点单"
+		bizContent["url_param"] = "pages/index/index"
+		bizContent["query_param"] = "x=1"
+
+		result := new(merchant.Qrcode).Create(bizContent)
+		if result.Response.Code != "10000" {
+			rest.rc.Error(c, "获取失败！"+result.Response.SubMsg, result)
+			return
+		}
+
+		rest.rc.Success(c, "获取成功！", gin.H{
+			"exp_qr_code_url": result.Response.QrCodeUrl,
+		})
+		return
+	}
+
 	appVersion := version.Version
 
 	bizContent := make(map[string]interface{}, 0)
@@ -256,27 +278,31 @@ func (rest *Version) ExperienceQuery(c *gin.Context) {
 	result := new(mini.Version).ExperienceQuery(bizContent)
 
 	if result.Response.Code == "10000" {
-
 		if result.Response.ExpQrCodeUrl == "" {
-			bizContent := make(map[string]interface{}, 0)
-			bizContent["app_version"] = appVersion
-			result := new(mini.Version).ExperienceCreate(bizContent)
-
-			if result.Response.Code == "10000" {
-				fmt.Println(result.Response)
-				rest.ExperienceQuery(c)
-			} else {
-				rest.rc.Error(c, result.Response.SubMsg, result.Response)
+			response, err := rest.experienceCreate(appVersion)
+			if err != nil {
+				rest.rc.Error(c, err.Error(), response)
 				return
 			}
+			rest.ExperienceQuery(c)
 		}
-
 		rest.rc.Success(c, result.Response.Msg, result.Response)
-
 	} else {
 		rest.rc.Error(c, result.Response.SubMsg, result.Response)
 	}
 
+}
+
+func (rest *Version) experienceCreate(appVersion string) (data.AlipayResponse, error) {
+	bizContent := make(map[string]interface{}, 0)
+	bizContent["app_version"] = appVersion
+	result := new(mini.Version).ExperienceCreate(bizContent)
+
+	if result.Response.Code != "10000" {
+		return result.Response, errors.New(result.Response.SubMsg)
+	}
+
+	return data.AlipayResponse{}, nil
 }
 
 /**
