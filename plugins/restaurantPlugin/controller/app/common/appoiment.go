@@ -22,7 +22,7 @@ import (
 )
 
 type Appointment struct {
-	rc controller.RestController
+	rc controller.Rest
 }
 
 type TimeMap struct {
@@ -79,6 +79,8 @@ func (rest *Appointment) Show(c *gin.Context) {
 
 	t := time.Now()
 	wd := int(t.Weekday())
+
+	fmt.Println("wd",wd)
 
 	var (
 		startHours string
@@ -147,7 +149,8 @@ func (rest *Appointment) Show(c *gin.Context) {
 		if h == (endH-1) && min < 30 {
 			currentDay = false
 		}
-		fmt.Println("currentDay", currentDay)
+
+		fmt.Println("day",day)
 
 		for i := 0; i < day; i++ {
 			year, month, day := time.Now().Date()
@@ -158,7 +161,7 @@ func (rest *Appointment) Show(c *gin.Context) {
 			monthTotal := util.MonthCount(year, monthInt)
 			// 如果大于最后一天
 			if temDay > monthTotal {
-				temStr = "00"
+				temStr = "01"
 				monthInt += 1
 			}
 			monthStr := fmt.Sprintf("%02d", monthInt)
@@ -189,11 +192,11 @@ func (rest *Appointment) Show(c *gin.Context) {
 			// 获取小时（今天）
 			var hour = make([]TimeMap, 0)
 			if i == 0 {
-				hour = rest.getHours(h, endH)
+				hour = rest.getHours(true,h, endH)
 			} else {
 				timeSplit := strings.Split(startHours, ":")
 				h, _ := strconv.Atoi(timeSplit[0])
-				hour = rest.getHours(h, endH)
+				hour = rest.getHours(false,h, endH)
 			}
 
 			dayItem.Children = &hour
@@ -207,7 +210,7 @@ func (rest *Appointment) Show(c *gin.Context) {
 
 }
 
-func (rest *Appointment) getHours(start int, end int) []TimeMap {
+func (rest *Appointment) getHours(current bool,start int, end int) []TimeMap {
 	var hour = make([]TimeMap, 0)
 	hLen := end - start
 
@@ -220,10 +223,14 @@ func (rest *Appointment) getHours(start int, end int) []TimeMap {
 
 			minStart := 0
 
+			if i == 0 {
+				minStart = 10
+			}
+
 			min := time.Now().Minute()
 
 			startRange := 20
-			if i == 0 {
+			if current && i == 0 {
 
 				minStart = min + startRange
 				hour := time.Now().Hour()
@@ -238,7 +245,7 @@ func (rest *Appointment) getHours(start int, end int) []TimeMap {
 				}
 			}
 
-			if i == 1 {
+			if current && i == 1 {
 				if min > 50 {
 					minStart = startRange
 				}

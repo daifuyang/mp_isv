@@ -19,7 +19,7 @@ import (
 
 // 打印机
 type Printer struct {
-	rc controller.RestController
+	rc controller.Rest
 }
 
 // @Summary 入口文件

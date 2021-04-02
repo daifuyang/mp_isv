@@ -17,7 +17,7 @@ import (
 )
 
 type Cashier struct {
-	rc controller.RestController
+	rc controller.Rest
 }
 
 type batchQueryResponse struct {

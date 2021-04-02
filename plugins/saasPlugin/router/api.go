@@ -26,7 +26,7 @@ func ApiListenRouter() {
 	cmf.Post("api/tenant/edit/:id", new(tenant.User).Edit)
 
 	// 租户通用管理
-	tenantGroup := cmf.Group("api/tenant", middleware.ValidationBearerToken, middleware.TenantDb, middleware.ValidationAdmin, middleware.ApiBaseController,middleware.Rbac)
+	tenantGroup := cmf.Group("api/tenant", middleware.ValidationBearerToken, middleware.TenantDb, middleware.ValidationAdmin, middleware.ApiBaseController, middleware.Rbac)
 	{
 		tenantGroup.Get("/admin_menu", new(tenant.Menu).Get, middleware.ValidationMerchant)
 
@@ -58,30 +58,30 @@ func ApiListenRouter() {
 		tenantGroup.Rest("/mp/page", new(tenant.MpThemePage))
 		// 资源管理
 
-		// 插看全部通知
-		tenantGroup.Get("/notice", new(tenant.Notice).Get)
+		// 查看全部通知
+		tenantGroup.Get("/notice", new(tenant.Notice).Get, middleware.ValidationMerchant)
 
 		// 标记通知已读
-		tenantGroup.Get("/notice/:id", new(tenant.Notice).Show)
+		tenantGroup.Get("/notice/:id", new(tenant.Notice).Show, middleware.ValidationMerchant)
 
-		tenantGroup.Get("/notice_read_all", new(tenant.Notice).ReadAll)
+		tenantGroup.Get("/notice_read_all", new(tenant.Notice).ReadAll, middleware.ValidationMerchant)
 
-		// 同步数据库
-		tenantGroup.Get("/sync", func(c *gin.Context) {
-
-			mid, _ := c.Get("mid")
-			saasMigrate.AutoMigrate()
-
-			new(saasModel.Role).Init(mid.(int))
-
-			// 地址
-			c.JSON(200, model.ReturnData{
-				Code: 1,
-				Data: nil,
-				Msg:  "同步成功！",
-			})
-		}, middleware.ValidationMerchant)
 	}
+
+	// 同步数据库
+	cmf.Get("api/tenant/sync", func(c *gin.Context) {
+
+		mid, _ := c.Get("mid")
+		saasMigrate.AutoMigrate()
+		new(saasModel.Role).Init(mid.(int))
+
+		// 地址
+		c.JSON(200, model.ReturnData{
+			Code: 1,
+			Data: nil,
+			Msg:  "升级成功！",
+		})
+	}, middleware.ValidationMerchant, middleware.ValidationMerchant)
 
 	// 注册租户信息
 	common.RegisterTenantRouter()

@@ -8,24 +8,29 @@ package tenant
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"gincmf/app/cmfWebsocket"
-	appModel "gincmf/app/model"
 	saasModel "gincmf/plugins/saasPlugin/model"
 	"github.com/gin-gonic/gin"
 	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
+	cmfLog "github.com/gincmf/cmf/log"
 	"gorm.io/gorm"
 	"strconv"
 	"time"
 )
 
 type Notice struct {
-	rc controller.RestController
+	rc controller.Rest
 }
 
 func (rest *Notice) Get(c *gin.Context) {
 
-	noticeData, err := new(saasModel.Notice).Index(c)
+	mid, _ := c.Get("mid")
+	notice := saasModel.AdminNotice{
+		Mid: mid.(int),
+	}
+	noticeData, err := notice.Index(c)
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)
 		return
@@ -45,7 +50,10 @@ func (rest *Notice) Show(c *gin.Context) {
 		return
 	}
 
-	notice := appModel.AdminNotice{}
+	mid, _ := c.Get("mid")
+	notice := saasModel.AdminNotice{
+		Mid: mid.(int),
+	}
 	tx := cmf.NewDb().Where("id = ?", rewrite.Id).First(&notice)
 	if tx.Error != nil {
 		if errors.Is(tx.Error, gorm.ErrRecordNotFound) {
@@ -69,7 +77,7 @@ func (rest *Notice) Show(c *gin.Context) {
 
 func (rest *Notice) ReadAll(c *gin.Context) {
 
-	notice := appModel.AdminNotice{}
+	notice := saasModel.AdminNotice{}
 
 	notice.Status = 1
 	tx := cmf.NewDb().Session(&gorm.Session{AllowGlobalUpdate: true}).Updates(&notice)
@@ -87,25 +95,30 @@ func (rest Notice) SocketGet(c *gin.Context) {
 	var (
 		conn  *cmfWebsocket.Connection
 		err   error
-		first bool = true
+		first = true
 	)
 
-	userId, _ := c.Get("userId")
+	userId, _ := c.Get("user_id")
 	userIdInt := userId.(int)
 	userIdStr := strconv.Itoa(userIdInt)
 
 	// 获取租户信息
-	tenantId, _ := c.Get("tenantId")
+	tenantId, _ := c.Get("tenant_id")
 	tenantIdInt := tenantId.(int)
 	tenantIdStr := strconv.Itoa(tenantIdInt)
+
+	mid, _ := c.Get("mid")
+
+	fmt.Println("mid",mid)
 
 	conn = new(cmfWebsocket.Client).GetClient(userIdStr).Conn
 
 	for {
 		// 查询当前用户订单
-		notice := appModel.AdminNotice{}
-		tx := cmf.NewDb().Order("id desc").First(&notice)
-		if tx.Error != nil {
+		notice := saasModel.AdminNotice{}
+		tx := cmf.NewDb().Where("mid = ?", mid).Order("id desc").First(&notice)
+		if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
+			cmfLog.Error(tx.Error.Error())
 			conn.Error(err.Error(), nil)
 			return
 		}
@@ -122,16 +135,15 @@ func (rest Notice) SocketGet(c *gin.Context) {
 				cmf.NewRedisDb().Set(eatInKey, notice.Id, 0)
 			}
 
-			var noticeMap []appModel.AdminNotice
-			tx := cmf.NewDb().Order("id desc").Limit(10).Find(&noticeMap)
-			if tx.Error != nil {
+			var noticeMap []saasModel.AdminNotice
+			tx := cmf.NewDb().Where("mid = ?", mid).Order("id desc").Limit(10).Find(&noticeMap)
+			if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 				conn.Error(err.Error(), nil)
 				return
 			}
 
 			result, _ := json.Marshal(&noticeMap)
-			if err = conn.WriteMessage([]byte(result)); err != nil {
-				conn.Close()
+			if err = conn.Success("获取成功！", string(result)); err != nil {
 				new(cmfWebsocket.Client).DelClient(userIdStr)
 			}
 			first = false

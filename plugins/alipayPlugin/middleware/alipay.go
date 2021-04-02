@@ -21,7 +21,7 @@ func AppAuthToken(c *gin.Context) {
 	alipayJson, _ := c.Get("alipay_json")
 
 	if alipayJson == "" {
-		controller.RestController{}.Error(c, "AppAuthToken获取失败，请先绑定支付宝小程序！", nil)
+		controller.Rest{}.Error(c, "AppAuthToken获取失败，请先绑定支付宝小程序！", nil)
 		c.Abort()
 		return
 	}
@@ -34,7 +34,7 @@ func AppAuthToken(c *gin.Context) {
 	alipayEasySdk.SetOption("AppAuthToken", mpMap.AppAuthToken)
 
 	if mpMap.AuthAppId == "" {
-		controller.RestController{}.Error(c, "AuthAppId获取失败，请先绑定支付宝小程序！", nil)
+		controller.Rest{}.Error(c, "AuthAppId获取失败，请先绑定支付宝小程序！", nil)
 		c.Abort()
 		return
 	}
@@ -65,17 +65,15 @@ func ValidationAlipay(c *gin.Context) {
 	tx := cmf.Db().Where("mp_id = ? AND type = ?", mid, "alipay").Order("id desc").First(&mpIsv)
 
 	if tx.RowsAffected == 0 {
-		controller.RestController{}.ErrorCode(c, 20001, "小程序编号不正确！", nil)
+		controller.Rest{}.ErrorCode(c, 20001, "请先绑定支付宝小程序！", nil)
 		c.Abort()
 		return
 	}
 
 	mpJson, _ := json.Marshal(&mpIsv)
 	c.Set("alipay_json", string(mpJson))
-
 	c.Set("alipay_user_id", mpIsv.UserId)
-
-	c.Set("open_id", mpIsv.AuthAppId)
+	c.Set("app_id", mpIsv.AuthAppId)
 
 	c.Next()
 
@@ -102,7 +100,7 @@ func UseAlipay(c *gin.Context) {
 	result := cmf.NewDb().Where("mid = ?", mid).First(&saasModel.MpTheme{})
 
 	if result.RowsAffected == 0 {
-		controller.RestController{}.ErrorCode(c, 20001, "小程序编号不正确！", nil)
+		controller.Rest{}.ErrorCode(c, 20001, "小程序编号不正确！", nil)
 		c.Abort()
 		return
 	}
@@ -115,13 +113,14 @@ func UseAlipay(c *gin.Context) {
 		mpJson, _ := json.Marshal(&mpIsv)
 
 		if mpIsv.AuthAppId == "" {
-			controller.RestController{}.Error(c, "AuthAppId获取失败，请先绑定支付宝小程序！", nil)
+			controller.Rest{}.Error(c, "AuthAppId获取失败，请先绑定支付宝小程序！", nil)
 			c.Abort()
 			return
 		}
 
 		c.Set("alipay_json", string(mpJson))
 		c.Set("alipay_user_id", mpIsv.UserId)
+		c.Set("app_id", mpIsv.AuthAppId)
 
 		alipayEasySdk.SetOption("AppAuthToken", mpIsv.AppAuthToken)
 

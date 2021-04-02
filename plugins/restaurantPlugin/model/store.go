@@ -22,7 +22,7 @@ import (
 
 // 门店信息表
 type Store struct {
-	Id               int               `gorm:"comment:门店id;not null" json:"id"`
+	Id               int               `gorm:"type:bigint(20);comment:门店id;not null" json:"id"`
 	OrderId          string            `gorm:"type:varchar(64);comment:申请单id;not null" json:"order_id"`
 	Mid              int               `gorm:"type:bigint(20);comment:对应小程序id;not null" json:"mid"`
 	StoreNumber      int               `gorm:"type:int(11);comment:门店唯一编号;not null" json:"store_number"`
@@ -298,8 +298,6 @@ func (model *Store) ListByDistance(query []string, queryArgs []interface{}) ([]S
 		}
 
 		for k, v := range store {
-
-			store[k].Id = 0
 
 			createTime := time.Unix(v.CreateAt, 0).Format("2006-01-02 15:04:05")
 			store[k].CreateTime = createTime

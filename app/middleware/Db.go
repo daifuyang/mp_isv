@@ -31,8 +31,8 @@ func TenantDb(c *gin.Context) {
 
 	c.Set("aliasName", aliasName)
 	if err != nil {
-		cmfLog.Error(err.Error())
-		new(controller.RestController).Error(c, "该租户不存在！", nil)
+		cmfLog.Error("err："+err.Error())
+		new(controller.Rest).Error(c, "该租户不存在！", nil)
 		c.Abort()
 		return
 	}

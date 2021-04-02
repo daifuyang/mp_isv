@@ -60,6 +60,9 @@ func ApiListenRouter() {
 		v1.Get("/mini_category/list/:id", new(common.MiniCategory).List)
 		v1.Get("/mini_category/last/:id", new(common.MiniCategory).Last)
 		v1.Get("/mini_category/detail/:id", new(common.MiniCategory).One)
+
+		// 获取通用模板主题
+		v1.Get("/mp/theme",new(common.MpTheme).Get)
 	}
 
 	// 清除缓存
@@ -82,7 +85,7 @@ func ApiListenRouter() {
 			Data: nil,
 			Msg:  "同步成功！",
 		})
-	})
+	},middleware.MainDb)
 
 	cmf.Get("/api/alipay_isv_app", new(admin.Settings).AlipayApp)
 

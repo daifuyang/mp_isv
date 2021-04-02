@@ -11,7 +11,7 @@ import (
 )
 
 type DemoController struct {
-	rc controller.RestController
+	rc controller.Rest
 }
 
 func (rest *DemoController) Get(c *gin.Context) {

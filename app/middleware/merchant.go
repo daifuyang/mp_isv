@@ -38,10 +38,10 @@ func ValidationMerchant(c *gin.Context) {
 	mid := midMap[0]
 
 	// 验证当前小程序是否存在
-	result := cmf.NewDb().Where("mid = ?", mid).First(&saasModel.MpTheme{})
+	tx := cmf.NewDb().Where("mid = ?", mid).First(&saasModel.MpTheme{})
 
-	if result.RowsAffected == 0 {
-		controller.RestController{}.ErrorCode(c, 20001, "小程序编号不正确！", nil)
+	if tx.RowsAffected == 0 {
+		new(controller.Rest).ErrorCode(c, 20001, "小程序编号不正确！", nil)
 		c.Abort()
 		return
 	}
@@ -73,7 +73,7 @@ func UseMerchant(c *gin.Context) {
 		result := cmf.NewDb().Where("mid = ?", mid).First(&saasModel.MpTheme{})
 
 		if result.RowsAffected == 0 {
-			controller.RestController{}.ErrorCode(c, 20001, "小程序编号不正确！", nil)
+			controller.Rest{}.ErrorCode(c, 20001, "小程序编号不正确！", nil)
 			c.Abort()
 			return
 		}

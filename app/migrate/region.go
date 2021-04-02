@@ -13,6 +13,8 @@ import (
 	"io/ioutil"
 	"os"
 	"strings"
+	"sync"
+	"time"
 )
 
 type Region struct {
@@ -21,7 +23,10 @@ type Region struct {
 
 func (migrate Region) AutoMigrate() {
 
+	cmf.Db().Migrator().DropTable(&model.Region{})
 	cmf.Db().AutoMigrate(&model.Region{})
+
+	time.Sleep(time.Second * 1)
 
 	f, err := os.Open(util.CurrentPath() + "/data/region.sql")
 	if err != nil {
@@ -33,9 +38,16 @@ func (migrate Region) AutoMigrate() {
 	result = strings.ReplaceAll(result, "{prefix}", prefix)
 	// fmt.Println(result)
 	sqlArr := strings.Split(result, ";")
-	go func() {
-		for _, sql := range sqlArr {
-			cmf.Db().Exec(sql)
-		}
-	}()
+
+	mutex := sync.Mutex{}
+	for _, sql := range sqlArr {
+		sql := sql
+		go func() {
+			mutex.Lock()
+			if sql != "" {
+				cmf.Db().Exec(sql)
+			}
+			mutex.Unlock()
+		}()
+	}
 }

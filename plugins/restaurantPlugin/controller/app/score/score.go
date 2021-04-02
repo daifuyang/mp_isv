@@ -12,7 +12,7 @@ import (
 )
 
 type Score struct {
-	rc controller.RestController
+	rc controller.Rest
 }
 
 func (rest *Score) Score(c *gin.Context) {

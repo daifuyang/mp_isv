@@ -7,22 +7,17 @@ package order
 
 import (
 	"errors"
-	"gincmf/app/model"
 	resModel "gincmf/plugins/restaurantPlugin/model"
 	"github.com/gin-gonic/gin"
-	"github.com/gincmf/alipayEasySdk/payment"
 	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
 	cmfLog "github.com/gincmf/cmf/log"
 	"github.com/gorilla/websocket"
-	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
-	"strconv"
-	"time"
 )
 
 type Index struct {
-	rc controller.RestController
+	rc controller.Rest
 }
 
 // 定义链接客户端
@@ -377,7 +372,6 @@ func (rest *Index) Refund(c *gin.Context) {
 	}
 
 	mid, _ := c.Get("mid")
-	_, exist := c.Get("alipay_user_id")
 
 	var query = []string{"fo.mid = ?", " fo.id = ? "}
 	var queryArgs = []interface{}{mid, rewrite.Id, "TRADE_SUCCESS"}
@@ -399,94 +393,10 @@ func (rest *Index) Refund(c *gin.Context) {
 		return
 	}
 
-	// 如果是余额支付
-	if data.PayType == "balance" {
-
-		rLog := model.RechargeLog{}
-		tx := cmf.NewDb().Where("target_id = ? AND target_type = ?", data.Id, 0).First(&rLog)
-		if tx.Error != nil {
-			rest.rc.Error(c, tx.Error.Error(), nil)
-			return
-		}
-
-		userData, err := new(model.User).Show([]string{"id = ?", "mid = ?", "user_type = 0", "delete_at = 0"}, []interface{}{data.UserId, mid})
-		if err != nil {
-			rest.rc.Error(c, err.Error(), nil)
-			return
-		}
-
-		balance := userData.Balance
-
-		reFee, err := decimal.NewFromString(rLog.Fee)
-
-		if err != nil {
-			rest.rc.Error(c, err.Error(), nil)
-			return
-		}
-
-		balanceDecimal := decimal.NewFromFloat(balance).Add(reFee)
-		balance, _ = balanceDecimal.Round(2).Float64()
-
-		tx = cmf.NewDb().Model(&resModel.User{}).Where("id = ?", userData.Id).Updates(map[string]interface{}{
-			"balance": balance,
-		})
-
-		if tx.Error != nil {
-			cmfLog.Error(tx.Error.Error())
-			rest.rc.Error(c, err.Error(), nil)
-		}
-
-		balanceStr := strconv.FormatFloat(balance, 'f', -1, 64)
-
-		rechargeLog := model.RechargeLog{
-			UserId:     userData.Id,
-			TargetId:   data.Id,
-			TargetType: 0,
-			Type:       0,
-			Fee:        rLog.Fee,
-			Balance:    balanceStr,
-			Remark:     "订单退款",
-			CreateAt:   time.Now().Unix(),
-		}
-
-		tx = cmf.NewDb().Create(&rechargeLog)
-		if tx.Error != nil {
-			cmfLog.Error(tx.Error.Error())
-			rest.rc.Error(c, err.Error(), nil)
-		}
-	}
-
-	if data.PayType == "alipay" {
-
-		if !exist {
-			rest.rc.Error(c, "请先授权支付宝小程序！", nil)
-			return
-		}
-
-		log := model.PayLog{}
-		tx := cmf.NewDb().Where("order_id = ?", data.OrderId).First(&log)
-
-		if tx.Error != nil {
-			cmfLog.Error(tx.Error.Error())
-			rest.rc.Error(c, err.Error(), nil)
-		}
-
-		bizContent := make(map[string]interface{}, 0)
-		bizContent["out_trade_no"] = data.OrderId
-		bizContent["trade_no"] = data.TradeNo
-		bizContent["refund_amount"] = log.TotalAmount
-		refundResult := new(payment.Common).Refund(bizContent)
-
-		if refundResult.Response.Code != "10000" {
-			rest.rc.Error(c, "退款失败！", refundResult.Response.SubMsg)
-			return
-		}
-	}
-
-	tx := cmf.NewDb().Model(&resModel.FoodOrder{}).Where("id = ?", data.Id).Update("order_status", "TRADE_REFUND")
-	if tx.Error != nil {
-		cmfLog.Error(tx.Error.Error())
-		rest.rc.Error(c, err.Error(), nil)
+	err = data.Refund()
+	if err != nil {
+		rest.rc.Error(c,err.Error(),nil)
+		return
 	}
 
 	rest.rc.Success(c, "退款成功！", nil)
@@ -560,16 +470,53 @@ func (rest *Index) ReceivedOrRefused(c *gin.Context) {
 		return
 	}
 
-	tx := cmf.NewDb().Where("mid = ? AND id = ?", mid, data.Id).Updates(&resModel.FoodOrder{
+	tx := cmf.NewDb().Begin()
+	tx.SavePoint("sp1")
+
+	defer func() {
+		if r := recover(); r != nil {
+			tx.RollbackTo("sp1")
+		}
+	}()
+
+	tx.Where("mid = ? AND id = ?", mid, data.Id).Updates(&resModel.FoodOrder{
 		OrderStatus:    orderStatus,
 		DeliveryStatus: deliveryStatus,
 	})
 
 	if tx.Error != nil {
 		cmfLog.Error(tx.Error.Error())
+		tx.RollbackTo("sp1")
 		rest.rc.Error(c, tx.Error.Error(), nil)
 		return
 	}
+
+	// 打印订单
+	if os == "1" {
+		foodOrder := resModel.FoodOrder{
+			Id: data.Id,
+		}
+
+		foodOrder.Db = tx
+		err := foodOrder.Printer()
+		if err != nil {
+			tx.RollbackTo("sp1")
+			rest.rc.Error(c, err.Error(), nil)
+			return
+		}
+	}
+
+	// 拒绝订单，退款
+	if os == "0" {
+		err = data.Refund()
+		if err != nil {
+			tx.RollbackTo("sp1")
+			rest.rc.Error(c,err.Error(),nil)
+			return
+		}
+	}
+
+	tx.Commit()
 
 	rest.rc.Success(c, msg, nil)
 

@@ -17,7 +17,7 @@ import (
 )
 
 type Common struct {
-	rc controller.RestController
+	rc controller.Rest
 }
 
 // @Summary 系统基础设置

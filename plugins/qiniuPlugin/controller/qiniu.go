@@ -11,7 +11,7 @@ import (
 )
 
 type QiNiu struct {
-	rc controller.RestController
+	rc controller.Rest
 }
 
 func (rest *QiNiu) Get(c *gin.Context) {

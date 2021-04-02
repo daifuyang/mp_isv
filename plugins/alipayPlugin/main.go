@@ -25,7 +25,7 @@ func Init() {
 	host := cmf.Conf().App.Domain
 
 	if cmf.Conf().App.AppDebug {
-		host = "https://www.codecloud.ltd"
+		host = "https://console.mashangdian.cn"
 	}
 
 	op := map[string]string{

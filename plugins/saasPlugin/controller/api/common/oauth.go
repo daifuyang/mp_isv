@@ -34,7 +34,7 @@ import (
 
 var (
 	token *oauth2.Token
-	rc    controller.RestController
+	rc    controller.Rest
 )
 
 func RegisterTenantRouter(handlers ...gin.HandlerFunc) {
@@ -90,9 +90,11 @@ func RegisterTenantRouter(handlers ...gin.HandlerFunc) {
 			)
 
 			if len(nameArr) == 1 {
+
+				userLogin := nameArr[0]
 				typ = "main"
 				t := saasModel.Tenant{}
-				tx = cmf.Db().Debug().First(&t, "user_login = ?", username) // 查询
+				tx = cmf.Db().First(&t, "user_login = ?", userLogin) // 查询
 				if tx.RowsAffected > 0 {
 					userId = 1
 					tenantId = t.TenantId
@@ -101,6 +103,7 @@ func RegisterTenantRouter(handlers ...gin.HandlerFunc) {
 			}
 
 			if len(nameArr) == 2 {
+
 				typ = "ram"
 				// 查询用户所属租户
 				t := saasModel.Tenant{}

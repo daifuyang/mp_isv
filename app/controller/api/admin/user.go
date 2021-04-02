@@ -21,7 +21,7 @@ import (
 )
 
 type User struct {
-	rc controller.RestController
+	rc controller.Rest
 }
 
 func (rest *User) Get(c *gin.Context) {
@@ -284,5 +284,5 @@ func (rest *User) CurrentUser(c *gin.Context) {
 	result.User = currentUser
 	result.AliasName = aliasName.(string)
 
-	controller.RestController{}.Success(c, "获取成功", result)
+	controller.Rest{}.Success(c, "获取成功", result)
 }

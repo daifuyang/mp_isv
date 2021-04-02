@@ -16,7 +16,7 @@ import (
 )
 
 type Recharge struct {
-	rc controller.RestController
+	rc controller.Rest
 }
 
 // @Summary 充值规则设置

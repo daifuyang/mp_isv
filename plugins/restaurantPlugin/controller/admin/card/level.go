@@ -17,7 +17,7 @@ import (
 )
 
 type Level struct {
-	rc controller.RestController
+	rc controller.Rest
 }
 
 func (rest *Level) Show(c *gin.Context) {
@@ -86,6 +86,8 @@ func (rest *Level) Edit(c *gin.Context) {
 		rest.rc.Error(c, "有效期非法！", nil)
 		return
 	}
+
+	expValidPeriod = form.ExpValidPeriod
 
 	// 会员等级
 	ExpRangeStart := 0

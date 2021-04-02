@@ -22,7 +22,7 @@ import (
 )
 
 type Address struct {
-	rc controller.RestController
+	rc controller.Rest
 }
 
 /**

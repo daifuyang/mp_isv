@@ -50,7 +50,7 @@ func ValidationMp(c *gin.Context) {
 
 	if appId == "" {
 		fmt.Println("ValidationMp,小程序app_id不能为空")
-		controller.RestController{}.Error(c, "小程序app_id不能为空！", nil)
+		controller.Rest{}.Error(c, "小程序app_id不能为空！", nil)
 		c.Abort()
 		return
 	}
@@ -62,7 +62,7 @@ func ValidationMp(c *gin.Context) {
 	if result.RowsAffected == 0 {
 		fmt.Println("ValidationMp,小程序app_id不正确")
 		cmfLog.Error("小程序app_id不正确，appId：" + appId)
-		controller.RestController{}.Error(c, "小程序auth_app_id不正确！", nil)
+		controller.Rest{}.Error(c, "小程序auth_app_id不正确！", nil)
 		c.Abort()
 		return
 	}
@@ -114,7 +114,7 @@ func UseMp(c *gin.Context) {
 
 	if appId == "" {
 		fmt.Println("ValidationMp,小程序app_id不能为空")
-		controller.RestController{}.Error(c, "小程序app_id不能为空！", nil)
+		controller.Rest{}.Error(c, "小程序app_id不能为空！", nil)
 		c.Abort()
 		return
 	}
@@ -126,7 +126,7 @@ func UseMp(c *gin.Context) {
 	if result.RowsAffected == 0 {
 		fmt.Println("ValidationMp,小程序app_id不正确")
 		cmfLog.Error("小程序app_id不正确，appId：" + appId)
-		controller.RestController{}.Error(c, "小程序auth_app_id不正确！", nil)
+		controller.Rest{}.Error(c, "小程序auth_app_id不正确！", nil)
 		c.Abort()
 		return
 	}
@@ -152,7 +152,7 @@ func ValidationOpenId(c *gin.Context) {
 	openId := strings.Join(r.Form["open_id"], "")
 
 	if openId == "" {
-		controller.RestController{}.Error(c, "小程序open_id不能为空！", nil)
+		controller.Rest{}.Error(c, "小程序open_id不能为空！", nil)
 		c.Abort()
 		return
 	}
@@ -160,7 +160,7 @@ func ValidationOpenId(c *gin.Context) {
 	tp := model.ThirdPart{}
 	result := cmf.NewDb().Where("open_id", openId).First(&tp)
 	if result.RowsAffected == 0 {
-		controller.RestController{}.Error(c, "用户open_id不存在！", nil)
+		controller.Rest{}.Error(c, "用户open_id不存在！", nil)
 		c.Abort()
 		return
 	}
@@ -176,7 +176,7 @@ func ValidationBindMobile(c *gin.Context) {
 	openId := strings.Join(r.Form["open_id"], "")
 
 	if openId == "" {
-		controller.RestController{}.Error(c, "小程序open_id不能为空！", nil)
+		controller.Rest{}.Error(c, "小程序open_id不能为空！", nil)
 		c.Abort()
 		return
 	}
@@ -184,7 +184,7 @@ func ValidationBindMobile(c *gin.Context) {
 	tp := model.ThirdPart{}
 	result := cmf.NewDb().Where("open_id", openId).First(&tp)
 	if result.RowsAffected == 0 {
-		controller.RestController{}.Error(c, "用户open_id不存在！", nil)
+		controller.Rest{}.Error(c, "用户open_id不存在！", nil)
 		c.Abort()
 		return
 	}

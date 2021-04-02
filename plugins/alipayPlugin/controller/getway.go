@@ -15,7 +15,7 @@ import (
 )
 
 type GetWay struct {
-	rc controller.RestController
+	rc controller.Rest
 }
 
 func (rest *GetWay) GetWay(c *gin.Context) {

@@ -12,7 +12,7 @@ import (
 
 // Assets 图片资源控制器，定义了资源文件增删改查接口
 type Upload struct {
-	rc controller.RestController
+	rc controller.Rest
 }
 
 func (rest *Upload) Get(c *gin.Context) {

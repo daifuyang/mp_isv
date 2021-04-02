@@ -21,7 +21,7 @@ import (
 )
 
 type PortalPost struct {
-	rc controller.RestController
+	rc controller.Rest
 }
 
 // 获取文章列表
@@ -234,12 +234,7 @@ func (rest *PortalPost) Edit(c *gin.Context) {
 		return
 	}
 
-	userId := util.CurrentAdminId(c)
-	if err != nil {
-		rest.rc.Error(c, err.Error(), nil)
-		return
-	}
-	userIdInt, _ := strconv.Atoi(userId)
+	userIdInt := util.CurrentAdminId(c)
 
 	portal := model.PortalPost{}
 
@@ -442,13 +437,12 @@ func (rest *PortalPost) Store(c *gin.Context) {
 		rest.rc.Error(c, err.Error(), nil)
 		return
 	}
-
-	userId := util.CurrentAdminId(c)
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)
 		return
 	}
-	userIdInt, _ := strconv.Atoi(userId)
+
+	userIdInt := util.CurrentAdminId(c)
 
 	portal := model.PortalPost{
 		Mid:          midInt,

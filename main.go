@@ -35,6 +35,7 @@ func main() {
 
 	//初始化路由设置
 	router.ApiListenRouter()
+	router.WebListenRouter()
 	// 数据库迁移
 	migrate.AutoMigrate()
 	// 注册插件

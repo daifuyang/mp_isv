@@ -8,7 +8,6 @@ package card
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	appModel "gincmf/app/model"
 	"gincmf/app/util"
 	"gincmf/plugins/restaurantPlugin/model"
@@ -28,7 +27,7 @@ import (
 )
 
 type Card struct {
-	rc controller.RestController
+	rc controller.Rest
 }
 
 /**
@@ -176,6 +175,16 @@ func (rest *Card) validVoucher(VoucherItem model.VoucherItem) (model.VoucherItem
 	return model.VoucherItem{}, errors.New("暂无内容！")
 }
 
+func (rest *Card) getVipLevel(levelId int, level []model.SLevel) (model.SLevel, error) {
+	for _, v := range level {
+		temLevel, _ := strconv.Atoi(strings.Replace(v.LevelId, "VIP", "", -1))
+		if temLevel == levelId {
+			return v, nil
+		}
+	}
+	return model.SLevel{}, errors.New("会员等级非法！")
+}
+
 /**
  * @Author return <1140444693@qq.com>
  * @Description 开卡投放
@@ -198,11 +207,8 @@ func (rest *Card) Send(c *gin.Context) {
 
 	u := model.User{}
 	userData, err := u.Show([]string{"u.id = ?"}, []interface{}{userId})
-
-	fmt.Println("VipLevel", userData.VipLevel)
-
 	if err != nil {
-		rest.rc.Error(c, "获取失败！"+err.Error(), err)
+		rest.rc.Error(c, "获取用户信息失败！"+err.Error(), err)
 		return
 	}
 
@@ -219,7 +225,14 @@ func (rest *Card) Send(c *gin.Context) {
 	var viMap model.VipInfo
 	json.Unmarshal([]byte(vipInfo), &viMap)
 
-	initVipLevel := viMap.Level[0].LevelId
+	// 初始化一级会员
+	vipLevel, err := rest.getVipLevel(1, viMap.Level)
+	if err != nil {
+		rest.rc.Error(c, "获取失败！"+err.Error(), err)
+		return
+	}
+
+	initVipLevel := vipLevel.LevelId
 
 	if userData.VipLevel != "" {
 		initVipLevel = userData.VipLevel
@@ -245,13 +258,23 @@ func (rest *Card) Send(c *gin.Context) {
 	insertKey := "mp_isv" + strconv.Itoa(mid.(int)) + ":member_card:" + yearStr + monthStr + dayStr
 	date := yearStr + monthStr + dayStr
 	vipNum := util.DateUuid("", insertKey, date, mid.(int))
+
+	// 获取会员会员等级
+	memberLevel, err := rest.getVipLevel(levelId, viMap.Level)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
+	getType := memberLevel.GetType
+	fee := memberLevel.Num
+
 	// 新建会员卡
-	switch viMap.Level[levelId].GetType {
+	switch getType {
 	case "pay":
 
 		co := model.MemberCardOrder{}
 		// 返回付费订单号
-		fee := viMap.Level[levelId].Num
 		if fee <= 0 {
 			rest.rc.Error(c, "商家会员卡配置出错！", nil)
 			return
@@ -296,16 +319,15 @@ func (rest *Card) Send(c *gin.Context) {
 		// 未开过卡
 		if vipData.Id == 0 {
 			vip.Mid = mid.(int)
-			vip.VipLevel = viMap.Level[0].LevelId
-			vip.VipName = viMap.Level[0].LevelName
+			vip.VipLevel = vipLevel.LevelId
+			vip.VipName = vipLevel.LevelName
 			vip.StartAt = time.Now().Unix()
-			vip.EndAt = int64(card.ValidPeriod) + nowUnix
+			vip.EndAt = 0
 			vip.VipNum = vipNum
 			vip.Status = 0
 			cmf.NewDb().Create(&vip)
-
-			co.VipName = viMap.Level[0].LevelName
-			co.VipLevel = viMap.Level[0].LevelId
+			co.VipName = vipLevel.LevelName
+			co.VipLevel = vipLevel.LevelId
 			co.VipNum = vipNum
 		} else {
 			co.VipName = vipData.VipName
@@ -336,7 +358,7 @@ func (rest *Card) Send(c *gin.Context) {
 				GoodsName: "付费会员卡",
 				Quantity:  "1",
 				Price:     fee,
-				Body:      viMap.Level[levelId].LevelName,
+				Body:      memberLevel.LevelName,
 			})
 
 			common := payment.Common{}
@@ -383,8 +405,6 @@ func (rest *Card) Send(c *gin.Context) {
 		// 达标后直接开卡
 		fallthrough
 	case "free":
-		fallthrough
-	default:
 		if userData.StartAt == 0 {
 			vip.Mid = mid.(int)
 			vip.VipLevel = viMap.Level[0].LevelId
@@ -398,6 +418,8 @@ func (rest *Card) Send(c *gin.Context) {
 		} else {
 			rest.rc.Error(c, "该用户已经领取了会员卡！", nil)
 		}
+	default:
+		rest.rc.Success(c, "开卡失败！非法访问", nil)
 	}
 
 }

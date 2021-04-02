@@ -17,7 +17,7 @@ import (
 )
 
 type AuthAccess struct {
-	rc controller.RestController
+	rc controller.Rest
 }
 
 func (rest *AuthAccess) Show(c *gin.Context) {

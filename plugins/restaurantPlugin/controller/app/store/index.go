@@ -15,7 +15,7 @@ import (
 )
 
 type Index struct {
-	rc controller.RestController
+	rc controller.Rest
 }
 
 /**

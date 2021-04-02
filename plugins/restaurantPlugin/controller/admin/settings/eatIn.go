@@ -17,7 +17,7 @@ import (
 )
 
 type EatIn struct {
-	rc controller.RestController
+	rc controller.Rest
 }
 
 func (rest *EatIn) Show(c *gin.Context) {

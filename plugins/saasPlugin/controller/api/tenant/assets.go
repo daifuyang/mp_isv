@@ -31,7 +31,7 @@ import (
 )
 
 type Assets struct {
-	rc controller.RestController
+	rc controller.Rest
 }
 
 func (rest *Assets) Get(c *gin.Context) {
@@ -316,7 +316,7 @@ func handleUpload(c *gin.Context, file *multipart.FileHeader, fileType string) (
 	if userId == nil {
 		userId = "0"
 	}
-	userIdInt, _ := strconv.Atoi(userId.(string))
+	userIdInt, _ := userId.(int)
 
 	fileTypeInt, _ := strconv.Atoi(fileType)
 	//保存到数据库
@@ -344,7 +344,7 @@ func handleUpload(c *gin.Context, file *multipart.FileHeader, fileType string) (
 			AssetType:  fileTypeInt,
 		},
 	}
-	result := cmf.NewDb().Debug().Create(&assets)
+	result := cmf.NewDb().Create(&assets)
 
 	tempMap := make(map[string]string, 0)
 

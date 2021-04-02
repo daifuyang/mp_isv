@@ -29,13 +29,13 @@ func ValidationStore(c *gin.Context) {
 
 	mid, exist := c.Get("mid")
 	if !exist {
-		controller.RestController{}.Error(c, "小程序唯一mid不能为空！", nil)
+		controller.Rest{}.Error(c, "小程序唯一mid不能为空！", nil)
 		c.Abort()
 		return
 	}
 
 	if storeNumber == "" {
-		controller.RestController{}.Error(c, "门店不能为空！", nil)
+		controller.Rest{}.Error(c, "门店不能为空！", nil)
 		c.Abort()
 		return
 	}
@@ -45,12 +45,12 @@ func ValidationStore(c *gin.Context) {
 
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			controller.RestController{}.Error(c, "当前门店不存在！", nil)
+			controller.Rest{}.Error(c, "当前门店不存在！", nil)
 			c.Abort()
 			return
 		}
 
-		controller.RestController{}.Error(c, err.Error(), nil)
+		controller.Rest{}.Error(c, err.Error(), nil)
 		c.Abort()
 		return
 	}

@@ -22,7 +22,7 @@ import (
 )
 
 type User struct {
-	rc controller.RestController
+	rc controller.Rest
 }
 
 func (rest *User) Show(c *gin.Context) {
@@ -247,6 +247,10 @@ func (rest *User) BindMpMobile(c *gin.Context) {
 		return
 	}
 
+	avatar := c.PostForm("avatar")
+	nickname := c.PostForm("nickname")
+
+	fmt.Println("mid", mid)
 	fmt.Println("encryptedData", encryptedData)
 
 	mobile := ""
@@ -261,16 +265,28 @@ func (rest *User) BindMpMobile(c *gin.Context) {
 
 	if tx.RowsAffected == 0 {
 		rest.rc.Error(c, "非法请求，小程序不存在", nil)
+		return
 	}
 
 	if mpType == "alipay" {
 		// 解析手机号
+		bizContent := make(map[string]string, 0)
+		bizContent["merchant_app_id"] = appId.(string)
+
+		aesGet := new(base.Oauth).AesGet(bizContent)
+
+		fmt.Println("aesGet",aesGet)
+
 		key := theme.EncryptKey
-		if appId.(string) == "2021001192675085" {
-			key = "VowK99nI+9IwZrJYDly1PA=="
+
+		if aesGet.Code == "10000" {
+			key = aesGet.AesKey
+		}else {
+			rest.rc.Error(c, "绑定失败！"+aesGet.SubMsg, aesGet)
+			return
 		}
 
-		fmt.Println("key", key)
+		fmt.Println("key",key)
 
 		enResult := new(base.Oauth).AesDeCrypt(encryptedData, key)
 		if enResult.Code == "10000" {
@@ -298,11 +314,19 @@ func (rest *User) BindMpMobile(c *gin.Context) {
 	u.Mid = mid.(int)
 	u.Mobile = mobile
 
+	if u.UserNickname == "" {
+		u.UserNickname = nickname
+	}
+
+	if u.Avatar == "" {
+		u.Avatar = avatar
+	}
+
 	// 保存
 	if u.Id == 0 {
-		tx = cmf.NewDb().Debug().Create(&u)
+		tx = cmf.NewDb().Create(&u)
 	} else {
-		tx = cmf.NewDb().Debug().Updates(&u)
+		tx = cmf.NewDb().Updates(&u)
 	}
 
 	// 更新三方关联

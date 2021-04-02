@@ -17,7 +17,7 @@ import (
 )
 
 type IndexController struct {
-	rc controller.RestController
+	rc controller.Rest
 }
 
 // @Summary 桌位管理

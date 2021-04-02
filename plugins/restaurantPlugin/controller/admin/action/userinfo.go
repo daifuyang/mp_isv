@@ -11,7 +11,7 @@ import (
 )
 
 type USerInfo struct {
-	rc controller.RestController
+	rc controller.Rest
 }
 
 func (rest USerInfo) Options(c *gin.Context) {

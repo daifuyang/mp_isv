@@ -12,7 +12,7 @@ import (
 
 type Settings struct {
 	controller string
-	rc         controller.RestController
+	rc         controller.Rest
 }
 
 /*

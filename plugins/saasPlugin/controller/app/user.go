@@ -16,7 +16,7 @@ import (
 )
 
 type User struct {
-	rc controller.RestController
+	rc controller.Rest
 }
 
 /**

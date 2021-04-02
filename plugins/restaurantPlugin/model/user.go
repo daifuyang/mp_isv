@@ -69,6 +69,10 @@ func (model *User) Show(query []string, queryArgs []interface{}) (User, error) {
 		user.EndTime = time.Unix(user.EndAt, 0).Format("2006-01-02 15:04:05")
 	}
 
+	if user.EndAt == -1 {
+		user.EndTime = "永久有效"
+	}
+
 	// 获取会员权益
 	level := new(Level).LevelDetail(user.VipLevel, user.Mid)
 	if level.LevelId != "" {
@@ -131,9 +135,18 @@ func (model *User) ThirdPartIndex(c *gin.Context, query []string, queryArgs []in
 	}
 
 	for k, v := range user {
-		user[k].BirthdayTime = time.Unix(v.Birthday, 0).Format("2006-01-02")
-		user[k].StartTime = time.Unix(v.StartAt, 0).Format("2006-01-02")
-		user[k].EndTime = time.Unix(v.EndAt, 0).Format("2006-01-02")
+
+		if v.Birthday > 0 {
+			user[k].BirthdayTime = time.Unix(v.Birthday, 0).Format("2006-01-02")
+		}
+
+		if v.StartAt > 0 {
+			user[k].StartTime = time.Unix(v.StartAt, 0).Format("2006-01-02")
+		}
+
+		if v.EndAt > 0 {
+			user[k].EndTime = time.Unix(v.EndAt, 0).Format("2006-01-02")
+		}
 	}
 
 	paginate := cmfModel.Paginate{Data: user, Current: current, PageSize: pageSize, Total: total}

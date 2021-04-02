@@ -22,7 +22,7 @@ type Tenant struct {
 	UserRealName string `gorm:"type:varchar(50)" json:"user_realname"`
 	UserEmail    string `gorm:"type:varchar(100)" json:"user_email"`
 	AccountType  string `gorm:"-" json:"account_type"`
-	UserStatus   int    `gorm:"type:tinyint(3);not null" json:"user_status"`
+	UserStatus   int    `gorm:"type:tinyint(3);comment:租户状态;default:1;not null" json:"user_status"`
 	CreateAt     int64  `gorm:"type:bigint(20)" json:"create_at"`
 	UpdateAt     int64  `gorm:"type:bigint(20)" json:"update_at"`
 }

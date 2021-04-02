@@ -24,6 +24,7 @@ func AutoMigrate() {
 
 	cmf.NewDb().Migrator().DropTable(&appModel.AdminMenu{})
 	cmf.NewDb().AutoMigrate(&appModel.AdminMenu{})
+
 	cmf.NewDb().AutoMigrate(&model.Role{})
 	cmf.NewDb().AutoMigrate(&appModel.RoleUser{})
 
@@ -34,6 +35,8 @@ func AutoMigrate() {
 	cmf.NewDb().AutoMigrate(&appModel.AuthRuleApi{})
 
 	new(model.AdminUser).AutoMigrate()
+	cmf.NewDb().AutoMigrate(&model.AdminNotice{})
+	cmf.NewDb().AutoMigrate(&appModel.PayLog{})
 
 	appModel.AutoAdminMenu()
 

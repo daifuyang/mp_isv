@@ -41,6 +41,9 @@ func StartMigrate() {
 	new(model.ExpLog).AutoMigrate()
 	new(model.RechargeLog).AutoMigrate()
 
+	// 主题模板
+	new(model.MpTheme).AutoMigrate()
+
 	model.AutoAdminMenu()
 
 }

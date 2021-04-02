@@ -35,7 +35,7 @@ import (
 )
 
 type Order struct {
-	rc controller.RestController
+	rc controller.Rest
 }
 
 type orderDetail struct {
@@ -61,7 +61,8 @@ type material struct {
 }
 
 type balancePay struct {
-	OrderId        int     `json:"order_id"`
+	mid            int     `json:"mid"`
+	orderId        int     `json:"order_id"`
 	orderType      int     `json:"order_type"`
 	alipayUserId   int     `json:"alipay_user_id"`
 	voucherId      int     `json:"voucher_id"`
@@ -184,7 +185,6 @@ func (rest *Order) Show(c *gin.Context) {
  * @return
  **/
 func (rest *Order) PreCreate(c *gin.Context) {
-
 	/*
 	 *订单类型 1 => 门店就餐; 2 => 打包外带；3 => 外卖
 	 *1.有桌位 => 扫码选择桌位号就餐
@@ -243,7 +243,6 @@ func (rest *Order) PreCreate(c *gin.Context) {
 	store := model.Store{}
 	store, err = store.Show([]string{"id = ?", "delete_at = ?"}, []interface{}{storeId, 0})
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-		cmfLog.Error(err.Error())
 		rest.rc.Error(c, err.Error(), nil)
 		return
 	}
@@ -891,6 +890,8 @@ func (rest *Order) PreCreate(c *gin.Context) {
 	fee, _ = strconv.ParseFloat(fmt.Sprintf("%.2f", fee), 64)
 	fo.BoxFee, _ = strconv.ParseFloat(fmt.Sprintf("%.2f", fo.BoxFee), 64)
 
+	fo.OriginalFee, _ = strconv.ParseFloat(fmt.Sprintf("%.2f", fee+boxFee), 64)
+
 	fo.CouponFee = couponFee
 	fo.Fee, _ = strconv.ParseFloat(fmt.Sprintf("%.2f", fee+boxFee-couponFee), 64)
 
@@ -963,6 +964,7 @@ func (rest *Order) PreCreate(c *gin.Context) {
 
 		nowUnix := time.Now().Unix()
 		fo.PayType = "balance"
+		fo.OriginalFee = originalFee
 		fo.Fee = totalFee
 		fo.CreateAt = nowUnix
 		fo.FinishedAt = nowUnix
@@ -1028,7 +1030,6 @@ func (rest *Order) PreCreate(c *gin.Context) {
 		}
 
 		content := pf.Format("58mm")
-
 		cmfLog.LogSave(content, "/log/test.log")
 
 		// 获取门店打印机状态
@@ -1053,13 +1054,16 @@ func (rest *Order) PreCreate(c *gin.Context) {
 		}
 
 		audio := ""
-		if otInt < 4 {
-			audio = "https://v.hji5.com/codecloud/n1.mp3"
+		if otInt == 3 {
+			audio = "https://cdn.mashangdian.cn/eatin.mp3"
+		} else if otInt == 2 {
+			audio = "https://cdn.mashangdian.cn/pack.mp3"
 		} else {
-			audio = "https://v.hji5.com/codecloud/n2.mp3"
+			audio = "https://cdn.mashangdian.cn/takeout.mp3"
 		}
 
 		bp = balancePay{
+			mid:            mid.(int),
 			orderType:      otInt,
 			alipayUserId:   mpUserId.(int),
 			voucherId:      form.VoucherId,
@@ -1140,7 +1144,7 @@ func (rest *Order) PreCreate(c *gin.Context) {
 		return
 	}
 
-	bp.OrderId = storeData.Id
+	bp.orderId = storeData.Id
 
 	if fo.PayType == "balance" {
 
@@ -1176,10 +1180,12 @@ func (rest *Order) PreCreate(c *gin.Context) {
 
 	// 减库存
 	if fo.PayType == "balance" {
-		model.FoodOrder{
+
+		foodOrder := model.FoodOrder{
 			OrderId: orderId,
 			Db:      tx,
-		}.ReduceInventory()
+		}
+		foodOrder.ReduceInventory()
 	}
 
 	tx.Commit()
@@ -1226,11 +1232,11 @@ func (b balancePay) submit() error {
 	}
 
 	if canPrinter {
-		//new(base.Printer).Printer(b.sn, b.content, "1")
+		new(base.Printer).Printer(b.sn, b.content, "1")
 	}
 
 	// 创建通知提醒
-	_, err = new(appModel.AdminNotice).Save(b.noticeTitle, b.noticeDesc, b.OrderId, 0, b.audio)
+	_, err = new(saasModel.AdminNotice).Save(b.mid, b.noticeTitle, b.noticeDesc, b.orderId, 0, b.audio)
 
 	if err != nil {
 		return tx.Error
@@ -1356,30 +1362,53 @@ func (rest *Order) ReceiveNotify(c *gin.Context) {
 
 			// 获取会员
 			card := model.CardTemplate{}
-			cmf.NewDb().Where("id = ? AND status  = ?", "1", "1").First(&card)
+			tx = cmf.NewDb().Where("id = ? AND status  = ?", "1", "1").First(&card)
+			if tx.Error != nil {
+				rest.rc.Error(c, err.Error(), nil)
+				return
+			}
 
 			validPeriod := card.ValidPeriod
 			validPeriodUnix := validPeriod * 86400
+			fmt.Println("validPeriodUnix", validPeriodUnix)
 
-			vip := model.MemberCard{
-				EndAt:  time.Now().Unix() + int64(validPeriodUnix),
-				Status: 1,
+			// 获取用户id
+			userId = co.UserId
+
+			vip := model.MemberCard{}
+
+			// 判断用户是否已经开过会员卡
+			vip, err := vip.Show([]string{"user_id = ?"}, []interface{}{userId})
+			if err != nil {
+				rest.rc.Error(c, err.Error(), nil)
+				return
 			}
 
-			cmf.NewDb().Where("vip_num = ?", co.VipNum).Updates(vip)
+			var endAt = vip.EndAt
+			if endAt == -1 {
+				endAt = 0
+			}
+			// 如果已过期
+			if vip.EndAt < time.Now().Unix() {
+				endAt = time.Now().Unix() + int64(validPeriodUnix)
+			} else {
+				endAt += int64(validPeriodUnix)
+			}
+			if card.ValidPeriod == -1 {
+				endAt = -1
+			}
+			vip.EndAt = endAt
+			tx = cmf.NewDb().Debug().Where("vip_num = ?", co.VipNum).Updates(&vip)
+			if tx.Error != nil {
+				rest.rc.Error(c, err.Error(), nil)
+				return
+			}
 
 			// 修改订单状态
 			cmf.NewDb().Where("order_id = ?", orderId).Updates(&model.MemberCardOrder{
 				FinishedAt:  time.Now().Unix(),
 				OrderStatus: "TRADE_FINISHED",
 			})
-
-			// 订单
-			mco := model.MemberCardOrder{}
-			cmf.NewDb().Where("order_id", orderId).First(&mco)
-
-			// 获取用户id
-			userId = mco.UserId
 
 			bizContent := make(map[string]interface{}, 0)
 			bizContent["out_biz_no"] = orderId
@@ -1392,15 +1421,35 @@ func (rest *Order) ReceiveNotify(c *gin.Context) {
 				bizContent["pay_amount"] = bpaFloat
 			}
 
-			var itemOrderInfo []map[string]interface{}
+			upContent := make(map[string]string, 0)
+			fileResult, err := new(merchant.File).Upload(upContent, util.GetAbsPath("images/vip.png"))
+
+			if err != nil {
+				rest.rc.Error(c, err.Error(), nil)
+				return
+			}
+
+			if fileResult.Response.Code != "10000" {
+				rest.rc.Error(c, fileResult.Response.SubMsg, nil)
+				return
+			}
+
+			var fodExtInfo = []map[string]string{
+				{
+					"ext_key":   "image_material_id",
+					"ext_value": fileResult.Response.MaterialId,
+				},
+			}
 
 			ioInfo := map[string]interface{}{
 				"item_id":    "vipCard",
 				"item_name":  "会员服务",
 				"unit_price": taFloat,
 				"quantity":   "1",
+				"ext_info":   fodExtInfo,
 			}
 
+			var itemOrderInfo []map[string]interface{}
 			itemOrderInfo = append(itemOrderInfo, ioInfo)
 			bizContent["item_order_list"] = itemOrderInfo
 
@@ -1572,15 +1621,35 @@ func (rest *Order) ReceiveNotify(c *gin.Context) {
 				bizContent["pay_amount"] = bpaFloat
 			}
 
-			var itemOrderInfo []map[string]interface{}
+			upContent := make(map[string]string, 0)
+			fileResult, err := new(merchant.File).Upload(upContent, util.GetAbsPath("images/recharge.png"))
+
+			if err != nil {
+				rest.rc.Error(c, err.Error(), nil)
+				return
+			}
+
+			if fileResult.Response.Code != "10000" {
+				rest.rc.Error(c, fileResult.Response.SubMsg, nil)
+				return
+			}
+
+			var fodExtInfo = []map[string]string{
+				{
+					"ext_key":   "image_material_id",
+					"ext_value": fileResult.Response.MaterialId,
+				},
+			}
 
 			ioInfo := map[string]interface{}{
 				"item_id":    "recharge",
-				"item_name":  "钱包充值",
+				"item_name":  "余额充值",
 				"unit_price": totalFloat,
 				"quantity":   "1",
+				"ext_info":   fodExtInfo,
 			}
 
+			var itemOrderInfo []map[string]interface{}
 			itemOrderInfo = append(itemOrderInfo, ioInfo)
 			bizContent["item_order_list"] = itemOrderInfo
 
@@ -1623,8 +1692,6 @@ func (rest *Order) ReceiveNotify(c *gin.Context) {
 			// 生成取餐号
 			queueNo := model.QueueNo(appId)
 
-			fmt.Println("queueNo", queueNo)
-
 			// 查询订单
 			tx := cmf.NewDb().Where("order_id", orderId).First(&fo)
 			if tx.Error != nil {
@@ -1633,13 +1700,15 @@ func (rest *Order) ReceiveNotify(c *gin.Context) {
 			}
 
 			if fo.OrderType <= 2 {
-				audio = "https://v.hji5.com/codecloud/n1.mp3"
+				audio = "https://cdn.mashangdian.cn/eatin.mp3"
 				noticeTitle = "堂食订单通知"
 				noticeDesc = "您有新的堂食订单，请及时处理！"
 			} else if fo.OrderType == 3 {
+				audio = "https://cdn.mashangdian.cn/pack.mp3"
 				noticeTitle = "打包订单通知"
 				noticeDesc = "您有新的打包订单，请及时处理！"
 			} else {
+				audio = "https://cdn.mashangdian.cn/takeout.mp3"
 				noticeDesc = "您有新的外卖订单，请及时处理！"
 			}
 
@@ -1669,16 +1738,25 @@ func (rest *Order) ReceiveNotify(c *gin.Context) {
 			}
 
 			vp := model.VoucherPost{}
+
+			couponFee := fo.CouponFee
+
 			if len(vList) > 0 && vList[0].VoucherId != "" {
 				tx := cmf.NewDb().Where("alipay_voucher_id = ?", vList[0].VoucherId).First(&vp)
 				if tx.Error != nil {
 					rest.rc.Error(c, tx.Error.Error(), nil)
 					return
 				}
+				couponFeeD, _ := decimal.NewFromString(vList[0].Amount)
+				couponFee, _ = couponFeeD.Float64()
 
-				foParams["coupon_fee"] = vList[0].Amount
+				foParams["coupon_fee"] = couponFee
 				foParams["voucher_id"] = vp.Id
 
+				couponFee, _ := decimal.NewFromString(vList[0].Amount)
+				fee, _ := decimal.NewFromFloat(fo.Fee).Sub(couponFee).Float64()
+				fo.Fee = fee
+				foParams["fee"] = fee
 			}
 
 			// 标记优惠券为已使用
@@ -1696,20 +1774,29 @@ func (rest *Order) ReceiveNotify(c *gin.Context) {
 			}
 
 			// 减库存
-			model.FoodOrder{OrderId: orderId}.ReduceInventory()
+			foodOrder := model.FoodOrder{OrderId: orderId}
+			foodOrder.ReduceInventory()
 
 			userId = fo.UserId
 			orderType := fo.OrderType
 
 			// 获取订单门店
 			storeId := fo.StoreId
+
 			// 获取门店信息
 			store := model.Store{}
-			tx = cmf.NewDb().Where("id = ?", storeId).First(&store)
-			if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
-				rest.rc.Error(c, tx.Error.Error(), nil)
+			store, err = store.Show([]string{"id = ?", "delete_at = ?"}, []interface{}{storeId, 0})
+			if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+				rest.rc.Error(c, err.Error(), nil)
 				return
 			}
+
+			if store.Id == 0 {
+				rest.rc.Error(c, "该门店不存在或以关闭！", nil)
+				return
+			}
+
+			fmt.Println("store", store)
 
 			// 查询订单列表
 			var fod []model.FoodOrderDetail
@@ -1823,12 +1910,12 @@ func (rest *Order) ReceiveNotify(c *gin.Context) {
 			}
 
 			if noticeTitle == "" {
-				audio = "https://v.hji5.com/codecloud/n2.mp3"
+				audio = "https://cdn.mashangdian.cn/takeout.mp3"
 				noticeTitle = "外卖订单提醒"
 			}
 
 			// 保存通知
-			_, err = new(appModel.AdminNotice).Save(noticeTitle, noticeDesc, fo.Id, 0, audio)
+			_, err = new(saasModel.AdminNotice).Save(mid.(int), noticeTitle, noticeDesc, fo.Id, 0, audio)
 
 			if err != nil {
 				rest.rc.Error(c, err.Error(), nil)
@@ -1841,11 +1928,11 @@ func (rest *Order) ReceiveNotify(c *gin.Context) {
 			pf := feieModel.PrinterFormat{
 				OrderType:   orderType,
 				StoreName:   store.StoreName,
-				PayType:     "alipay",
+				PayType:     fo.PayType,
 				QueueNo:     queueNo,
 				OrderDetail: pContent,
-				CouponFee:   strconv.FormatFloat(fo.CouponFee, 'f', -1, 64),
-				OriginalFee: strconv.FormatFloat(fo.Fee+fo.BoxFee, 'f', -1, 64),
+				CouponFee:   strconv.FormatFloat(couponFee, 'f', -1, 64),
+				OriginalFee: strconv.FormatFloat(fo.OriginalFee, 'f', -1, 64),
 				Fee:         strconv.FormatFloat(fo.Fee, 'f', -1, 64),
 				BoxFee:      strconv.FormatFloat(fo.BoxFee, 'f', -1, 64),
 				Address:     fo.Address,
@@ -1860,14 +1947,14 @@ func (rest *Order) ReceiveNotify(c *gin.Context) {
 			// 获取门店打印机状态
 			p := model.Printer{}
 			p, err = p.Show([]string{"store_id = ? AND mid = ?"}, []interface{}{storeId, mid})
-			if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+			if err != nil {
 				rest.rc.Error(c, err.Error(), nil)
 				return
 			}
 
 			if p.Id > 0 && canPrinter {
-				/*myResult := new(base.Printer).Printer(p.Sn, content, "1")
-				fmt.Println("myResult", myResult)*/
+				myResult := new(base.Printer).Printer(p.Sn, content, "1")
+				fmt.Println("myResult", myResult)
 			} else {
 				fmt.Println("请先绑定打印机！")
 			}
@@ -1909,82 +1996,86 @@ func (rest *Order) ReceiveNotify(c *gin.Context) {
 			// 启用消费返积分
 			if scoreMap.EnabledPay == 1 {
 				tScore = scoreMap.PayScore * totalFee
-			}
 
-			score += tScore
+				score += tScore
 
-			/* -- 经验 -- */
-			exp := u.Exp
+				/* -- 经验 -- */
+				exp := u.Exp
 
-			point := 0
-			remark := ""
+				point := 0
+				remark := ""
 
-			// 储值还是消费
-			if prefix == "recharge" {
-				remark = "储值"
-				point = rPoint
-			} else {
-				remark = "消费"
+				// 储值还是消费
+				if prefix == "recharge" {
+					remark = "储值"
+					point = rPoint
+				} else {
+					remark = "消费"
 
-				if u.Level != nil && u.Level.Benefit.EnabledPoint == 1 {
-					point = u.Level.Benefit.Point * totalFee
+					if u.Level != nil && u.Level.Benefit.EnabledPoint == 1 {
+						point = u.Level.Benefit.Point * totalFee
+					}
 				}
-			}
 
-			exp += point
+				exp += point
 
-			// 保存到数据库
-			sLog := appModel.ScoreLog{
-				UserId: u.Id,
-				Score:  tScore,
-				Fee:    ta,
-				Remark: remark,
-			}
+				// 保存到数据库
+				sLog := appModel.ScoreLog{
+					UserId: u.Id,
+					Score:  tScore,
+					Fee:    ta,
+					Remark: remark,
+				}
 
-			// 达到消费门槛1元
-			fmt.Println("totalFee", totalFee)
-			if totalFee > 1 {
-				err = sLog.Save()
-				if err != nil {
-					rest.rc.Error(c, err.Error(), nil)
-					cmfLog.Error(err.Error())
+				// 达到消费门槛1元
+				if totalFee > 1 {
+					err = sLog.Save()
+					if err != nil {
+						rest.rc.Error(c, err.Error(), nil)
+						cmfLog.Error(err.Error())
+						return
+					}
+				}
+
+				eLog := appModel.ExpLog{
+					UserId: u.Id,
+					Exp:    point,
+					Fee:    ta,
+					Remark: remark,
+				}
+
+				if score > 0 {
+					err = eLog.Save()
+					if err != nil {
+						rest.rc.Error(c, err.Error(), nil)
+						return
+					}
+				}
+
+				tx := cmf.NewDb().Model(&u).Where("id = ?", u.Id).Updates(map[string]interface{}{
+					"score": score,
+					"exp":   exp,
+				})
+
+				if tx.Error != nil {
+					cmfLog.Error(tx.Error.Error())
+					rest.rc.Error(c, tx.Error.Error(), nil)
 					return
 				}
-			}
 
-			eLog := appModel.ExpLog{
-				UserId: u.Id,
-				Exp:    point,
-				Fee:    ta,
-				Remark: remark,
-			}
-
-			if score > 0 {
-				err = eLog.Save()
-				if err != nil {
-					rest.rc.Error(c, err.Error(), nil)
-					return
-				}
-			}
-
-			tx := cmf.NewDb().Model(&u).Where("id = ?", u.Id).Updates(map[string]interface{}{
-				"score": score,
-				"exp":   exp,
-			})
-
-			if tx.Error != nil {
-				cmfLog.Error(tx.Error.Error())
-				rest.rc.Error(c, tx.Error.Error(), nil)
-				return
 			}
 		}
 
 		payLog := appModel.PayLog{
-			OrderId:     orderId,
-			TradeNo:     tradeNo,
-			Type:        "alipay",
-			AppId:       appId,
-			TotalAmount: taFloat,
+			OrderId:        orderId,
+			TradeNo:        tradeNo,
+			Type:           fo.PayType,
+			AppId:          appId,
+			TotalAmount:    taFloat,
+			ReceiptAmount:  raFloat,
+			InvoiceAmount:  iaFloat,
+			BuyerPayAmount: bpaFloat,
+			PointAmount:    paFloat,
 		}
 
 		payLog.UserId = userId

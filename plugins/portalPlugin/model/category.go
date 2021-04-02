@@ -53,6 +53,17 @@ type categoryOptions struct {
 	Level    int    `json:"level"`
 }
 
+func (model *PortalCategory) Init(mid int) {
+
+	pc := PortalCategory{
+		Id: 1,
+		Mid: mid,
+		Name: "新鲜事",
+	}
+	cmf.NewDb().FirstOrCreate(&pc)
+
+}
+
 func (model *PortalCategory) Index(c *gin.Context, query []string, queryArgs []interface{}) (cmfModel.Paginate, error) {
 
 	// 获取默认的系统分页

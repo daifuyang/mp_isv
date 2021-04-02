@@ -14,7 +14,7 @@ import (
 )
 
 type Food struct {
-	rc controller.RestController
+	rc controller.Rest
 }
 
 type foodCate struct {

@@ -16,7 +16,7 @@ import (
 )
 
 type SpecController struct {
-	rc controller.RestController
+	rc controller.Rest
 }
 
 func (rest SpecController) AddKey(c *gin.Context) {

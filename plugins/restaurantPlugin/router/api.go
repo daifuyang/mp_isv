@@ -22,6 +22,7 @@ import (
 	"gincmf/plugins/restaurantPlugin/controller/app/address"
 	rtCard "gincmf/plugins/restaurantPlugin/controller/app/card"
 	"gincmf/plugins/restaurantPlugin/controller/app/common"
+	"gincmf/plugins/restaurantPlugin/controller/app/contact"
 	rtDesk "gincmf/plugins/restaurantPlugin/controller/app/desk"
 	rtDishes "gincmf/plugins/restaurantPlugin/controller/app/dishes"
 	rtOrder "gincmf/plugins/restaurantPlugin/controller/app/order"
@@ -59,7 +60,7 @@ func ApiListenRouter() {
 
 		// 门店管理
 		adminGroup.Get("/store/list", new(store.Index).List)
-		adminGroup.Rest("/store/index", new(store.Index), AliMiddle.UseAlipay)
+		adminGroup.Rest("/store/index", new(store.Index), AliMiddle.ValidationAlipay)
 
 		adminGroup.Get("/store/order/query/:id", new(store.Index).QueryStatus, AliMiddle.ValidationAlipay)
 
@@ -136,10 +137,11 @@ func ApiListenRouter() {
 		// 获取小程序用户
 		appGroup.Get("/user/detail", new(rtUser.User).Show, middleware.ValidationBindMobile)
 		appGroup.Post("/user/save", new(rtUser.User).Save, middleware.ValidationOpenId)
+
 		appGroup.Post("/user/save/mobile", new(rtUser.User).SaveMobile, middleware.ValidationOpenId)
 
 		// 绑定手机号
-		appGroup.Post("/user/bind/mobile", new(rtUser.User).BindMpMobile, middleware.ValidationOpenId)
+		appGroup.Post("/user/mobile", new(rtUser.User).BindMpMobile, middleware.ValidationMp, middleware.ValidationOpenId)
 
 		// 门店列表
 		appGroup.Get("/store", new(rtStore.Index).List)
@@ -204,6 +206,8 @@ func ApiListenRouter() {
 
 		// 获取堂食预约
 		appGroup.Get("/appointment", new(common.Appointment).Show, rtMiddle.ValidationStore)
+
+		appGroup.Get("/contact/alipay", new(contact.Contact).Get)
 
 	}
 

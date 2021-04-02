@@ -22,7 +22,7 @@ import (
 )
 
 type Index struct {
-	rc controller.RestController
+	rc controller.Rest
 }
 
 /**
@@ -773,7 +773,7 @@ func (rest Index) Store(c *gin.Context) {
 		return
 	}
 
-	tx := cmf.Db().Where("category_id = ? AND category_type = ?", shopCategory, 2).First(&appModel.ShopCategory{})
+	tx := cmf.Db().Debug().Where("category_id = ? AND category_type = ?", shopCategory, 2).First(&appModel.ShopCategory{})
 
 	if tx.RowsAffected == 0 {
 		rest.rc.Error(c, "门店类目不存在！", nil)

@@ -117,16 +117,17 @@ ERR:
 
 }
 
-func (conn *Connection) Success(msg string, data interface{}) {
-	msg = new(controller.RestController).JsonSuccess(msg, data)
+func (conn *Connection) Success(msg string, data interface{}) error {
+	msg = new(controller.Rest).JsonSuccess(msg, data)
 	if err := conn.WriteMessage([]byte(msg)); err != nil {
 		conn.Close()
+		return errors.New("链接已关闭！")
 	}
-	return
+	return nil
 }
 
 func (conn *Connection) Error(msg string, data interface{}) {
-	msg = new(controller.RestController).JsonError(msg, nil)
+	msg = new(controller.Rest).JsonError(msg, nil)
 	if err := conn.WriteMessage([]byte(msg)); err != nil {
 		conn.Close()
 	}

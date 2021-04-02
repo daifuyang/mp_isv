@@ -22,7 +22,7 @@ import (
 )
 
 type Order struct {
-	rc controller.RestController
+	rc controller.Rest
 }
 
 type payResponse struct {

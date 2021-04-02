@@ -22,7 +22,7 @@ import (
 )
 
 type Recharge struct {
-	rc controller.RestController
+	rc controller.Rest
 }
 
 func (rest *Recharge) Order(c *gin.Context) {

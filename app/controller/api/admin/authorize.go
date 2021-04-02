@@ -12,7 +12,7 @@ import (
 )
 
 type Authorize struct {
-	rc controller.RestController
+	rc controller.Rest
 }
 
 type tempAuthorize struct {
@@ -36,7 +36,7 @@ func (rest *Authorize) Get(c *gin.Context) {
 		Joins("INNER JOIN  " + prefix + "auth_rule r ON m.unique_name = r.name").Scan(&adminMenu)
 
 	if result.RowsAffected == 0 {
-		controller.RestController{}.Error(c, "暂无菜单,请联系管理员添加！", nil)
+		controller.Rest{}.Error(c, "暂无菜单,请联系管理员添加！", nil)
 		return
 	}
 
@@ -61,7 +61,7 @@ func (rest *Authorize) Show(c *gin.Context) {
 		Joins("INNER JOIN  " + prefix + "auth_rule r ON m.unique_name = r.name").Scan(&adminMenu)
 
 	if result.RowsAffected == 0 {
-		controller.RestController{}.Error(c, "暂无菜单,请联系管理员添加！", nil)
+		controller.Rest{}.Error(c, "暂无菜单,请联系管理员添加！", nil)
 		return
 	}
 

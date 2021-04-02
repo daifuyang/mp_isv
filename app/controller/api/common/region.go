@@ -12,7 +12,7 @@ import (
 )
 
 type RegionController struct {
-	rc controller.RestController
+	rc controller.Rest
 }
 
 func (rest *RegionController) Get(c *gin.Context) {

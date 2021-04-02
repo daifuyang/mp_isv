@@ -76,7 +76,7 @@ func ValidationAdmin(c *gin.Context) {
 
 	if userType != 1 {
 		fmt.Println("您不是管理员，无权访问！")
-		new(controller.RestController).Error(c, "您不是管理员，无权访问！", nil)
+		new(controller.Rest).Error(c, "您不是管理员，无权访问！", nil)
 		c.Abort()
 		return
 	}

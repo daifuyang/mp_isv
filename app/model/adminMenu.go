@@ -160,7 +160,7 @@ func inRule(name string, title string, ruleApi []ruleApi)  {
 	}
 
 	if len(rApi) > 0 {
-		tx = cmf.NewDb().Debug().Create(&rApi)
+		tx = cmf.NewDb().Create(&rApi)
 		if tx.Error != nil {
 			return
 		}

@@ -13,6 +13,8 @@ import (
 	"io/ioutil"
 	"os"
 	"strings"
+	"sync"
+	"time"
 )
 
 type shopCategory struct {
@@ -21,7 +23,10 @@ type shopCategory struct {
 
 func (migrate shopCategory) AutoMigrate() {
 
+	cmf.Db().Migrator().DropTable(&model.ShopCategory{})
 	cmf.Db().AutoMigrate(&model.ShopCategory{})
+
+	time.Sleep(time.Second * 1)
 
 	f, err := os.Open(util.CurrentPath() + "/data/shop_category.sql")
 	if err != nil {
@@ -33,9 +38,15 @@ func (migrate shopCategory) AutoMigrate() {
 	result = strings.ReplaceAll(result, "{prefix}", prefix)
 	// fmt.Println(result)
 	sqlArr := strings.Split(result, ";")
-	go func() {
-		for _, sql := range sqlArr {
-			cmf.Db().Exec(sql)
-		}
-	}()
+	mutex := sync.Mutex{}
+	for _, sql := range sqlArr {
+		sql := sql
+		go func() {
+			mutex.Lock()
+			if sql != "" {
+				cmf.Db().Exec(sql)
+			}
+			mutex.Unlock()
+		}()
+	}
 }

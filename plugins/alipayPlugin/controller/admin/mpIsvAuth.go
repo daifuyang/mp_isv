@@ -22,7 +22,7 @@ import (
 )
 
 type MpIsvAuth struct {
-	rc controller.RestController
+	rc controller.Rest
 }
 
 type AlipayAuthResult struct {

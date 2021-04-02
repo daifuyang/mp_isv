@@ -20,7 +20,7 @@ import (
 )
 
 type Queue struct {
-	rc controller.RestController
+	rc controller.Rest
 }
 
 func (rest Queue) Init() {

@@ -66,7 +66,7 @@ type MpThemePage struct {
 	Title       string `gorm:"type:varchar(20);comment:页面名称;not null" json:"title"`
 	File        string `gorm:"type:varchar(20);comment:页面路径;not null" json:"file"`
 	Style       string `gorm:"type:text;comment:主题文件用户公共样式" json:"style"`
-	ConfigStyle string `gorm:"type:text;comment:主题文件默认公共样式" json:"global_style"`
+	ConfigStyle string `gorm:"type:text;comment:主题文件默认公共样式" json:"config_style"`
 	More        string `gorm:"type:text;comment:主题文件用户配置文件" json:"more"`
 	ConfigMore  string `gorm:"type:text;comment:主题文件默认配置文件" json:"config_more"`
 	CreateAt    int64  `gorm:"type:bigint(20)" json:"create_at"`

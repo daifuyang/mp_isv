@@ -5,6 +5,7 @@
 package tenant
 
 import (
+	"fmt"
 	saasModel "gincmf/plugins/saasPlugin/model"
 	"github.com/gin-gonic/gin"
 	cmf "github.com/gincmf/cmf/bootstrap"
@@ -12,7 +13,7 @@ import (
 )
 
 type Menu struct {
-	rc controller.RestController
+	rc controller.Rest
 }
 
 func (rest *Menu) Get(c *gin.Context) {
@@ -26,6 +27,7 @@ func (rest *Menu) Get(c *gin.Context) {
 	}
 
 	authAccessRule := saasModel.GetAuthAccess(c)
+	fmt.Println("authAccessRule",authAccessRule)
 
 	// 获取当前用户类型
 
@@ -41,7 +43,7 @@ func (rest *Menu) Get(c *gin.Context) {
 	}
 
 	results := rest.recursionMenu(c, showMenu, 0)
-	controller.RestController{}.Success(c, "获取成功！", results)
+	controller.Rest{}.Success(c, "获取成功！", results)
 
 }
 

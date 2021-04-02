@@ -13,7 +13,7 @@ import (
 )
 
 type Recharge struct {
-	rc controller.RestController
+	rc controller.Rest
 }
 
 /**

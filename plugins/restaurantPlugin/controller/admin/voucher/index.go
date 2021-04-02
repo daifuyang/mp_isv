@@ -24,7 +24,7 @@ import (
 )
 
 type Index struct {
-	rc controller.RestController
+	rc controller.Rest
 }
 
 func (rest *Index) Get(c *gin.Context) {

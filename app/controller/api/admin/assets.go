@@ -28,7 +28,7 @@ import (
 )
 
 type Assets struct {
-	rc controller.RestController
+	rc controller.Rest
 }
 
 /*

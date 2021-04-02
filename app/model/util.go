@@ -128,16 +128,20 @@ func GetRoleById(userId int) []role {
 }
 
 // 是否超级管理员
-func SuperRole(c *gin.Context, t int) bool {
+func SuperRole(c *gin.Context, userId int) bool {
 	type resultStruct struct {
 		Id   int    `json:"id"`
 		name string `json:"name"`
 	}
 	var result []resultStruct
-	userId, _ := c.Get("user_id")
+	iUserId, _ := c.Get("user_id")
 
-	if userId == "1" {
+	if iUserId == "1" {
 		return true
+	}
+
+	if userId == 0 {
+		 userId = iUserId.(int)
 	}
 
 	prefix := cmf.Conf().Database.Prefix
@@ -147,7 +151,7 @@ func SuperRole(c *gin.Context, t int) bool {
 		Scan(&result)
 
 	for _, v := range result {
-		if v.Id == t {
+		if v.Id == iUserId {
 			return true
 		}
 	}

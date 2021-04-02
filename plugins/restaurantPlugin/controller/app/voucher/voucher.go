@@ -19,7 +19,7 @@ import (
 )
 
 type Voucher struct {
-	rc controller.RestController
+	rc controller.Rest
 }
 
 // @Summary 优惠券列表

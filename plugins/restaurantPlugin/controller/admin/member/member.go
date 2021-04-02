@@ -12,7 +12,7 @@ import (
 )
 
 type Index struct {
-	rc controller.RestController
+	rc controller.Rest
 }
 
 // @Summary 会员管理

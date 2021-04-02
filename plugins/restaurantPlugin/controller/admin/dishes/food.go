@@ -21,7 +21,7 @@ import (
 )
 
 type Food struct {
-	rc controller.RestController
+	rc controller.Rest
 }
 
 type materialJson struct {
@@ -549,9 +549,8 @@ func (rest Food) Edit(c *gin.Context) {
 
 	// 总库存
 	foodInventory := inventoryInt
-	if useSkuInt == 1 {
 
-		foodInventory = 0
+	if useSkuInt == 1 {
 
 		var attrQuery []string
 		var attrQueryArgs []interface{}
@@ -627,7 +626,10 @@ func (rest Food) Edit(c *gin.Context) {
 				Db:               tx,
 			}
 
-			foodInventory += v.Inventory
+			if v.Inventory > 0 {
+				foodInventory += v.Inventory
+			}
+
 			skus = append(skus, sku)
 		}
 
@@ -653,17 +655,24 @@ func (rest Food) Edit(c *gin.Context) {
 				return
 			}
 		}
-
-		food, err = food.Update()
-		if err != nil {
-			tx.Rollback()
-			rest.rc.Error(c, err.Error(), nil)
-			return
-		}
-
 	}
 
-	tx.Commit()
+	food.Db = tx
+	food, err = food.Update()
+	if err != nil {
+		tx.RollbackTo("sp1")
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
+	defer func() {
+		if tx.Error != nil {
+			tx.RollbackTo("sp1")
+			return
+		}
+		tx.Commit()
+	}()
+
 	rest.rc.Success(c, "更新成功！", food)
 }
 
@@ -1016,6 +1025,8 @@ func (rest Food) Store(c *gin.Context) {
 		return
 	}
 
+	fmt.Println("food",food.Id)
+
 	// 更新所在分类
 	categoryArr := strings.Split(category, ",")
 	var categoryIntArr []int
@@ -1153,18 +1164,20 @@ func (rest Food) Store(c *gin.Context) {
 		}
 	}
 
+	tx.Commit()
+
 	// 更新库存
 	food.Inventory = foodInventory
 	food.DefaultInventory = foodInventory
 
+	food.Db = tx
 	food, err = food.Update()
 	if err != nil {
-		tx.Rollback()
 		rest.rc.Error(c, err.Error(), nil)
 		return
 	}
 
-	tx.Commit()
+
 	rest.rc.Success(c, "添加成功！", food)
 }
 

@@ -14,7 +14,7 @@ import (
 )
 
 type Notice struct {
-	rc controller.RestController
+	rc controller.Rest
 }
 
 // 定义链接客户端

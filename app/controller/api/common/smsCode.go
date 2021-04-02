@@ -14,7 +14,7 @@ import (
 )
 
 type SmsCode struct {
-	rc controller.RestController
+	rc controller.Rest
 }
 
 func (rest *SmsCode) Post(c *gin.Context) {

@@ -12,14 +12,13 @@ import (
 func AutoMigrate() {
 
 	// 指定数据库
-	food := new(model.Food)
 	foodCategory := new(model.FoodCategory)
 	foodSku := new(model.FoodSku)
 	store := new(model.Store)
 	desk := new(model.Desk)
 	deskCategory := new(model.DeskCategory)
 
-	food.AutoMigrate()
+	new(FoodOrder).AutoMigrate()
 	foodCategory.AutoMigrate()
 	store.AutoMigrate()
 	desk.AutoMigrate()
@@ -27,7 +26,6 @@ func AutoMigrate() {
 	foodSku.AutoMigrate()
 
 	new(user).AutoMigrate()
-	new(model.FoodOrder).AutoMigrate()
 	new(model.Option).AutoMigrate()
 	new(model.Voucher).AutoMigrate()
 	new(model.CardTemplate).AutoMigrate()

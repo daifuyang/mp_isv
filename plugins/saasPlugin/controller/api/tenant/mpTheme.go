@@ -8,11 +8,13 @@ package tenant
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	appModel "gincmf/app/model"
 	"gincmf/app/util"
 	resModel "gincmf/plugins/restaurantPlugin/model"
 	"gincmf/plugins/saasPlugin/model"
 	saasModel "gincmf/plugins/saasPlugin/model"
+	portalModel "gincmf/plugins/portalPlugin/model"
 	"github.com/gin-gonic/gin"
 	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
@@ -23,7 +25,7 @@ import (
 )
 
 type MpTheme struct {
-	rc controller.RestController
+	rc controller.Rest
 }
 
 func (rest *MpTheme) Get(c *gin.Context) {
@@ -225,8 +227,8 @@ func (rest *MpTheme) Store(c *gin.Context) {
 
 	themeIdStr := c.PostForm("theme_id")
 	themeId, _ := strconv.Atoi(themeIdStr)
-	ItenantId, _ := c.Get("tenant_id")
-	tenantId, _ := strconv.Atoi(ItenantId.(string))
+	iTenantId, _ := c.Get("tenant_id")
+	tenantId, _ := iTenantId.(int)
 
 	// 判断当前用户开通的门户数
 	var count int64 = 0
@@ -261,41 +263,77 @@ func (rest *MpTheme) Store(c *gin.Context) {
 		return
 	}
 
-	mpTheme := model.MpTheme{
+	mpTheme := model.MpTheme{}
+	if themeId > 0 {
+		tx := cmf.NewDb().Where("id = ?",themeId).Find(&mpTheme)
+		if tx.Error != nil {
+			rest.rc.Error(c,tx.Error.Error(),nil)
+			return
+		}
+	}
+
+	saasTheme := saasModel.MpTheme{
 		Mid:      mid,
 		Name:     name,
+		Thumbnail: mpTheme.Thumbnail,
 		ThemeId:  themeId,
 		TenantId: tenantId,
 		AppLogo:  appLogo,
 		CreateAt: time.Now().Unix(),
 	}
 
-	var mpThemeFile []model.MpThemePage
+	var mpThemePage []model.MpThemePage
 
 	err = cmf.NewDb().Transaction(func(tx *gorm.DB) error {
-		if err := tx.Create(&mpTheme).Error; err != nil {
+		if err := tx.Create(&saasTheme).Error; err != nil {
 			// 返回任何错误都会回滚事务
 			return err
 		}
 
 		if themeId == 0 {
-			mpThemeFile = append(mpThemeFile, model.MpThemePage{
-				ThemeId:  mpTheme.Id,
+			mpThemePage = append(mpThemePage, model.MpThemePage{
+				ThemeId:  saasTheme.Id,
 				Mid:      mid,
 				Title:    "首页",
 				File:     "home",
 				Home:     1,
 				CreateAt: time.Now().Unix(),
 			})
+		}else {
+			var pages []appModel.MpThemePage
+			prefix := cmf.Conf().Database.Prefix
+			cmf.Db().Debug().Table(prefix+"mp_theme t").Select("p.*").
+				Joins("INNER JOIN  "+prefix+"mp_theme_page p ON t.id = p.theme_id").
+				Where("t.id = ?",themeId).Scan(&pages)
 
-			// 插入主题单页面
-			if err := tx.Create(&mpThemeFile).Error; err != nil {
-				// 返回任何错误都会回滚事务
-				return err
+			mpThemePage = make([]saasModel.MpThemePage,0)
+			for _,v := range pages {
+				spItem := saasModel.MpThemePage{
+					ThemeId: saasTheme.Id,
+					Mid: mid,
+					Title: v.Title,
+					Home: v.Home,
+					File: v.File,
+					Style: v.Style,
+					ConfigStyle: v.Style,
+					More: v.More,
+					ConfigMore: v.More,
+					CreateAt: time.Now().Unix(),
+					UpdateAt: time.Now().Unix(),
+				}
+				mpThemePage = append(mpThemePage,spItem)
 			}
-			return nil
+		}
+
+		fmt.Println("mpThemePage",mpThemePage)
+
+		// 插入主题单页面
+		if err := tx.Create(&mpThemePage).Error; err != nil {
+			// 返回任何错误都会回滚事务
+			return err
 		}
 		return nil
+
 	})
 
 	if err != nil {
@@ -305,6 +343,9 @@ func (rest *MpTheme) Store(c *gin.Context) {
 
 	// 初始化角色
 	new(saasModel.Role).Init(mid)
+
+	// 初始化门户
+	new(portalModel.PortalCategory).Init(mid)
 
 	rest.rc.Success(c, "创建成功！", mpTheme)
 }

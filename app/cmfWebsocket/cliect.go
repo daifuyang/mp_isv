@@ -13,6 +13,7 @@ type Client struct {
 
 type Params struct {
 	Token string `json:"token"`
+	Mid   int    `json:"mid"`
 }
 
 var clientsMap = make(map[string]Client, 0)

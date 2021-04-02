@@ -12,7 +12,7 @@ import (
 )
 
 type Log struct {
-	rc controller.RestController
+	rc controller.Rest
 }
 
 func (rest Log) Get(c *gin.Context) {

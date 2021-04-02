@@ -12,7 +12,7 @@ import (
 )
 
 type Members struct {
-	rc controller.RestController
+	rc controller.Rest
 }
 
 func (rest *Members) Get(c *gin.Context) {

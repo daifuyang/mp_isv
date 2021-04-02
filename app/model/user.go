@@ -29,13 +29,13 @@ type User struct {
 	UserStatus        int     `gorm:"type:tinyint(3);not null;default:1" json:"user_status"`
 	UserLogin         string  `gorm:"type:varchar(60)" json:"user_login"`
 	UserPass          string  `gorm:"type:varchar(64)" json:"-"`
-	UserNickname      string  `gorm:"type:varchar(50)" json:"user_nickname"`
-	UserRealName      string  `gorm:"type:varchar(50)" json:"user_realname"`
+	UserNickname      string  `gorm:"type:varchar(50);column:user_nickname" json:"user_nickname"`
+	UserRealName      string  `gorm:"type:varchar(50);column:user_realname" json:"user_realname"`
 	UserEmail         string  `gorm:"type:varchar(100)" json:"user_email"`
 	UserUrl           string  `gorm:"type:varchar(100)" json:"user_url"`
 	Avatar            string  `json:"avatar"`
 	Signature         string  `json:"signature"`
-	LastLoginIp       string  `json:"last_loginip"`
+	LastLoginIp       string  `gorm:"type:varchar(50);column:last_loginip" json:"last_loginip"`
 	UserActivationKey string  `json:"user_activation_key"`
 	Mobile            string  `gorm:"type:varchar(20);not null" json:"mobile"`
 	More              string  `gorm:"type:text" json:"more"`

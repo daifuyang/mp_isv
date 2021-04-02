@@ -34,5 +34,5 @@ func (migrate *memberCardOrder) AutoMigrate() {
 	prefix := cmf.Conf().Database.Prefix
 
 	cmf.NewDb().Exec("drop event if exists memberStatus")
-	cmf.NewDb().Exec("CREATE EVENT memberStatus ON SCHEDULE EVERY 1 SECOND DO UPDATE " + prefix + "member_card SET status = -1 WHERE end_at < UNIX_TIMESTAMP(NOW())")
+	cmf.NewDb().Exec("CREATE EVENT memberStatus ON SCHEDULE EVERY 1 SECOND DO UPDATE " + prefix + "member_card SET status = -1 WHERE end_at between 0 AND UNIX_TIMESTAMP(NOW())")
 }

@@ -8,5 +8,5 @@ package mp
 import "github.com/gincmf/cmf/controller"
 
 type User struct {
-	rc controller.RestController
+	rc controller.Rest
 }

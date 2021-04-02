@@ -8,11 +8,12 @@ package common
 import (
 	"gincmf/app/model"
 	"github.com/gin-gonic/gin"
+	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
 )
 
 type ShopCategory struct {
-	rc controller.RestController
+	rc controller.Rest
 }
 
 func (rest *ShopCategory) Get(c *gin.Context) {
@@ -45,8 +46,9 @@ func (rest *ShopCategory) Last(c *gin.Context) {
 		return
 	}
 	shopCategoryId := rewrite.Id
-	result := new(model.ShopCategory).GetChildrenByTopId(shopCategoryId)
-	rest.rc.Success(c, "获取成功！", result)
+	var shopCategory = make([]model.ShopCategory,0)
+	cmf.Db().Debug().Where("top_id = ? AND  category_type = 2", shopCategoryId).Find(&shopCategory)
+	rest.rc.Success(c, "获取成功！", shopCategory)
 
 }
 

@@ -20,7 +20,7 @@ import (
 )
 
 type Dashboard struct {
-	rc controller.RestController
+	rc controller.Rest
 }
 
 type dashboardCard struct {
@@ -231,7 +231,7 @@ func (rest *Dashboard) DashboardCard(c *gin.Context) {
 	if dashboardResult.Yesterday.OrderCount == 0 {
 		dayOrderCountGrowth = 0
 	} else {
-		dayOrderCountGrowth, _ = decimal.NewFromInt(dashboardResult.Today.OrderCount - dashboardResult.Yesterday.OrderCount).Div(decimal.NewFromInt(dashboardResult.Yesterday.OrderCount)).Float64()
+		dayOrderCountGrowth, _ = decimal.NewFromInt(dashboardResult.Today.OrderCount - dashboardResult.Yesterday.OrderCount).Div(decimal.NewFromInt(dashboardResult.Yesterday.OrderCount)).Round(2).Float64()
 	}
 
 	dashboardResult.DayOrderCountGrowth = dayOrderCountGrowth * 100
@@ -242,7 +242,7 @@ func (rest *Dashboard) DashboardCard(c *gin.Context) {
 	if dashboardResult.Yesterday.NewMembersCount == 0 {
 		dayNewMembersCountGrowth = 0
 	} else {
-		dayNewMembersCountGrowth, _ = decimal.NewFromInt(dashboardResult.Today.NewMembersCount - dashboardResult.Yesterday.NewMembersCount).Div(decimal.NewFromInt(dashboardResult.Yesterday.NewMembersCount)).Float64()
+		dayNewMembersCountGrowth, _ = decimal.NewFromInt(dashboardResult.Today.NewMembersCount - dashboardResult.Yesterday.NewMembersCount).Div(decimal.NewFromInt(dashboardResult.Yesterday.NewMembersCount)).Round(2).Float64()
 	}
 
 	dashboardResult.DayNewMembersCountGrowth = dayNewMembersCountGrowth * 100
@@ -254,7 +254,7 @@ func (rest *Dashboard) DashboardCard(c *gin.Context) {
 	if dashboardResult.Week.ActuallyAmount == 0 {
 		weekActuallyGrowth = 0
 	} else {
-		weekActuallyGrowth, _ = decimal.NewFromFloat(dashboardResult.Today.ActuallyAmount - dashboardResult.Week.ActuallyAmount).Div(decimal.NewFromFloat(dashboardResult.Week.ActuallyAmount)).Float64()
+		weekActuallyGrowth, _ = decimal.NewFromFloat(dashboardResult.Today.ActuallyAmount - dashboardResult.Week.ActuallyAmount).Div(decimal.NewFromFloat(dashboardResult.Week.ActuallyAmount)).Round(2).Float64()
 	}
 
 	dashboardResult.WeekActuallyGrowth = weekActuallyGrowth * 100
@@ -275,7 +275,7 @@ func (rest *Dashboard) DashboardCard(c *gin.Context) {
 	if dashboardResult.Week.OrderCount == 0 {
 		weekOrderCountGrowth = 0
 	} else {
-		weekOrderCountGrowth, _ = decimal.NewFromInt(dashboardResult.Today.OrderCount - dashboardResult.Week.OrderCount).Div(decimal.NewFromInt(dashboardResult.Week.OrderCount)).Float64()
+		weekOrderCountGrowth, _ = decimal.NewFromInt(dashboardResult.Today.OrderCount - dashboardResult.Week.OrderCount).Div(decimal.NewFromInt(dashboardResult.Week.OrderCount)).Round(2).Float64()
 	}
 
 	dashboardResult.WeekOrderCountGrowth = weekOrderCountGrowth * 100
@@ -286,7 +286,7 @@ func (rest *Dashboard) DashboardCard(c *gin.Context) {
 	if dashboardResult.Week.NewMembersCount == 0 {
 		weekNewMembersCountGrowth = 0
 	} else {
-		weekNewMembersCountGrowth, _ = decimal.NewFromInt(dashboardResult.Today.NewMembersCount - dashboardResult.Week.NewMembersCount).Div(decimal.NewFromInt(dashboardResult.Week.NewMembersCount)).Float64()
+		weekNewMembersCountGrowth, _ = decimal.NewFromInt(dashboardResult.Today.NewMembersCount - dashboardResult.Week.NewMembersCount).Div(decimal.NewFromInt(dashboardResult.Week.NewMembersCount)).Round(2).Float64()
 	}
 
 	dashboardResult.WeekNewMembersCountGrowth = weekNewMembersCountGrowth * 100
@@ -531,10 +531,12 @@ func (rest *Dashboard) recursionStoreRanking(sr []storeSalesRanking, start float
 		}
 	}
 
-	resultSales = append(resultSales, storeSalesRanking{
-		StoreName:   storeName,
-		SalesAmount: start,
-	})
+	if storeName != "" {
+		resultSales = append(resultSales, storeSalesRanking{
+			StoreName:   storeName,
+			SalesAmount: start,
+		})
+	}
 
 	if len(tem) > 0 {
 		rs := rest.recursionStoreRanking(tem, start)

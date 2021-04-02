@@ -23,7 +23,7 @@ import (
 )
 
 type Index struct {
-	rc controller.RestController
+	rc controller.Rest
 }
 
 func (rest *Index) Show(c *gin.Context) {
@@ -48,6 +48,18 @@ func (rest *Index) Show(c *gin.Context) {
 	card.UpdateTime = time.Unix(card.CreateAt, 0).Format(data.TimeLayout)
 
 	card.BenefitInfoJson = tbiArr
+
+	if card.Id == 0 {
+		card.SyncToAlipay = 1
+		card.ValidPeriod = -1
+	}
+
+	if card.CardBackground == "" {
+		card.CardBackground = "images/vip-card.png"
+	}
+
+	card.CardBackgroundPrev = util.GetFileUrl(card.CardBackground)
+
 	rest.rc.Success(c, "获取成功！", card)
 
 }
@@ -76,7 +88,7 @@ func (rest *Index) Edit(c *gin.Context) {
 
 	cardBackground := c.PostForm("card_background")
 	if cardBackground == "" {
-		cardBackground = "template/vip.png"
+		cardBackground = "themes/vip-card.png"
 	}
 
 	syncToAlipay := c.PostForm("sync_to_alipay")
@@ -142,7 +154,7 @@ func (rest *Index) Edit(c *gin.Context) {
 			return
 		}
 
-		absPath := util.CurrentPath() + "/public/uploads/" + cardBackground
+		absPath := util.GetFileUrl(cardBackground)
 
 		b, err := util.ExistPath(absPath)
 		if err != nil {
@@ -155,9 +167,16 @@ func (rest *Index) Edit(c *gin.Context) {
 			return
 		}
 
+		ext := util.GetFileExt(absPath)
+
+		if ext == "" {
+			rest.rc.Error(c, "文件错误！", nil)
+			return
+		}
+
 		img := base.Image{}
 		bizContent := make(map[string]string, 0)
-		bizContent["image_type"] = "jpg"
+		bizContent["image_type"] = ext
 		bizContent["image_name"] = "vip_background"
 		imgResult, _ := img.Upload(bizContent, absPath)
 
@@ -227,28 +246,30 @@ func (rest *Index) Edit(c *gin.Context) {
 				{
 					Code:    "order",
 					Text:    "点餐",
-					UrlType: "url",
-					Url:     "https://merchant.ali.com/ee/clock_in.do",
+					UrlType: "miniAppUrl",
 					MiniAppUrl: &marketing.MiniAppUrl{
 						MiniAppId:     appId.(string),
+						MiniPageParam: "/pages/store/index",
 						DisplayOnList: "true",
 					}},
 				{
 					Code:    "pay",
 					Text:    "充值",
-					UrlType: "url",
-					Url:     "https://www.baodu.com",
+					UrlType: "miniAppUrl",
+					MiniAppUrl: &marketing.MiniAppUrl{
+						MiniAppId:      appId.(string),
+						MiniPageParam:  "/pages/order/recharge/index",
+						MiniQueryParam: "",
+						DisplayOnList:  "true",
+					}},
+				{
+					Code:    "mine",
+					Text:    "我的",
+					UrlType: "miniAppUrl",
 					MiniAppUrl: &marketing.MiniAppUrl{
 						MiniAppId:     appId.(string),
-						DisplayOnList: "true",
-					}}, {
-					Code:    "other",
-					Text:    "其他",
-					UrlType: "url",
-					Url:     "https://www.baodu.com",
-					MiniAppUrl: &marketing.MiniAppUrl{
-						MiniAppId:     appId.(string),
-						DisplayOnList: "true",
+						MiniPageParam: "/pages/mine/index",
+						DisplayOnList: "false",
 					}}}
 
 			bizMap := map[string]interface{}{

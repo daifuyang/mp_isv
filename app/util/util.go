@@ -16,6 +16,7 @@ import (
 	"log"
 	"math"
 	"os"
+	"path"
 	"runtime"
 	"strconv"
 	"strings"
@@ -23,9 +24,9 @@ import (
 )
 
 //获取当前登录管理员id
-func CurrentAdminId(c *gin.Context) string {
+func CurrentAdminId(c *gin.Context) int {
 	userId, _ := c.Get("user_id")
-	return userId.(string)
+	return userId.(int)
 }
 
 // 获取真实路径
@@ -333,6 +334,20 @@ func UploadFileInfo(dirName string) (filename string, filepath string) {
 	filepath = publicPath + filename
 
 	return
+}
+
+
+func GetFileExt(file string) string {
+
+	if file == "" {
+		 return ""
+	}
+
+	filenameAll := path.Base(file)
+	fileSuffix := path.Ext(file)
+	filePrefix := strings.TrimSuffix(filenameAll,fileSuffix)
+
+	return filePrefix
 }
 
 /*func GetUploadFileName(mid int) string {

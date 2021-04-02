@@ -13,7 +13,7 @@ import (
 )
 
 type Category struct {
-	rc controller.RestController
+	rc controller.Rest
 }
 
 /**

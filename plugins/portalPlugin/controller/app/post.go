@@ -17,7 +17,7 @@ import (
 )
 
 type Post struct {
-	rc controller.RestController
+	rc controller.Rest
 }
 
 /**

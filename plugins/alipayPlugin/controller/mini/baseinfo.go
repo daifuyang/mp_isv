@@ -12,7 +12,7 @@ import (
 )
 
 type BaseInfo struct {
-	rc controller.RestController
+	rc controller.Rest
 }
 
 /**

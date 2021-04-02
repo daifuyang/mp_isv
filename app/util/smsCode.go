@@ -15,9 +15,9 @@ import (
 )
 
 type smsCode struct {
-	Phone  int
-	Code   string
-	Expire int64
+	Phone  int `json:"phone"`
+	Code   string `json:"-"`
+	Expire int64 `json:"expire"`
 }
 
 var SmsCodeArr map[int]*smsCode

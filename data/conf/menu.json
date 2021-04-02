@@ -66,6 +66,24 @@
         "icon": "",
         "hide_in_menu": 0,
         "list_order": 10000,
+        "children": [
+          {
+            "unique_name": "app/order/business/list",
+            "name": "订单列表",
+            "path": "/app/:mid/order/business/list",
+            "icon": "",
+            "hide_in_menu": 1,
+            "list_order": 1
+          },
+          {
+            "unique_name": "app/order/business/id",
+            "name": "订单详情",
+            "path": "/app/:mid/order/business/:id",
+            "icon": "",
+            "hide_in_menu": 1,
+            "list_order": 1
+          }
+        ],
         "rule_api": [
           {
             "url": "/api/v1/admin/dishes/store",
@@ -431,9 +449,9 @@
     ]
   },
   {
-    "unique_name": "app/settings/default",
+    "unique_name": "app/settings",
     "name": "系统设置",
-    "path": "/app/:mid/settings/default",
+    "path": "/app/:mid/settings",
     "icon": "iconsetting",
     "hide_in_menu": 0,
     "list_order": 110,
@@ -447,20 +465,37 @@
         "list_order": 10000
       },
       {
+        "unique_name": "app/settings/contact",
+        "name": "客服设置",
+        "path": "/app/:mid/settings/contact",
+        "icon": "",
+        "hide_in_menu": 0,
+        "list_order": 10000
+      },
+      {
         "unique_name": "app/settings/logistics",
         "name": "物流设置",
         "path": "/app/:mid/settings/logistics",
         "icon": "",
         "hide_in_menu": 0,
         "list_order": 10000
-      },
+      }
+    ]
+  },
+  {
+    "unique_name": "app/notice",
+    "name": "消息通知",
+    "path": "/app/:mid/notice",
+    "icon": "",
+    "hide_in_menu": 1,
+    "list_order": 10000,
+    "children": [
       {
-        "unique_name": "app/settings/cashier",
-        "name": "收银配置",
-        "path": "/app/:mid/settings/cashier",
+        "unique_name": "app/notice/list",
+        "name": "消息列表",
+        "path": "/app/:mid/notice/list",
         "icon": "",
-        "hide_in_menu": 0,
-        "list_order": 10000
+        "hide_in_menu": 0
       }
     ]
   }

@@ -30,7 +30,7 @@ import (
 
 var (
 	token *oauth2.Token
-	rc    controller.RestController
+	rc    controller.Rest
 	Srv   *server.Server
 )
 

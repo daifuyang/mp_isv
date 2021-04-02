@@ -7,15 +7,14 @@ package socket
 
 import (
 	"encoding/json"
-	"fmt"
 	"gincmf/app/cmfWebsocket"
 	"gincmf/app/controller/api/common"
-	"gincmf/plugins/saasPlugin/model"
 	"github.com/gin-gonic/gin"
 	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gorilla/websocket"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -55,7 +54,6 @@ func ConnPools(c *gin.Context) {
 		s := common.Srv
 		t, err := s.Manager.LoadAccessToken(token)
 		if err != nil {
-			fmt.Println("err", err)
 			conn.Error("用户登录状态已失效！", nil)
 			goto Exit
 		}
@@ -68,18 +66,27 @@ func ConnPools(c *gin.Context) {
 			return duration, nil
 		})
 
-		userId, _ := strconv.Atoi(t.GetUserID())
-		fmt.Println("userId", userId)
+		scope := t.GetScope()
+		userID := t.GetUserID()
 
-		tenant := model.Tenant{}
+		userArr := strings.Split(userID, "@")
 
-		if err := cmf.Db().Where("id = ?", userId).First(&tenant).Error; err != nil {
-			fmt.Println("err", err)
-			conn.Error(err.Error(), nil)
-			goto Exit
-		}
+		userId := userArr[0]
+		userType := userArr[1]
+		tenantId := userArr[2]
 
-		db := "tenant_" + strconv.Itoa(tenant.TenantId)
+		mid := inParams.Mid
+
+		userIdInt, _ := strconv.Atoi(userId)
+		tenantIdInt, _ := strconv.Atoi(tenantId)
+
+		c.Set("scope", scope)
+		c.Set("user_id", userIdInt)
+		c.Set("account_type", userType)
+		c.Set("tenant_id", tenantIdInt)
+		c.Set("mid", mid)
+
+		db := "tenant_" + tenantId
 		cmf.ManualDb(db)
 
 		client := cmfWebsocket.Client{
@@ -87,9 +94,7 @@ func ConnPools(c *gin.Context) {
 			Token: token,
 		}
 
-		client.SetClient(strconv.Itoa(userId))
-		c.Set("userId", userId)
-		c.Set("tenantId", tenant.TenantId)
+		client.SetClient(userId)
 		c.Next()
 
 	}

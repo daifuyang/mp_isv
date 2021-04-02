@@ -16,7 +16,7 @@ import (
 )
 
 type MpThemePage struct {
-	rc controller.RestController
+	rc controller.Rest
 }
 
 func (rest *MpThemePage) Get(c *gin.Context) {

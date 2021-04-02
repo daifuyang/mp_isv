@@ -12,7 +12,7 @@ import (
 )
 
 type Page struct {
-	rc controller.RestController
+	rc controller.Rest
 }
 
 func (rest Page) Options(c *gin.Context) {

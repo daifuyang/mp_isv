@@ -438,10 +438,9 @@ func (model Food) Show(query []string, queryArgs []interface{}) (Food, error) {
 
 	queryStr := strings.Join(query, " AND ")
 	food := Food{}
-	result := db.Where(queryStr, queryArgs...).First(&food)
+	result := db.Debug().Where(queryStr, queryArgs...).First(&food)
 	food.PrevPath = util.GetFileUrl(food.Thumbnail)
 	if result.Error != nil {
-		cmfLog.Error(result.Error.Error())
 		return food, result.Error
 	}
 	return food, nil
@@ -472,7 +471,7 @@ func (model Food) Save() (Food, error) {
 	}
 
 	if food.Id == 0 {
-		result := model.Db.Create(&model)
+		result := model.Db.Debug().Create(&model)
 		if result.Error != nil {
 			return food, result.Error
 		}
@@ -503,17 +502,16 @@ func (model Food) Update() (Food, error) {
 	queryArgs := []interface{}{model.Mid, model.StoreId, model.Id}
 
 	food, err := food.Show(query, queryArgs)
-	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-		return food, err
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound){
+			return food, errors.New("该菜品不不存在！")
+		}
+		return Food{}, err
 	}
 
-	if food.Id > 0 {
-		result := model.Db.Where("id = ?", food.Id).Save(&model)
-		if result.Error != nil {
-			return food, result.Error
-		}
-	} else {
-		return Food{}, errors.New("该菜品不存在！")
+	result := model.Db.Debug().Where("id = ?", food.Id).Save(&model)
+	if result.Error != nil {
+		return food, result.Error
 	}
 
 	return model, nil

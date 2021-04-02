@@ -50,6 +50,10 @@ func ApiListenRouter() {
 		adminGroup.Post("/alipay/experience/create", new(mini.Version).ExperienceCreate, middleware.ValidationMerchant, aliMidd.ValidationAlipay, aliMidd.AppAuthToken)
 		adminGroup.Get("/alipay/experience/query", new(mini.Version).ExperienceQuery, middleware.ValidationMerchant, aliMidd.ValidationAlipay, aliMidd.AppAuthToken)
 
+		// 智能云客服配置
+		adminGroup.Get("/alipay/contact/button", new(admin.ContactButton).Get, middleware.ValidationMerchant)
+		adminGroup.Post("/alipay/contact/button", new(admin.ContactButton).Edit, middleware.ValidationMerchant)
+
 	}
 
 	alipayGroup := cmf.Group("api/v1/alipay", middleware.AllowCors)

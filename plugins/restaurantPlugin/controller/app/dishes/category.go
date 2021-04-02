@@ -12,7 +12,7 @@ import (
 )
 
 type Category struct {
-	rc controller.RestController
+	rc controller.Rest
 }
 
 func (rest *Category) List(c *gin.Context) {

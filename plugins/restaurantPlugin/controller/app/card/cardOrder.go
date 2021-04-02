@@ -12,7 +12,7 @@ import (
 )
 
 type Order struct {
-	rc controller.RestController
+	rc controller.Rest
 }
 
 func (rest Order) Get(c *gin.Context) {

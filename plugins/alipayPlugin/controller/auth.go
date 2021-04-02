@@ -26,7 +26,7 @@ import (
 )
 
 type Auth struct {
-	rc controller.RestController
+	rc controller.Rest
 }
 
 type responseData struct {
@@ -130,7 +130,8 @@ func (rest *Auth) Redirect(c *gin.Context) {
 		Mid      int    `json:"mid"`
 		Type     string `json:"type"`
 	}
-	json.Unmarshal(decoded, &stateMap)
+	err := json.Unmarshal(decoded, &stateMap)
+	fmt.Println("err",err)
 
 	tenant := saasModel.Tenant{}
 	tx := cmf.Db().Where("tenant_id = ?", stateMap.TenantId).First(&tenant)

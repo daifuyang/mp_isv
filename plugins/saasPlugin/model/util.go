@@ -65,6 +65,16 @@ func GetAuthAccess(c *gin.Context) []AuthAccessRule {
 
 	mid, _ := c.Get("mid")
 
+	var query []string
+	var queryArgs []interface{}
+
+	query = append(query, "access.mid = ?")
+	queryArgs = append(queryArgs, mid)
+
+	if SuperRole(c, adminUser.Id) {
+		return []AuthAccessRule{}
+	}
+
 	// 获取当前用户全部的权限列表
 	role, _ := GetRoleById(adminUser.Id, mid.(int))
 	var roleIds []string
@@ -74,16 +84,10 @@ func GetAuthAccess(c *gin.Context) []AuthAccessRule {
 
 	roleIdsStr := strings.Join(roleIds, ",")
 
-	var query []string
-	var queryArgs []interface{}
-
 	if roleIdsStr != "" {
 		query = append(query, "role_id in (?)")
 		queryArgs = append(queryArgs, roleIdsStr)
 	}
-
-	query = append(query,"access.mid = ?")
-	queryArgs = append(queryArgs,mid)
 
 	queryStr := strings.Join(query, " AND ")
 

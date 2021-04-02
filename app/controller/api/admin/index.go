@@ -7,7 +7,7 @@ import (
 )
 
 type IndexController struct {
-	rc controller.RestController
+	rc controller.Rest
 }
 
 // @Summary 入口文件

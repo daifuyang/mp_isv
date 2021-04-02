@@ -14,7 +14,7 @@ import (
 )
 
 type MiniCategory struct {
-	rc controller.RestController
+	rc controller.Rest
 }
 
 func (rest *MiniCategory) Get(c *gin.Context) {

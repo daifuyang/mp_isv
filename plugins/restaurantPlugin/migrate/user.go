@@ -7,6 +7,7 @@ package migrate
 
 import (
 	"gincmf/app/model"
+	resModel "gincmf/plugins/restaurantPlugin/model"
 	cmf "github.com/gincmf/cmf/bootstrap"
 )
 
@@ -17,5 +18,5 @@ type user struct {
 
 func (migrate *user) AutoMigrate() {
 	cmf.NewDb().AutoMigrate(&user{})
-	cmf.NewDb().AutoMigrate(&model.ThirdPart{})
+	cmf.NewDb().AutoMigrate(&resModel.ThirdPart{})
 }

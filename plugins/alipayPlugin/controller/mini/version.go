@@ -26,7 +26,7 @@ import (
 )
 
 type Version struct {
-	rc controller.RestController
+	rc controller.Rest
 }
 
 /**

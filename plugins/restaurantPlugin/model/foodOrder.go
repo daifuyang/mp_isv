@@ -8,14 +8,19 @@ package model
 import (
 	"errors"
 	"fmt"
-	isvModel "gincmf/app/model"
+	appModel "gincmf/app/model"
 	"gincmf/app/util"
+	feieModel "gincmf/plugins/feiePlugin/model"
 	"github.com/gin-gonic/gin"
 	"github.com/gincmf/alipayEasySdk/payment"
 	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/data"
+	cmfLog "github.com/gincmf/cmf/log"
 	cmfModel "github.com/gincmf/cmf/model"
+	"github.com/gincmf/feieSdk/base"
+	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -48,7 +53,9 @@ type FoodOrder struct {
 	VoucherId       int               `gorm:"type:int(11);comment:优惠券id" json:"voucher_id"`
 	Remark          string            `gorm:"type:varchar(255);comment:备注" json:"remark"`
 	Fee             float64           `gorm:"type:decimal(7,2);comment:合计金额;default:0;not null" json:"fee"`
-	TotalAmount     float64           `gorm:"-" json:"total_amount"`
+	OriginalFee     float64           `gorm:"type:decimal(7,2);comment:原价金额;default:0;not null" json:"original_fee"`
+	TotalAmount     float64           `gorm:"->" json:"total_amount"`
+	BuyerPayAmount  float64           `gorm:"->" json:"buyer_pay_amount"`
 	DeskId          int               `gorm:"type:int(11);comment:桌号id" json:"desk_id"`
 	DeskName        string            `gorm:"type:varchar(40);comment:桌位名称详情" json:"desk_name"`
 	UserId          int               `gorm:"type:bigint(20);comment:下单人信息" json:"user_id"`
@@ -64,7 +71,7 @@ type FoodOrder struct {
 	OrderStatus     string            `gorm:"type:varchar(20);comment:订单状态（WAIT_BUYER_PAY => 待支付，TRADE_SUCCESS => 待使用/已支付，TRADE_FINISHED=> 已完成，TRADE_REFUSED => 已拒绝，TRADE_CLOSED => 已关闭，TRADE_REFUND=>已退款）;default:WAIT_BUYER_PAY;not null" json:"order_status"`
 	DeliveryStatus  string            `gorm:"type:varchar(20);comment:运输状态（TRADE_RECEIVED => 已接单，TRADE_DELIVERY => 运输中" json:"delivery_status"`
 	paginate        cmfModel.Paginate `gorm:"-"`
-	Db              *gorm.DB          `gorm:"-"`
+	Db              *gorm.DB          `gorm:"-" json:"-"`
 }
 
 // 定单明细表
@@ -93,26 +100,6 @@ type FoodOrderDetail struct {
 	BoxFee            float64 `gorm:"type:decimal(9,2);comment:餐盒费;not null" json:"box_fee"`
 }
 
-func (model *FoodOrder) AutoMigrate() {
-	cmf.NewDb().AutoMigrate(&model)
-	cmf.NewDb().AutoMigrate(&FoodOrderDetail{})
-
-	prefix := cmf.Conf().Database.Prefix
-
-	cmf.NewDb().Exec("drop event if exists orderCloseStatus")
-	cmf.NewDb().Exec("drop event if exists orderFinishStatus")
-
-	// 超时未支付和订单自动完成
-	sql := "CREATE EVENT orderCloseStatus ON SCHEDULE EVERY 1 SECOND DO " +
-		"UPDATE " + prefix + "food_order SET order_status = 'TRADE_CLOSED' WHERE order_status = 'WAIT_BUYER_PAY' AND UNIX_TIMESTAMP(NOW()) > create_at + 600;"
-	cmf.NewDb().Exec(sql)
-
-	sql = "CREATE EVENT orderFinishStatus ON SCHEDULE EVERY 1 SECOND DO " +
-		"UPDATE " + prefix + "food_order SET order_status = 'TRADE_FINISHED',finished_at = UNIX_TIMESTAMP( NOW() ) WHERE order_status = 'TRADE_SUCCESS' AND UNIX_TIMESTAMP(NOW()) > create_at + 43200;"
-	cmf.NewDb().Exec(sql)
-
-}
-
 func (model FoodOrder) IndexByStore(c *gin.Context, query []string, queryArgs []interface{}) (cmfModel.Paginate, error) {
 
 	// 获取默认的系统分页
@@ -133,7 +120,7 @@ func (model FoodOrder) IndexByStore(c *gin.Context, query []string, queryArgs []
 		Joins("LEFT JOIN "+prefix+"pay_log l ON l.order_id = fo.order_id").
 		Where(queryStr, queryArgs...).Order("fo.id desc").Count(&total)
 
-	result := cmf.NewDb().Table(prefix+"food_order fo").Select("fo.*,s.store_name,l.total_amount").
+	result := cmf.NewDb().Table(prefix+"food_order fo").Select("fo.*,s.store_name,l.total_amount,buyer_pay_amount").
 		Joins("INNER JOIN "+prefix+"store s ON s.id = fo.store_id").
 		Joins("LEFT JOIN "+prefix+"pay_log l ON l.order_id = fo.order_id").
 		Where(queryStr, queryArgs...).Limit(pageSize).Offset((current - 1) * pageSize).Order("fo.id desc").Scan(&fo)
@@ -378,7 +365,7 @@ func (model FoodOrder) Cancel(query []string, queryArgs []interface{}, appId str
 		// 进行退款逻辑
 		// 查询pay_log的退款金额
 
-		payLog := isvModel.PayLog{}
+		payLog := appModel.PayLog{}
 		result := cmf.NewDb().Where("order_id = ?", data.OrderId).First(&payLog)
 		if result.Error != nil {
 			if errors.Is(result.Error, gorm.ErrRecordNotFound) {
@@ -403,7 +390,7 @@ func (model FoodOrder) Cancel(query []string, queryArgs []interface{}, appId str
 			}
 
 			// 退款记录到payLog中
-			payLog = isvModel.PayLog{
+			payLog = appModel.PayLog{
 				OrderId:      data.OrderId,
 				TradeNo:      data.TradeNo,
 				Type:         "alipay",
@@ -435,7 +422,7 @@ func (model FoodOrder) Cancel(query []string, queryArgs []interface{}, appId str
 }
 
 // 减库存
-func (model FoodOrder) ReduceInventory() {
+func (model *FoodOrder) ReduceInventory() {
 
 	db := cmf.NewDb()
 	if model.Db != nil {
@@ -490,4 +477,206 @@ func (model FoodOrder) ReduceInventory() {
 		}
 
 	}
+}
+
+/**
+ * @Author return <1140444693@qq.com>
+ * @Description 统一退款
+ * @Date 2021/3/30 11:59:18
+ * @Param
+ * @return
+ **/
+func (model *FoodOrder) Refund() error {
+
+	db := cmf.NewDb()
+	if model.Db != nil {
+		db = model.Db
+	}
+
+	// 如果是余额支付
+	if model.PayType == "balance" {
+
+		rLog := appModel.RechargeLog{}
+		tx := db.Where("target_id = ? AND target_type = ?", model.Id, 0).First(&rLog)
+		if tx.Error != nil {
+			return tx.Error
+		}
+
+		userData, err := new(User).Show([]string{"u.id = ?", "u.mid = ?", "user_type = 0", "u.delete_at = 0"}, []interface{}{model.UserId, model.Mid})
+		if err != nil {
+			return err
+		}
+
+		balance := userData.Balance
+
+		reFee, err := decimal.NewFromString(rLog.Fee)
+
+		if err != nil {
+			return err
+		}
+
+		balanceDecimal := decimal.NewFromFloat(balance).Add(reFee)
+		balance, _ = balanceDecimal.Round(2).Float64()
+
+		tx = db.Model(&User{}).Where("id = ?", userData.Id).Updates(map[string]interface{}{
+			"balance": balance,
+		})
+
+		if tx.Error != nil {
+			return err
+		}
+
+		balanceStr := strconv.FormatFloat(balance, 'f', -1, 64)
+
+		rechargeLog := appModel.RechargeLog{
+			UserId:     userData.Id,
+			TargetId:   model.Id,
+			TargetType: 0,
+			Type:       0,
+			Fee:        rLog.Fee,
+			Balance:    balanceStr,
+			Remark:     "订单退款",
+			CreateAt:   time.Now().Unix(),
+		}
+
+		tx = db.Create(&rechargeLog)
+		if tx.Error != nil {
+			cmfLog.Error(tx.Error.Error())
+			return err
+		}
+	}
+
+	if model.PayType == "alipay" {
+
+		log := appModel.PayLog{}
+		tx := db.Where("order_id = ?", model.OrderId).First(&log)
+
+		if tx.Error != nil {
+			cmfLog.Error(tx.Error.Error())
+			return tx.Error
+		}
+
+		bizContent := make(map[string]interface{}, 0)
+		bizContent["out_trade_no"] = model.OrderId
+		bizContent["trade_no"] = model.TradeNo
+		bizContent["refund_amount"] = log.TotalAmount
+		refundResult := new(payment.Common).Refund(bizContent)
+
+		if refundResult.Response.Code != "10000" {
+			return errors.New("退款失败！")
+		}
+	}
+
+	tx := db.Model(&FoodOrder{}).Where("id = ?", model.Id).Update("order_status", "TRADE_REFUND")
+	if tx.Error != nil {
+		cmfLog.Error(tx.Error.Error())
+		return tx.Error
+	}
+
+	return nil
+}
+
+/**
+ * @Author return <1140444693@qq.com>
+ * @Description //查询订单并打印
+ * @Date 2021/3/30 11:47:35
+ * @Param
+ * @return
+ **/
+
+func (model *FoodOrder) Printer() error {
+
+	id := model.Id
+
+	if id == 0 {
+		return errors.New("订单号不能为空！")
+	}
+
+	fo := FoodOrder{}
+	// 查询订单
+	tx := cmf.NewDb().Where("id = ?", id).First(&fo)
+	if tx.Error != nil {
+		return tx.Error
+	}
+
+	// 查询订单列表
+	var fod = make([]FoodOrderDetail, 0)
+	tx = cmf.NewDb().Where("order_id", fo.OrderId).Find(&fod)
+	if tx.Error != nil {
+		return tx.Error
+	}
+
+	var printOrder = make([]map[string]string, 0)
+
+	for _, v := range fod {
+
+		// 打印订单详情信息
+		var printOrderItem = make(map[string]string, 0)
+
+		title := v.FoodName
+		if v.SkuDetail != "" {
+			title += "-" + v.SkuDetail
+		}
+
+		printOrderItem["title"] = title
+		printOrderItem["count"] = strconv.Itoa(v.Count)
+		printOrderItem["food_id"] = strconv.Itoa(v.FoodId)
+		printOrderItem["total"] = strconv.FormatFloat(v.Total, 'f', -1, 64)
+		printOrder = append(printOrder, printOrderItem)
+
+	}
+
+
+	// 获取订单门店
+	storeId := fo.StoreId
+
+	// 获取门店信息
+	store := Store{}
+	store, err := store.Show([]string{"id = ?", "delete_at = ?"}, []interface{}{storeId, 0})
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return err
+	}
+
+	if store.Id == 0 {
+		return errors.New("该门店不存在或以关闭！")
+	}
+
+	fmt.Println("store",store)
+
+	// 打印机打印订单
+	pContent := new(base.Printer).Format58Printer(printOrder)
+
+	pf := feieModel.PrinterFormat{
+		OrderType:   fo.OrderType,
+		StoreName:   store.StoreName,
+		PayType:     fo.PayType,
+		QueueNo:     fo.QueueNo,
+		OrderDetail: pContent,
+		CouponFee:   strconv.FormatFloat(fo.CouponFee, 'f', -1, 64),
+		OriginalFee: strconv.FormatFloat(fo.Fee+fo.BoxFee, 'f', -1, 64),
+		Fee:         strconv.FormatFloat(fo.Fee, 'f', -1, 64),
+		BoxFee:      strconv.FormatFloat(fo.BoxFee, 'f', -1, 64),
+		Address:     fo.Address,
+		Name:        fo.Name,
+		Mobile:      fo.Mobile,
+	}
+
+	content := pf.Format("58mm")
+
+	// 获取门店打印机状态
+	p := Printer{}
+	p, err = p.Show([]string{"store_id = ? AND mid = ?"}, []interface{}{fo.StoreId, fo.Mid})
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return err
+	}
+
+	if p.Id > 0 {
+		myResult := new(base.Printer).Printer(p.Sn, content, "1")
+		fmt.Println("myResult", myResult)
+	} else {
+		fmt.Println("请先绑定打印机！")
+	}
+
+	return nil
+
 }

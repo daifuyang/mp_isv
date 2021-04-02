@@ -11,7 +11,7 @@ import (
 )
 
 type Role struct {
-	rc controller.RestController
+	rc controller.Rest
 }
 
 func (rest *Role) Get(c *gin.Context) {

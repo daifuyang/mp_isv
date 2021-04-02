@@ -14,7 +14,7 @@ import (
 )
 
 type Desk struct {
-	rc controller.RestController
+	rc controller.Rest
 }
 
 func (rest *Desk) Show(c *gin.Context) {

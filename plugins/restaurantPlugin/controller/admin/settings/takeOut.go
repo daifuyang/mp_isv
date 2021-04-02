@@ -17,7 +17,7 @@ import (
 )
 
 type TakeOut struct {
-	rc controller.RestController
+	rc controller.Rest
 }
 
 func (rest *TakeOut) Show(c *gin.Context) {
