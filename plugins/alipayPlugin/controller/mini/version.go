@@ -66,7 +66,7 @@ func (rest *Version) Upload(c *gin.Context) {
 	midInt := mid.(int)
 
 	var count int64
-	cmf.NewDb().Where("mid = ? and is_audit = ?", mid, 1).First(&saasModel.MpThemeVersion{}).Count(&count)
+	cmf.NewDb().Where("mid = ? and is_audit = ? AND type = ?", mid, 1,"alipay").First(&saasModel.MpThemeVersion{}).Count(&count)
 	if count > 0 {
 		rest.rc.Error(c, "请等待待审核的小程序完成审核状态在升级!", nil)
 		return
@@ -102,6 +102,8 @@ func (rest *Version) Upload(c *gin.Context) {
 	appVersion := rest.NextVersion(&versionModel)
 	versionModel.Version = appVersion
 
+	fmt.Println("versionModel",versionModel)
+
 	result, appVersion := rest.UploadVersion(versionModel)
 
 	if result.Response.Code == "10000" {
@@ -135,8 +137,9 @@ func (rest *Version) UploadVersion(version saasModel.MpThemeVersion) (mini.Versi
 	version.Version = appVersion
 	version.Id = 0
 
-	result := new(mini.Version).Upload(bizContent)
+	fmt.Println("bizContent",bizContent)
 
+	result := new(mini.Version).Upload(bizContent)
 	if result.Response.Code != "10000" {
 		if result.Response.SubCode == "LARGER_VERSION_HAS_EXISTED" || result.Response.SubCode == "VERSION_HAS_EXISTED" {
 
@@ -239,7 +242,7 @@ func (rest *Version) ExperienceCreate(c *gin.Context) {
 func (rest *Version) ExperienceQuery(c *gin.Context) {
 
 	// 获取当前版本
-	version, err := new(saasModel.MpThemeVersion).Show(nil, nil)
+	version, err := new(saasModel.MpThemeVersion).Show([]string{"type = ?"}, []interface{}{"alipay"})
 	if err != nil {
 
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -346,45 +349,33 @@ func (rest *Version) DetailQuery(c *gin.Context) {
 	bizContent["app_version"] = appVersion
 	result := new(mini.Audit).DetailQuery(bizContent)
 
-	if result.Response.Code == "10000" {
+	if result.Response.Code != "10000" {
+		rest.rc.Error(c, result.Response.SubMsg, result.Response)
+		return
+	}
 
-		// 更新状态为审核中
-		version, err := new(saasModel.MpThemeVersion).Show(nil, nil)
-		if err != nil {
-			rest.rc.Error(c, err.Error(), nil)
+	// 更新状态为已拒绝
+	if result.Response.Status == "AUDIT_REJECT" {
+		version.Status = "reject"
+		version.RejectReason = result.Response.RejectReason
+		version.IsAudit = 0
+
+		bizContent := make(map[string]interface{}, 0)
+		bizContent["app_version"] = appVersion
+		result := new(mini.Audit).AuditedCancel(bizContent)
+
+		if result.Response.Code != "10000" {
+			rest.rc.Error(c, result.Response.SubMsg, result.Response)
 			return
 		}
 
-		fmt.Println("result.Response", result.Response.Status)
-
-		if result.Response.Status == "AUDIT_REJECT" {
-			version.Status = "reject"
-			version.RejectReason = result.Response.RejectReason
-			version.IsAudit = 0
-
-			bizContent := make(map[string]interface{}, 0)
-			bizContent["app_version"] = appVersion
-			result := new(mini.Audit).AuditedCancel(bizContent)
-
-			if result.Response.Code != "10000" {
-				rest.rc.Error(c, result.Response.SubMsg, result.Response)
-				return
-			}
-
-		}
-
-		tx := cmf.NewDb().Save(&version)
-
+		tx = cmf.NewDb().Save(&version)
 		if tx.Error != nil {
 			rest.rc.Error(c, err.Error(), nil)
 			return
 		}
-
-		rest.rc.Success(c, result.Response.Msg, result.Response)
-
-	} else {
-		rest.rc.Error(c, result.Response.SubMsg, result.Response)
 	}
+	rest.rc.Success(c, result.Response.Msg, result.Response)
 
 }
 
@@ -445,7 +436,7 @@ func (rest *Version) Audit(c *gin.Context) {
 		return
 	}
 
-	if bi.BusinessLicense == "" {
+	/*if bi.BusinessLicense == "" {
 		rest.rc.Error(c, "请先填写营业执照号", nil)
 		return
 	}
@@ -453,17 +444,17 @@ func (rest *Version) Audit(c *gin.Context) {
 	if bi.BusinessPhoto == "" {
 		rest.rc.Error(c, "请先上传营业执照", nil)
 		return
-	}
+	}*/
 
 	if bi.OutDoorPic == "" {
 		rest.rc.Error(c, "请先上传门头照片", nil)
 		return
 	}
 
-	if bi.FoodLicensePic == "" {
+	/*if bi.FoodLicensePic == "" {
 		rest.rc.Error(c, "请先上传食品经营许可证", nil)
 		return
-	}
+	}*/
 
 	bizContent := make(map[string]string, 0)
 	bizContent["app_version"] = appVersion
@@ -483,34 +474,35 @@ func (rest *Version) Audit(c *gin.Context) {
 	}
 
 	files["app_logo"] = util.GetAbsPath(mpTheme.AppLogo)
-	files["first_license_pic"] = util.GetAbsPath(bi.BusinessPhoto)
+
 	files["out_door_pic"] = util.GetAbsPath(bi.OutDoorPic)
-	files["first_special_license_pic"] = util.GetAbsPath(bi.FoodLicensePic)
+	if bi.BusinessPhoto != "" {
+		files["first_license_pic"] = util.GetAbsPath(bi.BusinessPhoto)
+	}
+
+	if bi.FoodLicensePic != "" {
+		files["first_special_license_pic"] = util.GetAbsPath(bi.FoodLicensePic)
+	}
 
 	result, _ := new(mini.Audit).Apply(bizContent, files)
 	fmt.Println("result", result)
 
-	if result.Response.Code == "10000" {
-		rest.rc.Success(c, result.Response.Msg, result.Response)
-
-		// 更新状态为审核中
-		version, err := new(saasModel.MpThemeVersion).Show(nil, nil)
-		if err != nil {
-			rest.rc.Error(c, err.Error(), nil)
-			return
-		}
-
-		version.IsAudit = 1
-		version.Status = "wait"
-		tx := cmf.NewDb().Updates(&version)
-
-		if tx.Error != nil {
-			rest.rc.Error(c, err.Error(), nil)
-			return
-		}
-
-	} else {
+	if result.Response.Code != "10000" {
 		rest.rc.Error(c, result.Response.SubMsg, result.Response)
+		return
 	}
+
+	// 更新状态为审核中
+
+	version.IsAudit = 1
+	version.Status = "wait"
+	tx = cmf.NewDb().Updates(&version)
+
+	if tx.Error != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
+	rest.rc.Success(c, result.Response.Msg, result.Response)
 
 }

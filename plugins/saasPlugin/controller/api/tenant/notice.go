@@ -8,11 +8,10 @@ package tenant
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
-	"gincmf/app/cmfWebsocket"
 	saasModel "gincmf/plugins/saasPlugin/model"
 	"github.com/gin-gonic/gin"
 	cmf "github.com/gincmf/cmf/bootstrap"
+	"github.com/gincmf/cmf/cmfWebsocket"
 	"github.com/gincmf/cmf/controller"
 	cmfLog "github.com/gincmf/cmf/log"
 	"gorm.io/gorm"
@@ -75,6 +74,13 @@ func (rest *Notice) Show(c *gin.Context) {
 
 }
 
+/**
+ * @Author return <1140444693@qq.com>
+ * @Description 全部已读
+ * @Date 2021/4/9 11:11:41
+ * @Param
+ * @return
+ **/
 func (rest *Notice) ReadAll(c *gin.Context) {
 
 	notice := saasModel.AdminNotice{}
@@ -87,6 +93,48 @@ func (rest *Notice) ReadAll(c *gin.Context) {
 	}
 
 	rest.rc.Success(c, "已读全部成功！", nil)
+
+}
+
+/**
+ * @Author return <1140444693@qq.com>
+ * @Description 标记已经播放
+ * @Date 2021/4/9 11:12:2
+ * @Param
+ * @return
+ **/
+func (rest *Notice) IsPlay (c *gin.Context) {
+
+	var rewrite struct {
+		Id int `uri:"id"`
+	}
+	if err := c.ShouldBindUri(&rewrite); err != nil {
+		c.JSON(400, gin.H{"msg": err.Error()})
+		return
+	}
+
+	mid, _ := c.Get("mid")
+	notice := saasModel.AdminNotice{
+		Mid: mid.(int),
+	}
+	tx := cmf.NewDb().Where("id = ?", rewrite.Id).First(&notice)
+	if tx.Error != nil {
+		if errors.Is(tx.Error, gorm.ErrRecordNotFound) {
+			rest.rc.Error(c, "该通知不存在！", nil)
+			return
+		}
+		rest.rc.Error(c, tx.Error.Error(), nil)
+		return
+	}
+
+	notice.IsPlay = 1
+	tx = cmf.NewDb().Save(&notice)
+	if tx.Error != nil {
+		rest.rc.Error(c, tx.Error.Error(), nil)
+		return
+	}
+
+	rest.rc.Success(c, "播放成功！", notice)
 
 }
 
@@ -109,8 +157,6 @@ func (rest Notice) SocketGet(c *gin.Context) {
 
 	mid, _ := c.Get("mid")
 
-	fmt.Println("mid",mid)
-
 	conn = new(cmfWebsocket.Client).GetClient(userIdStr).Conn
 
 	for {
@@ -126,7 +172,6 @@ func (rest Notice) SocketGet(c *gin.Context) {
 		// 读取redis是否是最新的订单
 		eatInKey := "mp_isv:" + tenantIdStr + ":latest_notice"
 		latestNotice, _ := cmf.NewRedisDb().Get(eatInKey).Result()
-
 		latestNoticeInt, _ := strconv.Atoi(latestNotice)
 
 		if latestNoticeInt < notice.Id || first {

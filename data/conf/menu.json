@@ -34,9 +34,9 @@
         "list_order": 1
       },
       {
-        "unique_name": "app/published/weixin",
+        "unique_name": "app/published/wechat",
         "name": "微信小程序",
-        "path": "/app/:mid/published/weixin",
+        "path": "/app/:mid/published/wechat",
         "icon": "",
         "hide_in_menu": 0,
         "list_order": 2
@@ -345,6 +345,22 @@
             "unique_name": "app/store/edit",
             "name": "修改门店",
             "path": "/app/:mid/store/edit/:id",
+            "icon": "",
+            "hide_in_menu": 1,
+            "list_order": 10000
+          },
+          {
+            "unique_name": "app/store/edit_for_here",
+            "name": "堂食设置",
+            "path": "/app/:mid/store/edit_for_here/:id",
+            "icon": "",
+            "hide_in_menu": 1,
+            "list_order": 10000
+          },
+          {
+            "unique_name": "app/store/edit_take_out",
+            "name": "外卖设置",
+            "path": "/app/:mid/store/edit_take_out/:id",
             "icon": "",
             "hide_in_menu": 1,
             "list_order": 10000

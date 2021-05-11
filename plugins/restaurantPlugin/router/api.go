@@ -16,6 +16,7 @@ import (
 	"gincmf/plugins/restaurantPlugin/controller/admin/member"
 	"gincmf/plugins/restaurantPlugin/controller/admin/order"
 	"gincmf/plugins/restaurantPlugin/controller/admin/printer"
+	"gincmf/plugins/restaurantPlugin/controller/admin/qrocde"
 	"gincmf/plugins/restaurantPlugin/controller/admin/settings"
 	"gincmf/plugins/restaurantPlugin/controller/admin/store"
 	"gincmf/plugins/restaurantPlugin/controller/admin/voucher"
@@ -32,19 +33,24 @@ import (
 	rtUser "gincmf/plugins/restaurantPlugin/controller/app/user"
 	rtVoucher "gincmf/plugins/restaurantPlugin/controller/app/voucher"
 	rtMiddle "gincmf/plugins/restaurantPlugin/middleware"
+	wechatMiddle "gincmf/plugins/wechatPlugin/middleware"
 	cmf "github.com/gincmf/cmf/bootstrap"
 )
 
 func ApiListenRouter() {
 	// 注册后台菜单路由
-	adminGroup := cmf.Group("api/v1/admin", middleware.ValidationBearerToken, middleware.ValidationAdmin, middleware.TenantDb, middleware.AllowCors, middleware.ValidationMerchant, middleware.ApiBaseController,middleware.Rbac)
+	adminGroup := cmf.Group("api/v1/admin", middleware.ValidationBearerToken, middleware.ValidationAdmin, middleware.TenantDb, middleware.AllowCors, middleware.ValidationMerchant, middleware.ApiBaseController, middleware.Rbac)
 	{
 		adminGroup.Get("/dashboard/analysis", new(dashboard.Dashboard).DashboardCard)
 		adminGroup.Get("/dashboard/sales_ranking", new(dashboard.Dashboard).DashboardSales)
 		// 菜单管理
 		adminGroup.Get("/dishes/store", new(store.Index).IndexWithFoodCount)
 		adminGroup.Rest("/dishes/food", new(dishes.Food))
-		adminGroup.Rest("/dishes/category", new(dishes.CategoryController))
+		adminGroup.Post("/dishes/food_list_order", new(dishes.Food).ListOrder)
+		adminGroup.Post("/dishes/food_status/:id", new(dishes.Food).SetStatus)
+		adminGroup.Get("/dishes/food_list", new(dishes.Food).List)
+		adminGroup.Rest("/dishes/category", new(dishes.Category))
+		adminGroup.Get("/dishes/category_list", new(dishes.Category).List)
 
 		adminGroup.Get("/dishes/dish_type", new(dishes.Food).DishType)
 		adminGroup.Get("/dishes/flavor", new(dishes.Food).Flavor)
@@ -56,6 +62,7 @@ func ApiListenRouter() {
 
 		// 桌位管理
 		adminGroup.Rest("/desk/index", new(desk.IndexController))
+		adminGroup.Get("/desk/list", new(desk.IndexController).List)
 		adminGroup.Rest("/desk/category", new(desk.CategoryController))
 
 		// 门店管理
@@ -83,10 +90,19 @@ func ApiListenRouter() {
 		adminGroup.Post("/order/cancel", new(order.Index).Cancel, AliMiddle.UseAlipay)
 
 		// 发起退款
-		adminGroup.Post("/order/refund/:id", new(order.Index).Refund, AliMiddle.UseAlipay)
+		adminGroup.Post("/order/refund/:id", new(order.Index).Refund, AliMiddle.UseAlipay, wechatMiddle.AccessToken, wechatMiddle.AuthorizerAccessToken)
+
+		// 获取退款详情
+		adminGroup.Get("/order/refund/:id", new(order.Index).RefundShow)
 
 		// 接单或拒单
-		adminGroup.Post("/order/received_or_refused/:id", new(order.Index).ReceivedOrRefused, AliMiddle.UseAlipay)
+		adminGroup.Post("/order/received_or_refused/:id", new(order.Index).ReceivedOrRefused, AliMiddle.UseAlipay, wechatMiddle.AccessToken, wechatMiddle.AuthorizerAccessToken)
+
+		// 设置订单为完成状态
+		adminGroup.Post("/order/finished/:id", new(order.Index).Finished)
+
+		// 重打订单
+		adminGroup.Post("/order/printer/:id", new(order.Index).OrderPrinter)
 
 		// 堂食基本设置
 		adminGroup.Get("/settings/eat_in/:id", new(settings.EatIn).Show)
@@ -129,6 +145,9 @@ func ApiListenRouter() {
 		adminGroup.Rest("/printer", new(printer.Printer))
 
 		adminGroup.Get("/voucher_list", new(voucher.Index).List)
+
+		// 绑定桌码
+		adminGroup.Rest("/qrcode", new(qrocde.Qrcode), AliMiddle.ValidationAlipay)
 	}
 
 	// 小程序路由注册
@@ -137,11 +156,11 @@ func ApiListenRouter() {
 		// 获取小程序用户
 		appGroup.Get("/user/detail", new(rtUser.User).Show, middleware.ValidationBindMobile)
 		appGroup.Post("/user/save", new(rtUser.User).Save, middleware.ValidationOpenId)
-
-		appGroup.Post("/user/save/mobile", new(rtUser.User).SaveMobile, middleware.ValidationOpenId)
+		appGroup.Post("/user/avatar", new(rtUser.User).SaveAvatar, middleware.ValidationBindMobile)
+		appGroup.Post("/user/save/mobile", middleware.ValidationOpenId, new(rtUser.User).SaveMobile)
 
 		// 绑定手机号
-		appGroup.Post("/user/mobile", new(rtUser.User).BindMpMobile, middleware.ValidationMp, middleware.ValidationOpenId)
+		appGroup.Post("/user/mobile", new(rtUser.User).BindMpMobile, middleware.ValidationOpenId)
 
 		// 门店列表
 		appGroup.Get("/store", new(rtStore.Index).List)
@@ -168,8 +187,11 @@ func ApiListenRouter() {
 		// 会员卡开通订单列表
 		appGroup.Get("/order/card", new(rtCard.Order).Get, middleware.ValidationBindMobile)
 
+		// 获取运费
+		appGroup.Post("/order/delivery_fee/:id", new(rtOrder.Order).DeliveryFee, rtMiddle.ValidationStore)
+
 		// 创建订单
-		appGroup.Post("/order/pre_create", new(rtOrder.Order).PreCreate, middleware.ValidationBindMobile, AliMiddle.AppAuthToken, rtMiddle.ValidationStore)
+		appGroup.Post("/order/pre_create", new(rtOrder.Order).PreCreate, middleware.ValidationBindMobile, AliMiddle.AppAuthToken, rtMiddle.ValidationStore, wechatMiddle.AccessToken, wechatMiddle.AuthorizerAccessToken)
 
 		// 支付宝订单支付完成回调url
 		appGroup.Post("/alipay/receive_notify", new(rtOrder.Order).ReceiveNotify, AliMiddle.AppAuthToken)
@@ -208,6 +230,8 @@ func ApiListenRouter() {
 		appGroup.Get("/appointment", new(common.Appointment).Show, rtMiddle.ValidationStore)
 
 		appGroup.Get("/contact/alipay", new(contact.Contact).Get)
+
+		appGroup.Get("/settings/common", new(settings.Common).Show)
 
 	}
 

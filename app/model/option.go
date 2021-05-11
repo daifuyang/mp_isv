@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	cmf "github.com/gincmf/cmf/bootstrap"
+	wechatEasySdkOpen "github.com/gincmf/wechatEasySdk/open"
 	"gorm.io/gorm"
 )
 
@@ -47,11 +48,18 @@ type TypeValues struct {
 	Extensions        string `json:"extensions"`
 }
 
-//
+// 支付宝小程序最新模板
 type AlipayIsvApp struct {
 	AppId         string `json:"app_id"`
 	TemplateAppId string `json:"template_app_id"`
 	Version       string `json:"version"`
+}
+
+// 微信小程序最新模板
+type WechatIsvApp struct {
+	SourceMiniprogramAppid string `json:"source_miniprogram_appid"`
+	TemplateId             int    `json:"template_id"`
+	UserVersion            string `json:"user_version"`
 }
 
 func (app AlipayIsvApp) Show() (AlipayIsvApp, error) {
@@ -59,6 +67,21 @@ func (app AlipayIsvApp) Show() (AlipayIsvApp, error) {
 	isvApp := AlipayIsvApp{}
 	op := Option{}
 	result := cmf.Db().Where("option_name = ?", "alipay_isv_app").First(&op)
+	if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		return isvApp, result.Error
+	}
+
+	json.Unmarshal([]byte(op.OptionValue), &isvApp)
+
+	return isvApp, nil
+
+}
+
+func (app WechatIsvApp) Show() (WechatIsvApp, error) {
+
+	isvApp := WechatIsvApp{}
+	op := Option{}
+	result := cmf.Db().Where("option_name = ?", "wechat_isv_app").First(&op)
 	if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return isvApp, result.Error
 	}
@@ -94,6 +117,47 @@ func (app AlipayIsvApp) Edit() (AlipayIsvApp, error) {
 		tx = cmf.Db().Debug().Create(&op)
 	} else {
 		tx = cmf.Db().Debug().Updates(&op)
+	}
+	if tx.Error != nil {
+		return isvApp, tx.Error
+	}
+
+	return isvApp, nil
+
+}
+
+func (app WechatIsvApp) Edit(ak string) (WechatIsvApp, error) {
+
+	isvApp := WechatIsvApp{}
+	op := Option{}
+	result := cmf.Db().Where("option_name = ?", "wechat_isv_app").First(&op)
+	if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		return isvApp, result.Error
+	}
+
+	json.Unmarshal([]byte(op.OptionValue), &isvApp)
+
+	componentAccessToken := ak
+	listResult := new(wechatEasySdkOpen.Wxa).GetTemplateList(componentAccessToken)
+
+	if listResult.Errcode != 0 {
+		return isvApp, errors.New(listResult.Errmsg)
+	}
+
+	isvApp.SourceMiniprogramAppid =  listResult.TemplateList[0].SourceMiniprogramAppid
+	isvApp.TemplateId = listResult.TemplateList[0].TemplateId
+	isvApp.UserVersion = listResult.TemplateList[0].UserVersion
+
+	v, _ := json.Marshal(&isvApp)
+
+	op.OptionValue = string(v)
+
+	var tx *gorm.DB
+	if op.Id == 0 {
+		op.OptionName = "wechat_isv_app"
+		tx = cmf.Db().Create(&op)
+	} else {
+		tx = cmf.Db().Updates(&op)
 	}
 	if tx.Error != nil {
 		return isvApp, tx.Error

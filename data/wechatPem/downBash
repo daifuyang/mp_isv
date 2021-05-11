@@ -1,0 +1,1 @@
+java -jar CertificateDownloader-1.1.jar -k ***REMOVED*** -m 1605269485 -f /Users/return/workspace/mygo/wechat-easysdk-go/pem/wechat_public_key.pem -s ***REMOVED*** -o /Users/return/downloads

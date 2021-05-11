@@ -17,7 +17,7 @@ import (
 	"time"
 )
 
-type CategoryController struct {
+type Category struct {
 	rc controller.Rest
 }
 
@@ -43,7 +43,7 @@ type CategoryController struct {
 // @Success 200 {object} model.Paginate{data=[]model.FoodCategory} "code:1 => 获取成功，code:0 => 获取异常"
 // @Failure 400 {object} model.ReturnData "{"code":400,"msg":"登录状态已失效！"}"
 // @Router /admin/dishes/category [get]
-func (rest *CategoryController) Get(c *gin.Context) {
+func (rest *Category) Get(c *gin.Context) {
 
 	// 所在门店
 	storeId := c.Query("store_id")
@@ -61,6 +61,30 @@ func (rest *CategoryController) Get(c *gin.Context) {
 
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+	rest.rc.Success(c, "获取成功！", data)
+
+}
+
+func (rest *Category) List(c *gin.Context) {
+
+	mid, _ := c.Get("mid")
+
+	storeId := c.Query("store_id")
+
+	category := model.FoodCategory{}
+
+	var query []string
+	var queryArgs []interface{}
+
+	query = append(query, "mid = ? AND store_id = ? AND delete_at = ? AND status = ?")
+	queryArgs = append(queryArgs, mid, storeId, 0, 1)
+
+	data, err := category.ListByStore(query, queryArgs)
+
+	if err != nil {
+		rest.rc.Error(c, "获取失败！", err.Error())
 		return
 	}
 	rest.rc.Success(c, "获取成功！", data)
@@ -85,7 +109,7 @@ func (rest *CategoryController) Get(c *gin.Context) {
 // @Success 200 {object} model.ReturnData{data=model.FoodCategory} "code:1 => 获取成功，code:0 => 获取异常"
 // @Failure 400 {object} model.ReturnData "{"code":400,"msg":"登录状态已失效！"}"
 // @Router /admin/dishes/category/{id} [get]
-func (rest *CategoryController) Show(c *gin.Context) {
+func (rest *Category) Show(c *gin.Context) {
 
 	var rewrite struct {
 		Id int `uri:"id"`
@@ -139,7 +163,7 @@ func (rest *CategoryController) Show(c *gin.Context) {
 // @Success 200 {object} model.ReturnData "code:1 => 获取成功，code:0 => 获取异常"
 // @Failure 400 {object} model.ReturnData "{"code":400,"msg":"登录状态已失效！"}"
 // @Router /admin/dishes/category/{id} [post]
-func (rest CategoryController) Edit(c *gin.Context) {
+func (rest Category) Edit(c *gin.Context) {
 
 	var rewrite struct {
 		Id int `uri:"id"`
@@ -179,6 +203,9 @@ func (rest CategoryController) Edit(c *gin.Context) {
 	scene := c.DefaultPostForm("scene", "0")
 	sceneInt, err := strconv.Atoi(scene)
 
+	listOrder := c.PostForm("list_order")
+	listOrderFloat, _ := strconv.ParseFloat(listOrder, 64)
+
 	if err != nil {
 		rest.rc.Error(c, "场景参数不正确！", nil)
 		return
@@ -208,9 +235,20 @@ func (rest CategoryController) Edit(c *gin.Context) {
 
 	var data model.FoodCategory
 
+	query := []string{"mid = ?", "id = ?"}
+	queryArgs := []interface{}{mid, rewrite.Id}
+
+	foodCategory, err := data.Show(query, queryArgs)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound)  {
+			rest.rc.Error(c,"该分类不存在！",nil)
+		}
+		rest.rc.Error(c,err.Error(),nil)
+	}
+
 	txErr := cmf.NewDb().Transaction(func(tx *gorm.DB) error {
 
-		foodCategory := model.FoodCategory{
+		foodCategory = model.FoodCategory{
 			StoreId: storeIdInt,
 			FoodCategoryStoreHouse: model.FoodCategoryStoreHouse{
 				Id:         rewrite.Id,
@@ -222,6 +260,7 @@ func (rest CategoryController) Edit(c *gin.Context) {
 				CreateAt:   time.Now().Unix(),
 				UpdateAt:   time.Now().Unix(),
 				Status:     statusInt,
+				ListOrder:  listOrderFloat,
 			},
 			Db: tx,
 		}
@@ -265,7 +304,7 @@ func (rest CategoryController) Edit(c *gin.Context) {
 // @Success 200 {object} model.ReturnData{data=model.FoodCategory} "code:1 => 获取成功，code:0 => 获取异常"
 // @Failure 400 {object} model.ReturnData "{"code":400,"msg":"登录状态已失效！"}"
 // @Router /admin/dishes/category [post]
-func (rest CategoryController) Store(c *gin.Context) {
+func (rest Category) Store(c *gin.Context) {
 
 	// 获取小程序mid
 	mid, _ := c.Get("mid")
@@ -374,7 +413,7 @@ func (rest CategoryController) Store(c *gin.Context) {
 // @Success 200 {object} model.ReturnData "code:1 => 删除成功，code:0 => 删除失败"
 // @Failure 400 {object} model.ReturnData "{"code":400,"msg":"登录状态已失效！"}"
 // @Router /admin/dishes/category/{id} [delete]
-func (rest CategoryController) Delete(c *gin.Context) {
+func (rest Category) Delete(c *gin.Context) {
 
 	var rewrite struct {
 		Id int `uri:"id"`

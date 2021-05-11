@@ -34,5 +34,13 @@ func (migrate *memberCardOrder) AutoMigrate() {
 	prefix := cmf.Conf().Database.Prefix
 
 	cmf.NewDb().Exec("drop event if exists memberStatus")
+
+	// 设置会员状态已过期
 	cmf.NewDb().Exec("CREATE EVENT memberStatus ON SCHEDULE EVERY 1 SECOND DO UPDATE " + prefix + "member_card SET status = -1 WHERE end_at between 0 AND UNIX_TIMESTAMP(NOW())")
+
+	// 设置会员订单为超时已关闭
+	cmf.NewDb().Exec("drop event if exists memberOrderCloseStatus")
+	sql := "CREATE EVENT memberOrderCloseStatus ON SCHEDULE EVERY 1 SECOND DO " +
+		"UPDATE " + prefix + "member_card_order SET order_status = 'TRADE_CLOSED' WHERE order_status = 'WAIT_BUYER_PAY' AND UNIX_TIMESTAMP(NOW()) > create_at + 600;"
+	cmf.NewDb().Exec(sql)
 }

@@ -18,28 +18,34 @@ import (
 
 func AppAuthToken(c *gin.Context) {
 
-	alipayJson, _ := c.Get("alipay_json")
+	mpType, _ := c.Get("mp_type")
 
-	if alipayJson == "" {
-		controller.Rest{}.Error(c, "AppAuthToken获取失败，请先绑定支付宝小程序！", nil)
-		c.Abort()
-		return
+	if mpType == "alipay" {
+
+		alipayJson, _ := c.Get("alipay_json")
+
+		if alipayJson == "" {
+			controller.Rest{}.Error(c, "AppAuthToken获取失败，请先绑定支付宝小程序！", nil)
+			c.Abort()
+			return
+		}
+
+		alipayJsonStr, _ := alipayJson.(string)
+
+		var mpMap model.MpIsvAuth
+		json.Unmarshal([]byte(alipayJsonStr), &mpMap)
+
+		alipayEasySdk.SetOption("AppAuthToken", mpMap.AppAuthToken)
+
+		if mpMap.AuthAppId == "" {
+			controller.Rest{}.Error(c, "AuthAppId获取失败，请先绑定支付宝小程序！", nil)
+			c.Abort()
+			return
+		}
+
+		c.Set("app_id", mpMap.AuthAppId)
+
 	}
-
-	alipayJsonStr, _ := alipayJson.(string)
-
-	var mpMap model.MpIsvAuth
-	json.Unmarshal([]byte(alipayJsonStr), &mpMap)
-
-	alipayEasySdk.SetOption("AppAuthToken", mpMap.AppAuthToken)
-
-	if mpMap.AuthAppId == "" {
-		controller.Rest{}.Error(c, "AuthAppId获取失败，请先绑定支付宝小程序！", nil)
-		c.Abort()
-		return
-	}
-
-	c.Set("app_id", mpMap.AuthAppId)
 	c.Next()
 
 }

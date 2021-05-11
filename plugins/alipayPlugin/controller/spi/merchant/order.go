@@ -56,7 +56,7 @@ func (rest *Order) Test(c *gin.Context) {
 		getParams = getParams + k + "=" + strings.Join(v, "") + "&"
 	}
 
-	privateData, err := ioutil.ReadFile("./data/ruyi_pem/private_key.pem")
+	privateData, err := ioutil.ReadFile("./data/ruyiPem/private_key.pem")
 	if err != nil {
 		panic("读取私钥出错，文件不存在！")
 	}

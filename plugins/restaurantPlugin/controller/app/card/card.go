@@ -19,6 +19,9 @@ import (
 	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
 	"github.com/gincmf/cmf/data"
+	cmfUtil "github.com/gincmf/cmf/util"
+	"github.com/gincmf/wechatEasySdk/pay"
+	wechatUtil "github.com/gincmf/wechatEasySdk/util"
 	"gorm.io/gorm"
 	"net/url"
 	"strconv"
@@ -196,7 +199,7 @@ func (rest *Card) Send(c *gin.Context) {
 
 	mpUserId, _ := c.Get("mp_user_id")
 	mpType, _ := c.Get("mp_type")
-	Openid, _ := c.Get("open_id")
+	openid, _ := c.Get("open_id")
 
 	// 获取当前租户信息
 	mid, _ := c.Get("mid")
@@ -280,7 +283,21 @@ func (rest *Card) Send(c *gin.Context) {
 			return
 		}
 
-		tx := cmf.NewDb().Where("user_id = ? AND mid = ? AND vip_level = ? AND fee = ? AND pay_type = ? AND order_status = ?", mpUserId, mid, initVipLevel, fee, "alipay", "WAIT_BUYER_PAY").First(&co)
+		var payType = ""
+		if mpType == "alipay" {
+			payType = "alipay"
+		} else if mpType == "wechat" {
+			payType = "wxpay"
+		} else {
+			payType = ""
+		}
+
+		if payType == "" {
+			rest.rc.Error(c, "支付方式错误！", nil)
+			return
+		}
+
+		tx := cmf.NewDb().Where("user_id = ? AND mid = ? AND vip_level = ? AND fee = ? AND pay_type = ? AND order_status = ?", mpUserId, mid, initVipLevel, fee, payType, "WAIT_BUYER_PAY").First(&co)
 
 		if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 			rest.rc.Error(c, tx.Error.Error(), nil)
@@ -288,6 +305,26 @@ func (rest *Card) Send(c *gin.Context) {
 		}
 
 		if tx.RowsAffected > 0 {
+
+			if co.PayType == "wxpay" {
+				co.RequestPayment.AppId = appId.(string)
+				co.RequestPayment.TimeStamp = strconv.FormatInt(time.Now().Unix(), 10)
+				co.RequestPayment.NonceStr = cmfUtil.GetMd5(strconv.FormatInt(time.Now().Unix(), 10))
+				co.RequestPayment.Package = "prepay_id=" + co.TradeNo
+				co.RequestPayment.SignType = "RSA"
+
+				encryptData := []string{
+					co.RequestPayment.AppId,
+					co.RequestPayment.TimeStamp,
+					co.RequestPayment.NonceStr,
+					co.RequestPayment.Package,
+				}
+
+				signature := wechatUtil.Sign(encryptData)
+				co.RequestPayment.PaySign = signature
+
+			}
+
 			rest.rc.Success(c, "获取历史订单成功！", co)
 			return
 		}
@@ -309,8 +346,6 @@ func (rest *Card) Send(c *gin.Context) {
 			rest.rc.Error(c, err.Error(), nil)
 			return
 		}
-
-		// 支付宝小程序下单
 
 		businessJson := saasModel.Options("business_info", mid.(int))
 		bi := model.BusinessInfo{}
@@ -376,7 +411,7 @@ func (rest *Card) Send(c *gin.Context) {
 			bizContent["discountable_amount"] = 0
 			bizContent["subject"] = brandName
 			bizContent["body"] = bi.BrandName + "开通会员卡"
-			bizContent["buyer_id"] = Openid
+			bizContent["buyer_id"] = openid
 			bizContent["goods_detail"] = aliDetail
 			extendParams := map[string]string{
 				"food_order_type": "direct_payment",
@@ -392,6 +427,81 @@ func (rest *Card) Send(c *gin.Context) {
 			}
 		}
 
+		// 微信小程序下单
+		if mpType == "wxpay" {
+
+			co.PayType = "wxpay"
+			mpTheme := saasModel.MpTheme{}
+			tx := cmf.NewDb().Where("mid = ?", mid).First(&mpTheme)
+			if tx.Error != nil {
+				if errors.Is(tx.Error, gorm.ErrRecordNotFound) {
+					rest.rc.Error(c, "小程序不存在！", nil)
+					return
+				}
+				rest.rc.Error(c, tx.Error.Error(), nil)
+				return
+			}
+
+			subMchid := mpTheme.SubMchid
+
+			if subMchid == "" {
+				rest.rc.Error(c, "请联系管理员配置收款账号！", nil)
+				return
+			}
+
+			bizContent := make(map[string]interface{}, 0)
+			bizContent["out_trade_no"] = orderId
+			bizContent["sub_appid"] = appId
+			bizContent["sub_mchid"] = subMchid
+
+			// 测试模板
+			flag := new(appModel.TestAppId).InList(appId.(string))
+			if flag {
+				bizContent["amount"] = map[string]interface{}{
+					"total":    1,
+					"currency": "CNY",
+				}
+			} else {
+				bizContent["amount"] = map[string]interface{}{
+					"total":    fee * 100,
+					"currency": "CNY",
+				}
+			}
+
+			bizContent["description"] = bi.BrandName + "开通会员卡"
+
+			host := "https://console.mashangdian.cn"
+			bizContent["notify_url"] = host + "/api/v1/wechat/pay_notify"
+
+			bizContent["payer"] = map[string]interface{}{
+				"sub_openid": openid,
+			}
+
+			payResult := new(pay.PartnerPay).Jsapi(bizContent)
+			if payResult.Code != "" {
+				rest.rc.Error(c, payResult.Message, nil)
+				return
+			}
+
+			co.TradeNo = payResult.PrepayId
+
+			co.RequestPayment.AppId = appId.(string)
+			co.RequestPayment.TimeStamp = strconv.FormatInt(time.Now().Unix(), 10)
+			co.RequestPayment.NonceStr = cmfUtil.GetMd5(strconv.FormatInt(time.Now().Unix(), 10))
+			co.RequestPayment.Package = "prepay_id=" + co.TradeNo
+			co.RequestPayment.SignType = "RSA"
+
+			encryptData := []string{
+				co.RequestPayment.AppId,
+				co.RequestPayment.TimeStamp,
+				co.RequestPayment.NonceStr,
+				co.RequestPayment.Package,
+			}
+
+			signature := wechatUtil.Sign(encryptData)
+			co.RequestPayment.PaySign = signature
+
+		}
 		tx = cmf.NewDb().Create(&co)
 		if tx.Error != nil {
 			rest.rc.Error(c, tx.Error.Error(), nil)

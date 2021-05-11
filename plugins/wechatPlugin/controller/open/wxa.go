@@ -1,0 +1,109 @@
+/**
+** @创建时间: 2021/5/3 7:02 下午
+** @作者　　: return
+** @描述　　:
+ */
+package open
+
+import (
+	"fmt"
+	"github.com/gin-gonic/gin"
+	"github.com/gincmf/cmf/controller"
+	"github.com/gincmf/wechatEasySdk/open"
+)
+
+type Wxa struct {
+	rc controller.Rest
+}
+
+func (rest *Wxa) AccessToken(c *gin.Context) {
+
+	accessToken, _ := c.Get("accessToken")
+
+	// 获取回调授权authorizationCode
+	authorizerAccessToken, _ := c.Get("authorizerAccessToken")
+	if authorizerAccessToken == "" {
+		rest.rc.Error(c, "授权失败！,aak不存在", nil)
+		return
+	}
+
+	fmt.Println("authorizerAccessToken", accessToken)
+
+	rest.rc.Success(c, "获取成功！", gin.H{
+		"componentAccessToken":  accessToken,
+		"authorizerAccessToken": authorizerAccessToken,
+	})
+}
+
+func (rest *Wxa) FastRegisterWeApp(c *gin.Context) {
+
+	accessToken, exist := c.Get("accessToken")
+
+	if !exist {
+		rest.rc.Error(c, "accessToken不存在！", nil)
+		return
+	}
+
+	var form struct {
+		Name               string `json:"name"`
+		Code               string `json:"code"`
+		CodeType           int    `json:"code_type"`
+		LegalPersonaWechat string `json:"legal_persona_wechat"`
+		LegalPersonaName   string `json:"legal_persona_name"`
+		ComponentPhone     string `json:"component_phone"`
+		Pwd                string `json:"pwd"`
+	}
+
+	err := c.ShouldBindJSON(&form)
+	if err != nil {
+		c.JSON(400, gin.H{"msg": err.Error()})
+		return
+	}
+
+	if form.Pwd != "codecloud2021" {
+		rest.rc.Error(c, "安全秘钥验证失败！", nil)
+		return
+	}
+
+	if form.Name == "" {
+		rest.rc.Error(c, "企业名不能为空", nil)
+		return
+	}
+
+	if form.CodeType == 0 || form.CodeType > 3 {
+		rest.rc.Error(c, "企业代码类型错误或为空", nil)
+		return
+	}
+
+	if form.LegalPersonaWechat == "" {
+		rest.rc.Error(c, "法人微信不能为空", nil)
+		return
+	}
+
+	if form.LegalPersonaName == "" {
+		rest.rc.Error(c, "法人姓名不能为空", nil)
+		return
+	}
+
+	if form.ComponentPhone == "" {
+		form.ComponentPhone = "17177723588"
+	}
+
+	bizContent := make(map[string]interface{}, 0)
+	bizContent["name"] = form.Name
+	bizContent["code"] = form.Code
+	bizContent["code_type"] = form.CodeType
+	bizContent["legal_persona_wechat"] = form.LegalPersonaWechat
+	bizContent["legal_persona_name"] = form.LegalPersonaName
+	bizContent["component_phone"] = form.ComponentPhone
+
+	regResult := new(open.Component).FastRegisterWeapp(accessToken.(string), bizContent)
+
+	if regResult.Errcode != 0 {
+		rest.rc.Error(c,regResult.Errmsg,nil)
+		return
+	}
+
+	rest.rc.Success(c,"发起成功，请尽快处理",regResult)
+
+}

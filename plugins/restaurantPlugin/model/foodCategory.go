@@ -36,7 +36,8 @@ type FoodCategoryStoreHouse struct {
 	CreateTime string            `gorm:"-" json:"create_time"`
 	UpdateTime string            `gorm:"-" json:"update_time"`
 	DeleteAt   int64             `gorm:"type:bigint(20);comment:'删除时间';default:0" json:"delete_at"`
-	Status     int               `gorm:"type:tinyint(3);comment:菜品分类状态;" json:"status"`
+	Status     int               `gorm:"type:tinyint(3);comment:菜品分类状态（0 => 下架,1 => 上架）;default:1;not null" json:"status"`
+	ListOrder  float64           `gorm:"type:float(10);comment:排序;default:10000;not null" json:"list_order"`
 	paginate   cmfModel.Paginate `gorm:"-"`
 	Db         *gorm.DB          `gorm:"-" json:"-"`
 }
@@ -74,8 +75,8 @@ func (model FoodCategory) Index(c *gin.Context, query []string, queryArgs []inte
 	var total int64 = 0
 
 	var foodCategory []FoodCategory
-	cmf.NewDb().Where(queryStr, queryArgs...).Find(&foodCategory).Count(&total)
-	result := cmf.NewDb().Where(queryStr, queryArgs...).Limit(pageSize).Offset((current - 1) * pageSize).Find(&foodCategory)
+	cmf.NewDb().Where(queryStr, queryArgs...).Find(&foodCategory).Order("list_order desc,id desc").Count(&total)
+	result := cmf.NewDb().Where(queryStr, queryArgs...).Limit(pageSize).Offset((current - 1) * pageSize).Order("list_order desc,id desc").Find(&foodCategory)
 
 	if result.Error != nil {
 		return cmfModel.Paginate{}, result.Error
@@ -133,7 +134,7 @@ func (model FoodCategory) List(query []string, queryArgs []interface{}) ([]FoodC
 	var foodCategory []FoodCategory
 	var foodCategoryTemp []FoodCategoryTemp
 
-	result := cmf.NewDb().Where(queryStr, queryArgs...).Find(&foodCategory)
+	result := cmf.NewDb().Where(queryStr, queryArgs...).Order("list_order desc,id desc").Find(&foodCategory)
 
 	if result.Error != nil {
 		return foodCategoryTemp, result.Error
@@ -167,7 +168,7 @@ func (model FoodCategory) ListByStore(query []string, queryArgs []interface{}) (
 	queryStr := strings.Join(query, " AND ")
 	var foodCategory []FoodCategory
 
-	result := cmf.NewDb().Where(queryStr, queryArgs...).Find(&foodCategory)
+	result := cmf.NewDb().Where(queryStr, queryArgs...).Order("list_order desc, id desc").Find(&foodCategory)
 
 	if result.Error != nil {
 		return foodCategory, result.Error
@@ -312,21 +313,9 @@ func (model FoodCategory) Update() (FoodCategory, error) {
 		db = model.Db
 	}
 
-	query := []string{"mid = ?", "id = ?"}
-	queryArgs := []interface{}{model.Mid, model.Id}
-
-	foodCategory, err := model.Show(query, queryArgs)
-	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-		return foodCategory, err
-	}
-
-	if foodCategory.Id == 0 {
-		return foodCategory, errors.New("该分类不存在！")
-	}
-
 	result := db.Save(&model)
 	if result.Error != nil {
-		return foodCategory, result.Error
+		return FoodCategory{}, result.Error
 	}
 
 	return model, nil

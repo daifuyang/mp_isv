@@ -26,6 +26,7 @@ type AdminNotice struct {
 	Type       int    `gorm:"type:tinyint(3);comment:类型（0 => 堂食外卖订单）;default:0" json:"type"`
 	Status     int    `gorm:"type:tinyint(3);comment:状态（0 => 未读，1 => 已读）;default:0" json:"status"`
 	Audio      string `gorm:"type:varchar(255);comment:通知提示音" json:"audio"`
+	IsPlay     int    `gorm:"type:tinyint(3);comment:类型（0 => 未拨放，1 => 已拨放）;default:0" json:"is_play"`
 	paginate   cmfModel.Paginate
 }
 

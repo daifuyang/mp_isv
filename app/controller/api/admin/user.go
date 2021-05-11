@@ -272,7 +272,11 @@ func (rest *User) Delete(c *gin.Context) {
 
 func (rest *User) CurrentUser(c *gin.Context) {
 	// 获取当前用户
-	var currentUser = new(model.User).CurrentUser(c)
+	currentUser,err := new(model.User).CurrentUser(c)
+	if err != nil {
+		new(controller.Rest).Error(c, "该用户不存在！", nil)
+		return
+	}
 
 	aliasName, _ := c.Get("aliasName")
 
@@ -284,5 +288,5 @@ func (rest *User) CurrentUser(c *gin.Context) {
 	result.User = currentUser
 	result.AliasName = aliasName.(string)
 
-	controller.Rest{}.Success(c, "获取成功", result)
+	new(controller.Rest).Success(c, "获取成功", result)
 }

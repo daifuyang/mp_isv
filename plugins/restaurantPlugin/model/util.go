@@ -33,24 +33,29 @@ type geoCodes struct {
 	Location         string `json:"location"`
 }
 
-func QueueNo(appId string) string {
+func QueueNo(appId string, appointmentAt int64) string {
+
+	appUnix := time.Unix(appointmentAt,0)
+
+	year := appUnix.Year()
+	month := appUnix.Month()
+	day := appUnix.Day()
+
 	// 生成取餐号
 	var number float64 = 10000
 
-	now := time.Now()
-	year, month, day := time.Now().Date()
-	today := time.Date(year, month, day, 23, 59, 59, 59, time.Local)
+	dayTime := time.Date(year, month, day, 23, 59, 59, 59, time.Local)
 
-	unix := 86400 - today.Sub(now).Seconds()
+	unix := 86400 - dayTime.Sub(appUnix).Seconds()
 
-	if unix < number {
-		number += number
-	} else {
+	if unix > number {
 		number = unix
 	}
 
 	// 获取redis自增队列
-	yearStr, monthStr, dayStr := util.CurrentDate()
+	yearStr := strconv.Itoa(year)
+	monthStr := strconv.Itoa(int(month))
+	dayStr := strconv.Itoa(day)
 
 	date := yearStr + monthStr + dayStr
 
@@ -63,7 +68,7 @@ func QueueNo(appId string) string {
 	queueNo := strconv.Itoa(int(math.Floor(number + 0.5)))
 
 	// 设置当天失效时间
-	cmf.NewRedisDb().ExpireAt(insertKey, today)
+	cmf.NewRedisDb().ExpireAt(insertKey, dayTime)
 
 	// 获取当天自增的值
 	return queueNo

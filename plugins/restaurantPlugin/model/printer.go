@@ -27,7 +27,7 @@ type Printer struct {
 	Key        string `gorm:"type:varchar(20);comment:设备Key;not null" json:"key"`
 	CreateAt   int64  `gorm:"type:bigint(20)" json:"create_at"`
 	UpdateAt   int64  `gorm:"type:bigint(20)" json:"update_at"`
-	DeleteAt   int64  `gorm:"type:int(11)" json:"delete_at"`
+	DeleteAt   int64  `gorm:"type:bigint(20)" json:"delete_at"`
 	CreateTime string `gorm:"-" json:"create_time"`
 	UpdateTime string `gorm:"-" json:"update_time"`
 	paginate   cmfModel.Paginate

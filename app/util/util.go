@@ -1,18 +1,21 @@
 package util
 
 import (
+	"archive/zip"
 	"crypto"
 	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	cmf "github.com/gincmf/cmf/bootstrap"
 	cmfUtil "github.com/gincmf/cmf/util"
 	uuid "github.com/nu7hatch/gouuid"
 	"github.com/pjebs/optimus-go"
+	"io"
 	"log"
 	"math"
 	"os"
@@ -31,11 +34,19 @@ func CurrentAdminId(c *gin.Context) int {
 
 // 获取真实路径
 func CurrentPath() string {
+
 	dir, err := os.Getwd()
 	if err != nil {
 		log.Fatal(err)
 	}
-	return strings.Replace(dir, "\\", "/", -1)
+
+	rPath := strings.Replace(dir, "\\", "/", -1)
+
+	if rPath[:len(rPath)-1] != "/" {
+		rPath += "/"
+	}
+
+	return rPath
 }
 
 // 获取文件是否存在
@@ -53,7 +64,7 @@ func ExistPath(path string) (bool, error) {
 }
 
 // 获取真实url
-func GetFileUrl(path string) string {
+func GetFileUrl(path string,b ...bool) string {
 
 	if path == "" {
 		return ""
@@ -63,24 +74,27 @@ func GetFileUrl(path string) string {
 
 	prevPath := domain + "/uploads/" + path
 
+	ishttps := strings.Contains(domain,"https://")
 	protocol := "http://"
+	if ishttps {
+		protocol = "https://"
+	}
 
-	style := "clipper"
+	if len(b) == 0 {
+		if cmf.QiuNiuConf().Enabled {
+			style := "clipper"
 
-	if cmf.QiuNiuConf().Enabled {
+			if cmf.QiuNiuConf().IsHttps {
+				protocol = "https://"
+			}
 
-		if cmf.QiuNiuConf().IsHttps {
-			protocol = "https://"
-		}
+			domain = protocol + cmf.QiuNiuConf().Domain + "/"
 
-		domain = protocol + cmf.QiuNiuConf().Domain + "/"
+			prevPath = domain + path
 
-		prevPath = domain + path
-
-		if style != "" {
 			prevPath += "!" + style
-		}
 
+		}
 	}
 
 	return prevPath
@@ -92,7 +106,7 @@ func GetAbsPath(path string) string {
 		return ""
 	}
 
-	prevPath := CurrentPath() + "/public/uploads/" + path
+	prevPath := CurrentPath() + "public/uploads/" + path
 	return prevPath
 }
 
@@ -336,18 +350,96 @@ func UploadFileInfo(dirName string) (filename string, filepath string) {
 	return
 }
 
-
 func GetFileExt(file string) string {
 
 	if file == "" {
-		 return ""
+		return ""
 	}
 
 	filenameAll := path.Base(file)
 	fileSuffix := path.Ext(file)
-	filePrefix := strings.TrimSuffix(filenameAll,fileSuffix)
+	filePrefix := strings.TrimSuffix(filenameAll, fileSuffix)
 
 	return filePrefix
+}
+
+// 创建压缩包
+func ZipCreate(inFiles []string, targetName string) (result []string, err error) {
+
+	// 创建准备写入的文件
+	result = make([]string, 0)
+	fw, err := os.Create(targetName)
+	defer fw.Close()
+	if err != nil {
+		return result,err
+	}
+
+	// 通过 fw 来创建 zip.Write
+	zw := zip.NewWriter(fw)
+	defer func() {
+		// 检测一下是否成功关闭
+		if err := zw.Close(); err != nil {
+			return
+		}
+	}()
+
+	var fr *os.File
+
+	for _, fPath := range inFiles {
+
+		file, err := os.Open(fPath)
+		fi, err := file.Stat()
+
+		// 通过文件信息，创建 zip 的文件信息
+		fh, err := zip.FileInfoHeader(fi)
+		if err != nil {
+			return result,err
+		}
+
+		// 替换文件信息中的文件名
+		fileName := strings.Split(fPath, "/")
+		if len(fileName) < 1 {
+			err = errors.New("文件路径不合法")
+			return result,err
+		}
+		fh.Name = fileName[len(fileName)-1]
+
+		// 这步开始没有加，会发现解压的时候说它不是个目录
+		if fi.IsDir() {
+			fh.Name += "/"
+		}
+
+		// 写入文件信息，并返回一个 Write 结构
+		w, err := zw.CreateHeader(fh)
+		if err != nil {
+			return result,err
+		}
+
+		// 检测，如果不是标准文件就只写入头信息，不写入文件数据到 w
+		// 如目录，也没有数据需要写
+		if !fh.Mode().IsRegular() {
+		}
+
+		// 打开要压缩的文件
+		fr, err = os.Open(fPath)
+
+		if err != nil {
+			return result,err
+		}
+
+		// 将打开的文件 Copy 到 w
+		_, err = io.Copy(w, fr)
+		if err != nil {
+			result = append(result, err.Error())
+			return result,err
+		}
+
+	}
+
+	defer fr.Close()
+
+	return result, nil
+
 }
 
 /*func GetUploadFileName(mid int) string {

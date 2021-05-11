@@ -22,7 +22,7 @@ func Test_ShopCategory(t *testing.T) {
 	cmf.Db().Migrator().DropTable(&model.ShopCategory{})
 	cmf.Db().AutoMigrate(&model.ShopCategory{})
 
-	f, err := os.Open("../../data/shop_c	ategory.sql")
+	f, err := os.Open("../../data/shop_category.sql")
 	if err != nil {
 		fmt.Println("err", err)
 	}

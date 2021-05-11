@@ -34,6 +34,7 @@ type skuJson struct {
 	AttrValue     string  `json:"attr_value"`
 	FoodId        int     `json:"food_id"`
 	Code          string  `json:"code"`
+	Weight        float64 `json:"weight"`
 	Inventory     int     `json:"inventory"`
 	MemberPrice   float64 `json:"member_price"`
 	UseMember     int     `json:"use_member"`
@@ -45,6 +46,13 @@ type skuJson struct {
 type extVale struct {
 	Value string `json:"value"`
 	Label string `json:"label"`
+}
+
+type foodCate struct {
+	CategoryId int          `json:"category_id"`
+	Name       string       `json:"name"`
+	IsRequired int          `json:"is_required"`
+	Food       []model.Food `json:"food"`
 }
 
 /**
@@ -108,6 +116,78 @@ func (rest *Food) Get(c *gin.Context) {
 	}
 
 	rest.rc.Success(c, "获取成功！", data)
+}
+
+/**
+ * @Author return <1140444693@qq.com>
+ * @Description 根据分类获取菜品列表
+ * @Date 2020/11/24 11:04:49
+ * @Param
+ * @return
+ **/
+func (rest *Food) List(c *gin.Context) {
+
+	mid, _ := c.Get("mid")
+	storeId := c.Query("store_id")
+
+	// 获取门店参数
+	category := model.FoodCategory{}
+
+	var query []string
+	var queryArgs []interface{}
+
+	query = append(query, "mid = ? AND store_id = ? AND delete_at = ? AND status = ?")
+	queryArgs = append(queryArgs, mid, storeId, 0, 1)
+
+	categoryData, err := category.List(query, queryArgs)
+	if err != nil {
+		rest.rc.Error(c, "获取失败！", nil)
+		return
+	}
+
+	// 获取全部菜品
+	var foodQuery []string
+	var foodQueryArgs []interface{}
+
+	foodQuery = append(foodQuery, "f.mid = ? AND fc.store_id = ? AND f.delete_at = ?")
+	foodQueryArgs = append(foodQueryArgs, mid, storeId, 0)
+
+	food := model.Food{}
+	foodData, err := food.ListByCategory(foodQuery, foodQueryArgs)
+
+	if err != nil {
+		rest.rc.Error(c, "获取菜品错误！", err.Error())
+		return
+	}
+
+	// 最终结果项
+	var foodCateMap = make([]foodCate, 0)
+
+	for _, v := range categoryData {
+
+		// 当前分类项
+		fc := foodCate{
+			CategoryId: v.FoodCategory.Id,
+			Name:       v.FoodCategory.Name,
+			IsRequired: v.FoodCategory.IsRequired,
+		}
+
+		// 当前菜品项
+		foodArr := make([]model.Food, 0)
+		for _, fv := range foodData {
+			// 寻找分类,存入菜品
+			if v.FoodCategory.Id == fv.CategoryId {
+				foodArr = append(foodArr, fv.Food)
+			}
+		}
+
+		fc.Food = foodArr
+		// 存入一个分类
+		foodCateMap = append(foodCateMap, fc)
+
+	}
+
+	rest.rc.Success(c, "获取成功！", foodCateMap)
 }
 
 /**
@@ -271,6 +351,12 @@ func (rest Food) Edit(c *gin.Context) {
 		return
 	}*/
 
+	unit := c.PostForm("unit")
+	if unit == "" {
+		rest.rc.Error(c, "单位不能为空！", nil)
+		return
+	}
+
 	// 获取菜品的图片
 	thumbnail := c.PostForm("thumbnail")
 
@@ -382,10 +468,17 @@ func (rest Food) Edit(c *gin.Context) {
 		return
 	}
 
+	var weight float64 = 0
 	if useSkuInt == 1 {
 		useSkuInt = 1
 	} else {
 		useSkuInt = 0
+		w := c.PostForm("weight")
+		weight, err = strconv.ParseFloat(w, 64)
+		if err != nil {
+			rest.rc.Error(c, err.Error(), nil)
+			return
+		}
 	}
 
 	// 启用口味
@@ -469,6 +562,8 @@ func (rest Food) Edit(c *gin.Context) {
 			DishType:         dishType,
 			Flavor:           flavor,
 			CookingMethod:    cookingMethod,
+			Weight:           weight,
+			Unit:             unit,
 			UseSku:           useSkuInt,
 			Thumbnail:        thumbnail,
 			MemberPrice:      mp,
@@ -492,8 +587,12 @@ func (rest Food) Edit(c *gin.Context) {
 	}
 
 	tx := cmf.NewDb().Begin()
-
 	tx.SavePoint("sp1")
+	defer func() {
+		if r := recover(); r != nil {
+			tx.RollbackTo("sp1")
+		}
+	}()
 
 	food.Db = tx
 
@@ -566,7 +665,12 @@ func (rest Food) Edit(c *gin.Context) {
 			return
 		}
 		var skus []model.FoodSku
-		for _, v := range skuMap {
+		for k, v := range skuMap {
+
+			if v.Weight == 0 {
+				rest.rc.Error(c, "第"+strconv.Itoa(k)+"项重量不能为空！", nil)
+				return
+			}
 
 			// 增加规格值
 			attrValue := model.FoodAttrValue{
@@ -784,6 +888,12 @@ func (rest Food) Store(c *gin.Context) {
 		return
 	}*/
 
+	unit := c.PostForm("unit")
+	if unit == "" {
+		rest.rc.Error(c, "单位不能为空！", nil)
+		return
+	}
+
 	// 获取菜品的图片
 	thumbnail := c.PostForm("thumbnail")
 
@@ -901,10 +1011,17 @@ func (rest Food) Store(c *gin.Context) {
 		return
 	}
 
+	var weight float64 = 0
 	if useSkuInt == 1 {
 		useSkuInt = 1
 	} else {
 		useSkuInt = 0
+		w := c.PostForm("weight")
+		weight, err = strconv.ParseFloat(w, 64)
+		if err != nil {
+			rest.rc.Error(c, err.Error(), nil)
+			return
+		}
 	}
 
 	// 启用口味
@@ -990,6 +1107,8 @@ func (rest Food) Store(c *gin.Context) {
 			FoodCode:         foodCode,
 			DishType:         dishType,
 			Flavor:           flavor,
+			Weight:           weight,
+			Unit:             unit,
 			CookingMethod:    cookingMethod,
 			UseSku:           useSkuInt,
 			Thumbnail:        thumbnail,
@@ -1014,8 +1133,12 @@ func (rest Food) Store(c *gin.Context) {
 	}
 
 	tx := cmf.NewDb().Begin()
-
 	tx.SavePoint("sp1")
+	defer func() {
+		if r := recover(); r != nil {
+			tx.RollbackTo("sp1")
+		}
+	}()
 
 	food.Db = tx
 	food, err = food.Save()
@@ -1025,7 +1148,7 @@ func (rest Food) Store(c *gin.Context) {
 		return
 	}
 
-	fmt.Println("food",food.Id)
+	fmt.Println("food", food.Id)
 
 	// 更新所在分类
 	categoryArr := strings.Split(category, ",")
@@ -1086,9 +1209,13 @@ func (rest Food) Store(c *gin.Context) {
 		var skuMap []skuJson
 		json.Unmarshal(skuBytes, &skuMap)
 
-		fmt.Println("skuMap", skuMap)
+		for k, v := range skuMap {
 
-		for _, v := range skuMap {
+			if v.Weight == 0 {
+				rest.rc.Error(c, "第"+strconv.Itoa(k)+"项重量不能为空！", nil)
+				return
+			}
+
 			// 增加规格值
 			attrValue := model.FoodAttrValue{
 				AttrId:    v.AttrKeyId,
@@ -1140,6 +1267,7 @@ func (rest Food) Store(c *gin.Context) {
 				AttrPost:         attrPostId,
 				FoodId:           food.Id,
 				Code:             v.Code,
+				Weight:           weight,
 				Inventory:        v.Inventory,
 				DefaultInventory: v.Inventory,
 				MemberPrice:      v.MemberPrice,
@@ -1176,7 +1304,6 @@ func (rest Food) Store(c *gin.Context) {
 		rest.rc.Error(c, err.Error(), nil)
 		return
 	}
-
 
 	rest.rc.Success(c, "添加成功！", food)
 }
@@ -1300,5 +1427,88 @@ func (rest *Food) CookingMethod(c *gin.Context) {
 	}
 
 	rest.rc.Success(c, "获取成功", ev)
+
+}
+
+/**
+ * @Author return <1140444693@qq.com>
+ * @Description ListOrder 排序
+ * @Date 2021/4/20 10:3:31
+ * @Param
+ * @return
+ **/
+
+func (rest *Food) ListOrder(c *gin.Context) {
+
+	type food struct {
+		Id        int     `json:"id"`
+		ListOrder float64 `json:"list_order"`
+	}
+
+	var form []food
+
+	err := c.ShouldBindJSON(&form)
+	if err != nil {
+		c.JSON(400, gin.H{"msg": err.Error()})
+		return
+	}
+
+	mid, _ := c.Get("mid")
+	storeId := c.Query("store_id")
+
+	for _, item := range form {
+		cmf.NewDb().Model(&model.Food{}).Where("id = ? AND mid = ? AND store_id = ?", item.Id, mid, storeId).Update("list_order", item.ListOrder)
+	}
+
+	rest.rc.Success(c, "操作成功！", nil)
+
+}
+
+/**
+ * @Author return <1140444693@qq.com>
+ * @Description 上下架菜品
+ * @Date 2021/4/20 11:56:35
+ * @Param
+ * @return
+ **/
+
+func (rest *Food) SetStatus(c *gin.Context) {
+
+	mid, _ := c.Get("mid")
+
+	var rewrite struct {
+		Id int `uri:"id"`
+	}
+	if err := c.ShouldBindUri(&rewrite); err != nil {
+		c.JSON(400, gin.H{"msg": err.Error()})
+		return
+	}
+
+	food := model.Food{}
+	tx := cmf.NewDb().Where("id = ?",rewrite.Id).First(&food)
+
+	if tx.Error != nil {
+		if errors.Is(tx.Error,gorm.ErrRecordNotFound) {
+			rest.rc.Error(c,"该菜品不存在！",nil)
+			return
+		}
+		rest.rc.Error(c,tx.Error.Error(),nil)
+		return
+	}
+
+	storeId := c.Query("store_id")
+	status := c.PostForm("status")
+
+	if !(status == "0" || status == "1") {
+		rest.rc.Error(c,"状态错误!",nil)
+	}
+
+	tx = cmf.NewDb().Model(&Food{}).Where("id = ? AND mid = ? AND store_id = ?",rewrite.Id,mid,storeId).Update("status",status)
+	if tx.Error != nil {
+		rest.rc.Error(c,tx.Error.Error(),nil)
+		return
+	}
+
+	rest.rc.Success(c,"操作成功！",nil)
 
 }

@@ -54,7 +54,7 @@ func (rest *Common) Show(c *gin.Context) {
 	res.OutDoorPicPrev = util.GetFileUrl(bi.OutDoorPic)
 	res.FoodLicensePicPrev = util.GetFileUrl(bi.FoodLicensePic)
 
-	rest.rc.Success(c, "获取成功！", res)
+	rest.rc.Success(c, "获取成功！", res.Mobile)
 
 }
 

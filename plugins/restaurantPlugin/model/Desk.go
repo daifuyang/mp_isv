@@ -89,6 +89,35 @@ func (model *Desk) Index(c *gin.Context, query []string, queryArgs []interface{}
 
 /**
  * @Author return <1140444693@qq.com>
+ * @Description 查看列表（不分页）
+ * @Date 2020/11/10 17:58:58
+ * @Param
+ * @return
+ **/
+func (model *Desk) List(query []string, queryArgs []interface{}) (desk []resultDesk, err error) {
+
+	// 合并参数合计
+	queryStr := strings.Join(query, " AND ")
+
+	prefix := cmf.Conf().Database.Prefix
+	desk = make([]resultDesk,0)
+
+	result := cmf.NewDb().Table(prefix+"desk d").Select("d.*,s.store_name,dc.least_seats,dc.maximum_seats").
+		Joins("INNER JOIN "+prefix+"desk_category dc ON d.category_id = dc.id").
+		Joins("INNER JOIN "+prefix+"store s ON s.id = d.store_id").
+		Where(queryStr, queryArgs...).Scan(&desk)
+
+	if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		return desk, result.Error
+	}
+
+	return desk, nil
+
+}
+
+
+/**
+ * @Author return <1140444693@qq.com>
  * @Description 查看单项
  * @Date 2020/11/10 17:39:02
  * @Param

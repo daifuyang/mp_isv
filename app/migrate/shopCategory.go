@@ -14,19 +14,16 @@ import (
 	"os"
 	"strings"
 	"sync"
-	"time"
 )
 
 type shopCategory struct {
 	Migrate
 }
 
-func (migrate shopCategory) AutoMigrate() {
+func (migrate *shopCategory) AutoMigrate() {
 
 	cmf.Db().Migrator().DropTable(&model.ShopCategory{})
 	cmf.Db().AutoMigrate(&model.ShopCategory{})
-
-	time.Sleep(time.Second * 1)
 
 	f, err := os.Open(util.CurrentPath() + "/data/shop_category.sql")
 	if err != nil {

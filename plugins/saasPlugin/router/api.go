@@ -23,7 +23,10 @@ func ApiListenRouter() {
 
 	// 租户注册
 	cmf.Post("api/tenant/register", new(tenant.User).Register)
+	cmf.Post("api/tenant/forget", new(tenant.User).Forget)
 	cmf.Post("api/tenant/edit/:id", new(tenant.User).Edit)
+
+	cmf.Post("api/tenant/fast_register", new(tenant.User).FastRegister)
 
 	// 租户通用管理
 	tenantGroup := cmf.Group("api/tenant", middleware.ValidationBearerToken, middleware.TenantDb, middleware.ValidationAdmin, middleware.ApiBaseController, middleware.Rbac)
@@ -31,6 +34,8 @@ func ApiListenRouter() {
 		tenantGroup.Get("/admin_menu", new(tenant.Menu).Get, middleware.ValidationMerchant)
 
 		tenantGroup.Rest("/assets", new(tenant.Assets), middleware.UseMerchant)
+
+		tenantGroup.Post("/wechat/assets", new(tenant.Assets).WechatStore, middleware.UseMerchant)
 
 		tenantGroup.Rest("/role", new(tenant.Role), middleware.ValidationMerchant)
 		tenantGroup.Rest("/user", new(tenant.AdminUser), middleware.ValidationMerchant)
@@ -48,8 +53,8 @@ func ApiListenRouter() {
 		tenantGroup.Post("/mp/create", new(tenant.MpTheme).Store)
 		tenantGroup.Post("/mp/apps/:id", new(tenant.MpTheme).Edit)
 		tenantGroup.Delete("/mp/apps/:id", new(tenant.MpTheme).Delete)
-		tenantGroup.Get("/mp/category/:id", new(tenant.MpTheme).UpdateCategory)
-		tenantGroup.Get("/mp/unbind/:id", new(tenant.MpTheme).UnOauth)
+		tenantGroup.Get("/mp/category/:id", new(tenant.MpTheme).UpdateCategory, middleware.ValidationMerchant)
+		tenantGroup.Get("/mp/unbind/:id", new(tenant.MpTheme).UnOauth, middleware.ValidationMerchant)
 
 		// 根据mid获取主题首页
 		tenantGroup.Get("/mp/theme/home", new(tenant.MpThemePage).Home, middleware.ValidationMerchant)
@@ -63,6 +68,9 @@ func ApiListenRouter() {
 
 		// 标记通知已读
 		tenantGroup.Get("/notice/:id", new(tenant.Notice).Show, middleware.ValidationMerchant)
+
+		// 标记已经播放已读
+		tenantGroup.Get("/notice_play/:id", new(tenant.Notice).IsPlay, middleware.ValidationMerchant)
 
 		tenantGroup.Get("/notice_read_all", new(tenant.Notice).ReadAll, middleware.ValidationMerchant)
 
@@ -81,7 +89,7 @@ func ApiListenRouter() {
 			Data: nil,
 			Msg:  "升级成功！",
 		})
-	}, middleware.ValidationMerchant, middleware.ValidationMerchant)
+	}, middleware.ValidationBearerToken, middleware.TenantDb, middleware.ValidationMerchant)
 
 	// 注册租户信息
 	common.RegisterTenantRouter()

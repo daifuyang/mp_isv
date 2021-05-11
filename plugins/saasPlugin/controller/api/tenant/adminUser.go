@@ -79,7 +79,7 @@ func (rest *AdminUser) Show(c *gin.Context) {
 
 	adminUser := model.AdminUser{}
 
-	tx := cmf.NewDb().Debug().Table(prefix+"admin_user as au").
+	tx := cmf.NewDb().Table(prefix+"admin_user as au").
 		Joins("INNER JOIN "+prefix+"mp_theme_admin_user_post p ON au.id = p.admin_user_id").
 		Where(query, queryArgs...).First(&adminUser)
 

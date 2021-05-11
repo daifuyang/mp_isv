@@ -20,6 +20,51 @@ type IndexController struct {
 	rc controller.Rest
 }
 
+/**
+ * @Author return <1140444693@qq.com>
+ * @Description 获取门店全部桌位
+ * @Date 2021/4/12 12:29:18
+ * @Param
+ * @return
+ **/
+func (rest *IndexController) List(c *gin.Context) {
+	var query []string
+	var queryArgs []interface{}
+
+	mid, _ := c.Get("mid")
+	query = append(query, "d.mid = ?")
+	queryArgs = append(queryArgs, mid)
+
+	storeId := c.Query("d.store_id")
+	if storeId != "" {
+		query = append(query, "d.store_id = ?")
+		queryArgs = append(queryArgs, storeId)
+	}
+
+	categoryId := c.Query("category_id")
+	if storeId != "" {
+		query = append(query, "category_id = ?")
+		queryArgs = append(queryArgs, categoryId)
+	}
+
+	name := c.Query("name")
+	if name != "" {
+		query = append(query, "name = ?")
+		queryArgs = append(queryArgs, "%"+name+"%")
+	}
+
+	desk := model.Desk{}
+
+	data, err := desk.List(query, queryArgs)
+
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
+	rest.rc.Success(c, "获取成功！", data)
+}
+
 // @Summary 桌位管理
 // @Description 查看全部桌位列表
 // @Tags restaurant 桌位管理

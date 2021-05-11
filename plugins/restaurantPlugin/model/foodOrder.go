@@ -6,18 +6,25 @@
 package model
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	appModel "gincmf/app/model"
 	"gincmf/app/util"
-	feieModel "gincmf/plugins/feiePlugin/model"
+	printerPlugin "gincmf/plugins/printerPlugin/model"
+	saasModel "gincmf/plugins/saasPlugin/model"
+	wechatModel "gincmf/plugins/wechatPlugin/model"
 	"github.com/gin-gonic/gin"
 	"github.com/gincmf/alipayEasySdk/payment"
 	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/data"
 	cmfLog "github.com/gincmf/cmf/log"
 	cmfModel "github.com/gincmf/cmf/model"
+	cmfUtil "github.com/gincmf/cmf/util"
 	"github.com/gincmf/feieSdk/base"
+	"github.com/gincmf/wechatEasySdk/pay"
+	wechatUtil "github.com/gincmf/wechatEasySdk/util"
+	xpyunYun "github.com/gincmf/xpyunSdk/base"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 	"strconv"
@@ -26,52 +33,67 @@ import (
 )
 
 type FoodOrder struct {
-	Id              int               `json:"id"`
-	Mid             int               `gorm:"type:bigint(20);comment:对应小程序id;not null" json:"mid"`
-	OrderId         string            `gorm:"type:varchar(40);comment:订单号;not null" json:"order_id"`
-	TradeNo         string            `gorm:"type:varchar(60);comment:支付宝订单号;not null" json:"trade_no"`
-	QueueNo         string            `gorm:"type:varchar(10);comment:取餐队列号;not null" json:"queue_no"`
-	PayType         string            `gorm:"type:varchar(10);comment:第三方支付类型;not null" json:"pay_type"`
-	StoreId         int               `gorm:"type:int(11);comment:所属门店id;not null" json:"store_id"`
-	StoreName       string            `gorm:"->" json:"store_name"`
-	StoreNumber     string            `gorm:"->" json:"store_number,omitempty"`
-	Longitude       float64           `gorm:"->" json:"longitude,omitempty"`
-	Latitude        float64           `gorm:"->" json:"latitude,omitempty"`
-	StoreProvince   string            `gorm:"->" json:"store_province,omitempty"`
-	StoreCity       string            `gorm:"->" json:"store_city,omitempty"`
-	StoreDistrict   string            `gorm:"->" json:"store_district,omitempty"`
-	StoreAddress    string            `gorm:"->" json:"store_address,omitempty"`
-	StorePhone      string            `gorm:"->" json:"store_phone,omitempty"`
-	OrderType       int               `gorm:"type:tinyint(3);comment:订单类型（1 => 门店扫码就餐; 2 => 门店堂食就餐; 3 => 门店打包外带; 4 => 外卖;not null" json:"order_type"`
-	AppointmentTime string            `gorm:"type:varchar(20);comment:预约取餐时间" json:"appointment_time"`
-	OrderDetail     string            `gorm:"type:json;comment:订单详情;not null" json:"order_detail"`
-	FoodDetail      []FoodOrderDetail `gorm:"-" json:"food_detail"`
-	FoodCount       int               `gorm:"-" json:"food_count"`
-	BoxFee          float64           `gorm:"type:decimal(3,2);comment:餐盒费;default:0;not null" json:"box_fee"`
-	DeliveryFee     float64           `gorm:"type:decimal(3,2);comment:配送费;default:0;not null" json:"delivery_fee"`
-	CouponFee       float64           `gorm:"type:decimal(7,2);comment:优惠金额;default:0;not null" json:"coupon_fee"`
-	VoucherId       int               `gorm:"type:int(11);comment:优惠券id" json:"voucher_id"`
-	Remark          string            `gorm:"type:varchar(255);comment:备注" json:"remark"`
-	Fee             float64           `gorm:"type:decimal(7,2);comment:合计金额;default:0;not null" json:"fee"`
-	OriginalFee     float64           `gorm:"type:decimal(7,2);comment:原价金额;default:0;not null" json:"original_fee"`
-	TotalAmount     float64           `gorm:"->" json:"total_amount"`
-	BuyerPayAmount  float64           `gorm:"->" json:"buyer_pay_amount"`
-	DeskId          int               `gorm:"type:int(11);comment:桌号id" json:"desk_id"`
-	DeskName        string            `gorm:"type:varchar(40);comment:桌位名称详情" json:"desk_name"`
-	UserId          int               `gorm:"type:bigint(20);comment:下单人信息" json:"user_id"`
-	Name            string            `gorm:"type:varchar(20);comment:用户预留姓名" json:"name"`
-	Mobile          string            `gorm:"type:varchar(11);comment:用户预留手机号;not null" json:"mobile"`
-	Address         string            `gorm:"type:varchar(255);comment:用户预留收货地址" json:"address"`
-	AddressId       int               `gorm:"type:int(11);comment:选择地址id" json:"address_id"`
-	CreateAt        int64             `gorm:"type:bigint(20)" json:"create_at"`
-	FinishedAt      int64             `gorm:"type:int(11)" json:"finished_at"`
-	CreateTime      string            `gorm:"-" json:"create_time"`
-	FinishedTime    string            `gorm:"-" json:"finished_time"`
-	TotalCount      int               `gorm:"-" json:"total_count"`
-	OrderStatus     string            `gorm:"type:varchar(20);comment:订单状态（WAIT_BUYER_PAY => 待支付，TRADE_SUCCESS => 待使用/已支付，TRADE_FINISHED=> 已完成，TRADE_REFUSED => 已拒绝，TRADE_CLOSED => 已关闭，TRADE_REFUND=>已退款）;default:WAIT_BUYER_PAY;not null" json:"order_status"`
-	DeliveryStatus  string            `gorm:"type:varchar(20);comment:运输状态（TRADE_RECEIVED => 已接单，TRADE_DELIVERY => 运输中" json:"delivery_status"`
-	paginate        cmfModel.Paginate `gorm:"-"`
-	Db              *gorm.DB          `gorm:"-" json:"-"`
+	Id              int                        `json:"id"`
+	Mid             int                        `gorm:"type:bigint(20);comment:对应小程序id;not null" json:"mid"`
+	OrderId         string                     `gorm:"type:varchar(40);comment:订单号;not null" json:"order_id"`
+	TradeNo         string                     `gorm:"type:varchar(60);comment:支付宝订单号;not null" json:"trade_no"`
+	QueueNo         string                     `gorm:"type:varchar(10);comment:取餐队列号;not null" json:"queue_no"`
+	PayType         string                     `gorm:"type:varchar(10);comment:第三方支付类型;not null" json:"pay_type"`
+	StoreId         int                        `gorm:"type:int(11);comment:所属门店id;not null" json:"store_id"`
+	FormId          string                     `gorm:"type:varchar(64);comment:支付宝推送formId;not null" json:"form_id"`
+	StoreName       string                     `gorm:"->" json:"store_name"`
+	StoreNumber     string                     `gorm:"->" json:"store_number,omitempty"`
+	Longitude       float64                    `gorm:"->" json:"longitude,omitempty"`
+	Latitude        float64                    `gorm:"->" json:"latitude,omitempty"`
+	StoreProvince   string                     `gorm:"->" json:"store_province,omitempty"`
+	StoreCity       string                     `gorm:"->" json:"store_city,omitempty"`
+	StoreDistrict   string                     `gorm:"->" json:"store_district,omitempty"`
+	StoreAddress    string                     `gorm:"->" json:"store_address,omitempty"`
+	StorePhone      string                     `gorm:"->" json:"store_phone,omitempty"`
+	OrderType       int                        `gorm:"type:tinyint(3);comment:订单类型（1 => 门店扫码就餐; 2 => 门店堂食就餐; 3 => 门店打包外带; 4 => 外卖;not null" json:"order_type"`
+	AppointmentTime string                     `gorm:"->" json:"appointment_time"`
+	AppointmentAt   int64                      `gorm:"type:bigint(20);comment:预约取餐时间" json:"appointment_at"`
+	OrderDetail     string                     `gorm:"type:json;comment:订单详情;not null" json:"order_detail"`
+	FoodDetail      []FoodOrderDetail          `gorm:"-" json:"food_detail"`
+	FoodCount       int                        `gorm:"-" json:"food_count"`
+	BoxFee          float64                    `gorm:"type:decimal(3,2);comment:餐盒费;default:0;not null" json:"box_fee"`
+	DeliveryFee     float64                    `gorm:"type:decimal(3,2);comment:配送费;default:0;not null" json:"delivery_fee"`
+	CouponFee       float64                    `gorm:"type:decimal(7,2);comment:优惠金额;default:0;not null" json:"coupon_fee"`
+	VoucherId       int                        `gorm:"type:int(11);comment:优惠券id" json:"voucher_id"`
+	Remark          string                     `gorm:"type:varchar(255);comment:备注" json:"remark"`
+	Fee             float64                    `gorm:"type:decimal(7,2);comment:合计金额;default:0;not null" json:"fee"`
+	OriginalFee     float64                    `gorm:"type:decimal(7,2);comment:原价金额;default:0;not null" json:"original_fee"`
+	RefundFee       float64                    `gorm:"type:decimal(7,2);comment:剩余可退金额;default:0;not null" json:"refund_fee"`
+	TotalAmount     float64                    `gorm:"->" json:"total_amount"`
+	BuyerPayAmount  float64                    `gorm:"->" json:"buyer_pay_amount"`
+	DeskId          int                        `gorm:"type:int(11);comment:桌号id" json:"desk_id"`
+	DeskName        string                     `gorm:"type:varchar(40);comment:桌位名称详情" json:"desk_name"`
+	UserId          int                        `gorm:"type:bigint(20);comment:下单人信息" json:"user_id"`
+	Name            string                     `gorm:"type:varchar(20);comment:用户预留姓名" json:"name"`
+	Mobile          string                     `gorm:"type:varchar(11);comment:用户预留手机号;not null" json:"mobile"`
+	Address         string                     `gorm:"type:varchar(255);comment:用户预留收货地址" json:"address"`
+	AddressId       int                        `gorm:"type:int(11);comment:选择地址id" json:"address_id"`
+	CreateAt        int64                      `gorm:"type:bigint(20)" json:"create_at"`
+	FinishedAt      int64                      `gorm:"type:int(11)" json:"finished_at"`
+	CreateTime      string                     `gorm:"-" json:"create_time"`
+	FinishedTime    string                     `gorm:"-" json:"finished_time"`
+	TotalCount      int                        `gorm:"-" json:"total_count"`
+	OrderStatus     string                     `gorm:"type:varchar(20);comment:订单状态（WAIT_BUYER_PAY => 待支付，TRADE_SUCCESS => 待使用/已支付，TRADE_FINISHED=> 已完成，TRADE_REFUSED => 已拒绝，TRADE_CLOSED => 已关闭，TRADE_REFUND=>已退款）;default:WAIT_BUYER_PAY;not null" json:"order_status"`
+	DeliveryStatus  string                     `gorm:"type:varchar(20);comment:运输状态（TRADE_RECEIVED => 已接单，TRADE_DELIVERY => 运输中" json:"delivery_status"`
+	paginate        cmfModel.Paginate          `gorm:"-"`
+	Call            string                     `gorm:"-" json:"call"`
+	Db              *gorm.DB                   `gorm:"-" json:"-"`
+	AppId           string                     `gorm:"-" json:"app_id"`
+	RequestPayment  wechatModel.RequestPayment `gorm:"-" json:"request_payment"`
+}
+
+// 退款明细
+type FoodOrderRefund struct {
+	Id      int     `json:"id"`
+	Mid     int     `gorm:"type:bigint(20);comment:对应小程序id;not null" json:"mid"`
+	OrderId string  `gorm:"type:varchar(40);comment:订单号;not null" json:"order_id"`
+	Fee     float64 `gorm:"type:decimal(7,2);comment:退款金额;default:0;not null" json:"fee"`
+	Reason  string  `gorm:"type:varchar(255);comment:退款理由" json:"reason"`
 }
 
 // 定单明细表
@@ -80,6 +102,8 @@ type FoodOrderDetail struct {
 	Code              string  `gorm:"type:varchar(32);comment:菜品唯一编号;not null" json:"code"`
 	OrderId           string  `gorm:"type:varchar(40);comment:订单号;not null" json:"order_id"`
 	FoodId            int     `gorm:"type:int(11);comment:所属食物id;not null" json:"food_id"`
+	Food              Food    `gorm:"-" json:"food"`
+	CategoryId        int     `gorm:"-" json:"category_id"`
 	FoodThumbnail     string  `gorm:"type:varchar(255);comment:菜品缩略图;not null" json:"food_thumbnail"`
 	FoodThumbnailPrev string  `gorm:"-" json:"food_thumbnail_prev"`
 	AlipayMaterialId  string  `gorm:"type:varchar(256);comment:阿里素材标识;not null" json:"alipay_material_id"`
@@ -98,6 +122,18 @@ type FoodOrderDetail struct {
 	Price             float64 `gorm:"type:decimal(9,2);comment:菜品单价;not null" json:"price"`
 	Total             float64 `gorm:"type:decimal(9,2);comment:菜品总价;not null" json:"total"`
 	BoxFee            float64 `gorm:"type:decimal(9,2);comment:餐盒费;not null" json:"box_fee"`
+}
+
+type tasty struct {
+	AttrKey   string `json:"attr_key"`
+	AttrValue string `json:"attr_value"`
+}
+
+type material struct {
+	Id            int     `json:"id,omitempty"`
+	Count         int     `json:"count,omitempty"`
+	MaterialName  string  `json:"material_name,omitempty"`
+	MaterialPrice float64 `json:"material_price,omitempty"`
 }
 
 func (model FoodOrder) IndexByStore(c *gin.Context, query []string, queryArgs []interface{}) (cmfModel.Paginate, error) {
@@ -123,16 +159,44 @@ func (model FoodOrder) IndexByStore(c *gin.Context, query []string, queryArgs []
 	result := cmf.NewDb().Table(prefix+"food_order fo").Select("fo.*,s.store_name,l.total_amount,buyer_pay_amount").
 		Joins("INNER JOIN "+prefix+"store s ON s.id = fo.store_id").
 		Joins("LEFT JOIN "+prefix+"pay_log l ON l.order_id = fo.order_id").
-		Where(queryStr, queryArgs...).Limit(pageSize).Offset((current - 1) * pageSize).Order("fo.id desc").Scan(&fo)
+		Where(queryStr, queryArgs...).Limit(pageSize).Offset((current - 1) * pageSize).
+		Order("case WHEN fo.order_status = 'TRADE_SUCCESS' then 1 WHEN fo.order_status = 'TRADE_SUCCESS' then 1 else 99 end asc, appointment_at desc, fo.id desc").Scan(&fo)
 
 	if result.Error != nil {
 		return cmfModel.Paginate{}, result.Error
 	}
 
+	domain := cmf.Conf().App.Domain
+
+	appId, exist := c.Get("app_id")
+
 	for k, v := range fo {
+		if exist {
+			appIdStr := appId.(string)
+			if v.PayType == "wxpay" {
+				fo[k].RequestPayment.AppId = appIdStr
+				fo[k].RequestPayment.TimeStamp = strconv.FormatInt(time.Now().Unix(), 10)
+				fo[k].RequestPayment.NonceStr = cmfUtil.GetMd5(strconv.FormatInt(time.Now().Unix(), 10))
+				fo[k].RequestPayment.Package = "prepay_id=" + v.TradeNo
+				fo[k].RequestPayment.SignType = "RSA"
+			}
+
+			encryptData := []string{
+				fo[k].RequestPayment.AppId,
+				fo[k].RequestPayment.TimeStamp,
+				fo[k].RequestPayment.NonceStr,
+				fo[k].RequestPayment.Package,
+			}
+
+			signature := wechatUtil.Sign(encryptData)
+			fo[k].RequestPayment.PaySign = signature
+		}
+
+		fo[k].Call = domain + "/call/" + v.Mobile
 
 		count := 0
 		fo[k].CreateTime = time.Unix(v.CreateAt, 0).Format(data.TimeLayout)
+		fo[k].AppointmentTime = time.Unix(v.AppointmentAt, 0).Format(data.TimeLayout)
 		fo[k].FinishedTime = time.Unix(v.FinishedAt, 0).Format(data.TimeLayout)
 
 		var fod []FoodOrderDetail
@@ -146,6 +210,16 @@ func (model FoodOrder) IndexByStore(c *gin.Context, query []string, queryArgs []
 			if dv.FoodThumbnail == "" {
 				dv.FoodThumbnail = "template/food.png"
 			}
+
+			fcp := FoodCategoryPost{}
+			cmf.NewDb().Where("food_id = ?", dv.FoodId).First(&fcp)
+			categoryId := fcp.FoodCategoryId
+
+			food := Food{}
+			cmf.NewDb().Where("food_id = ?", dv.FoodId).First(&food)
+
+			fod[dk].CategoryId = categoryId
+			fod[dk].Food = food
 
 			fod[dk].FoodThumbnailPrev = util.GetFileUrl(dv.FoodThumbnail)
 			count = count + dv.Count
@@ -186,6 +260,7 @@ func (model FoodOrder) ShowByStore(query []string, queryArgs []interface{}) (Foo
 	}
 
 	count := 0
+	fo.AppointmentTime = time.Unix(fo.AppointmentAt, 0).Format(data.TimeLayout)
 	fo.CreateTime = time.Unix(fo.CreateAt, 0).Format(data.TimeLayout)
 	var fod []FoodOrderDetail
 	tx := cmf.NewDb().Where("order_id", fo.OrderId).Find(&fod)
@@ -193,7 +268,21 @@ func (model FoodOrder) ShowByStore(query []string, queryArgs []interface{}) (Foo
 		return fo, result.Error
 	}
 
+	domain := cmf.Conf().App.Domain
+	fo.Call = domain + "/call/" + fo.Mobile
+
 	for dk, dv := range fod {
+
+		fcp := FoodCategoryPost{}
+		cmf.NewDb().Where("food_id = ?", dv.FoodId).First(&fcp)
+		categoryId := fcp.FoodCategoryId
+
+		food := Food{}
+		cmf.NewDb().Where("id = ?", dv.FoodId).First(&food)
+		food.PrevPath = util.GetFileUrl(food.Thumbnail)
+
+		fod[dk].CategoryId = categoryId
+		fod[dk].Food = food
 
 		if dv.FoodThumbnail == "" {
 			dv.FoodThumbnail = "template/food.png"
@@ -201,10 +290,49 @@ func (model FoodOrder) ShowByStore(query []string, queryArgs []interface{}) (Foo
 
 		fod[dk].FoodThumbnailPrev = util.GetFileUrl(dv.FoodThumbnail)
 		count = count + dv.Count
+
+		var material []material
+		json.Unmarshal([]byte(dv.Material), &material)
+
+		// 增加加料描述
+		materialRemark := ""
+		for _, item := range material {
+			materialRemark += " | " + item.MaterialName
+		}
+
+		var tasty []tasty
+		json.Unmarshal([]byte(dv.Tasty), &tasty)
+
+		tastyRemark := ""
+
+		for _, item := range tasty {
+			tastyRemark = " | " + item.AttrValue
+		}
+
+		fod[dk].FoodName = dv.FoodName + materialRemark + tastyRemark
+
 	}
 
 	fo.FoodDetail = fod
 	fo.TotalCount = count
+
+	if fo.PayType == "wxpay" {
+		fo.RequestPayment.AppId = model.AppId
+		fo.RequestPayment.TimeStamp = strconv.FormatInt(time.Now().Unix(), 10)
+		fo.RequestPayment.NonceStr = cmfUtil.GetMd5(strconv.FormatInt(time.Now().Unix(), 10))
+		fo.RequestPayment.Package = "prepay_id=" + fo.TradeNo
+		fo.RequestPayment.SignType = "RSA"
+
+		encryptData := []string{
+			fo.RequestPayment.AppId,
+			fo.RequestPayment.TimeStamp,
+			fo.RequestPayment.NonceStr,
+			fo.RequestPayment.Package,
+		}
+
+		signature := wechatUtil.Sign(encryptData)
+		fo.RequestPayment.PaySign = signature
+	}
 
 	return fo, nil
 
@@ -265,7 +393,12 @@ func (model FoodOrder) Show(query []string, queryArgs []interface{}) (FoodOrder,
 
 }
 
-func (model FoodOrder) Store() (FoodOrder, error) {
+func (model FoodOrder) Store() (fo FoodOrder, err error) {
+
+	db := cmf.NewDb()
+	if model.Db != nil {
+		db = model.Db
+	}
 
 	o, err := model.Show([]string{"order_id = ?"}, []interface{}{model.OrderId})
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
@@ -277,9 +410,9 @@ func (model FoodOrder) Store() (FoodOrder, error) {
 		return o, errors.New("该订单已经存在，无需重复添加！")
 	}
 
-	result := cmf.NewDb().Create(&model)
-	if result.Error != nil {
-		return o, result.Error
+	tx := db.Create(&model)
+	if tx.Error != nil {
+		return o, tx.Error
 	}
 
 	return model, nil
@@ -486,7 +619,7 @@ func (model *FoodOrder) ReduceInventory() {
  * @Param
  * @return
  **/
-func (model *FoodOrder) Refund() error {
+func (model *FoodOrder) Refund(refundFee float64, refundReason string, authorizerAccessToken string) error {
 
 	db := cmf.NewDb()
 	if model.Db != nil {
@@ -509,7 +642,7 @@ func (model *FoodOrder) Refund() error {
 
 		balance := userData.Balance
 
-		reFee, err := decimal.NewFromString(rLog.Fee)
+		reFee := decimal.NewFromFloat(refundFee)
 
 		if err != nil {
 			return err
@@ -546,6 +679,8 @@ func (model *FoodOrder) Refund() error {
 		}
 	}
 
+	userMpType := ""
+	// 如果是支付宝支付
 	if model.PayType == "alipay" {
 
 		log := appModel.PayLog{}
@@ -559,18 +694,204 @@ func (model *FoodOrder) Refund() error {
 		bizContent := make(map[string]interface{}, 0)
 		bizContent["out_trade_no"] = model.OrderId
 		bizContent["trade_no"] = model.TradeNo
-		bizContent["refund_amount"] = log.TotalAmount
+		bizContent["refund_amount"] = refundFee
+		bizContent["refund_reason"] = refundReason
 		refundResult := new(payment.Common).Refund(bizContent)
 
 		if refundResult.Response.Code != "10000" {
 			return errors.New("退款失败！")
 		}
+
+		userMpType = "alipay"
+
 	}
 
-	tx := db.Model(&FoodOrder{}).Where("id = ?", model.Id).Update("order_status", "TRADE_REFUND")
+	// 如果是微信支付
+	if model.PayType == "wxpay" {
+
+		log := appModel.PayLog{}
+		tx := db.Where("order_id = ?", model.OrderId).First(&log)
+
+		if tx.Error != nil {
+			if errors.Is(tx.Error, gorm.ErrRecordNotFound) {
+				return errors.New("支付日志不存在！")
+			}
+			return tx.Error
+		}
+
+		theme := saasModel.MpTheme{}
+		tx = cmf.NewDb().Where("mid = ?", model.Mid).First(&theme)
+		if tx.Error != nil {
+			return tx.Error
+		}
+
+		if theme.SubMchid == "" {
+			return errors.New("请先绑定微信支付")
+		}
+
+		bizContent := make(map[string]interface{}, 0)
+
+		refund := decimal.NewFromFloat(refundFee).Round(2).Mul(decimal.NewFromInt(100)).IntPart()
+
+		bizContent["sub_mchid"] = theme.SubMchid
+		bizContent["out_trade_no"] = model.OrderId
+		bizContent["out_refund_no"] = "refund_" + strconv.FormatInt(time.Now().Unix(), 10)
+		bizContent["amount"] = map[string]interface{}{
+			"refund":   refund,
+			"total":    refund,
+			"currency": "CNY",
+		}
+		bizContent["reason"] = refundReason
+
+		refundsResponse := new(pay.PartnerPay).Refunds(bizContent)
+
+		if refundsResponse.Code != "" {
+			return errors.New(refundsResponse.Message)
+		}
+
+		userMpType = "wechat"
+
+	}
+
+	var (
+		u   User
+		err error
+	)
+	// 退款通知
+	if model.FormId != "" || authorizerAccessToken != "" {
+
+		wxSubscribe := Subscribe{
+			Id:          model.Id,
+			AccessToken: model.FormId,
+			StoreName:   model.StoreName,
+			OrderId:     model.OrderId,
+			Fee:         strconv.FormatFloat(refundFee, 'f', -1, 64),
+			Remark:      refundReason,
+		}
+
+		if model.FormId != "" {
+			userMpType = "alipay-mp"
+			wxSubscribe.Type = "alipay"
+			wxSubscribe.AccessToken = model.FormId
+		} else {
+			userMpType = "wechat-mp"
+			wxSubscribe.Type = "wechat"
+			wxSubscribe.AccessToken = authorizerAccessToken
+		}
+
+		// 获取当前会员信息
+		u, err = new(User).GetMpUser(model.UserId, userMpType)
+		if err != nil {
+			cmfLog.Error(err.Error())
+			return err
+		}
+
+		wxSubscribe.OpenId = u.OpenId
+
+		wxSubscribe.TradeRefund()
+
+	}
+
+	rFee, _ := decimal.NewFromFloat(model.RefundFee).Sub(decimal.NewFromFloat(refundFee)).Round(2).Float64()
+
+	rfParams := map[string]interface{}{
+		"refund_fee": rFee,
+	}
+
+	if rFee == 0 {
+		rfParams["order_status"] = "TRADE_REFUND"
+	}
+
+	tx := db.Model(&FoodOrder{}).Where("id = ?", model.Id).Updates(rfParams)
 	if tx.Error != nil {
 		cmfLog.Error(tx.Error.Error())
 		return tx.Error
+	}
+
+	// 增加退款到退款订单日志
+	db.Create(&FoodOrderRefund{
+		Mid:     model.Mid,
+		OrderId: model.OrderId,
+		Fee:     refundFee,
+		Reason:  refundReason,
+	})
+
+	// 修改支付日志为已退款
+	payLog := &appModel.PayLog{}
+	tx = db.Where("order_id = ?", model.OrderId).First(&payLog)
+
+	if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
+		cmfLog.Error(tx.Error.Error())
+		return tx.Error
+	}
+	if tx.RowsAffected > 0 {
+
+		totalAmount := payLog.TotalAmount
+		refundFee := payLog.RefundFee
+
+		if payLog.Type == "wxpay" {
+			totalAmount, _ = decimal.NewFromFloat(payLog.TotalAmount).Sub(decimal.NewFromFloat(refundFee).Mul(decimal.NewFromInt(100))).Round(2).Float64()
+			refundFee, _ = decimal.NewFromFloat(refundFee).Add(decimal.NewFromFloat(refundFee).Mul(decimal.NewFromInt(100))).Round(2).Float64()
+		}
+
+		if payLog.Type == "alipay" {
+			totalAmount, _ = decimal.NewFromFloat(payLog.TotalAmount).Sub(decimal.NewFromFloat(refundFee)).Round(2).Float64()
+			refundFee, _ = decimal.NewFromFloat(refundFee).Add(decimal.NewFromFloat(refundFee).Mul(decimal.NewFromInt(100))).Round(2).Float64()
+		}
+
+		payLog.TotalAmount = totalAmount
+		payLog.RefundFee = refundFee
+
+		if rFee == 0 {
+			payLog.TradeStatus = "TRADE_REFUND"
+		}
+
+		cmf.NewDb().Where("order_id = ?", model.OrderId).Updates(&payLog)
+	}
+
+	// 收回已发放的积分
+	if model.PayType == "alipay" || model.PayType == "wxpay" {
+
+		scoreJson := saasModel.Options("score", model.Mid)
+		scoreMap := Score{}
+		_ = json.Unmarshal([]byte(scoreJson), &scoreMap)
+
+		// 启用消费返积分
+		if scoreMap.EnabledPay == 1 {
+
+			score := u.Score
+			tScore := scoreMap.PayScore * int(refundFee)
+			score = score - tScore
+			remark := "退款"
+
+
+			// 保存到数据库
+			sLog := appModel.ScoreLog{
+				UserId: u.Id,
+				Type:   1,
+				Score:  tScore,
+				Fee:    strconv.FormatFloat(refundFee, 'f', 2, 64),
+				Remark: remark,
+			}
+
+			// 达到消费门槛1元
+			if refundFee > 1 {
+				err = sLog.Save()
+				if err != nil {
+					return err
+				}
+			}
+
+			u.Score = score
+			tx := db.Where("id = ?", u.Id).Updates(&u)
+
+			if tx.Error != nil {
+				cmfLog.Error(tx.Error.Error())
+				return tx.Error
+			}
+
+		}
+
 	}
 
 	return nil
@@ -626,7 +947,6 @@ func (model *FoodOrder) Printer() error {
 
 	}
 
-
 	// 获取订单门店
 	storeId := fo.StoreId
 
@@ -641,42 +961,162 @@ func (model *FoodOrder) Printer() error {
 		return errors.New("该门店不存在或以关闭！")
 	}
 
-	fmt.Println("store",store)
-
-	// 打印机打印订单
-	pContent := new(base.Printer).Format58Printer(printOrder)
-
-	pf := feieModel.PrinterFormat{
-		OrderType:   fo.OrderType,
-		StoreName:   store.StoreName,
-		PayType:     fo.PayType,
-		QueueNo:     fo.QueueNo,
-		OrderDetail: pContent,
-		CouponFee:   strconv.FormatFloat(fo.CouponFee, 'f', -1, 64),
-		OriginalFee: strconv.FormatFloat(fo.Fee+fo.BoxFee, 'f', -1, 64),
-		Fee:         strconv.FormatFloat(fo.Fee, 'f', -1, 64),
-		BoxFee:      strconv.FormatFloat(fo.BoxFee, 'f', -1, 64),
-		Address:     fo.Address,
-		Name:        fo.Name,
-		Mobile:      fo.Mobile,
-	}
-
-	content := pf.Format("58mm")
+	appointmentTime := time.Unix(fo.AppointmentAt, 0).Format(data.TimeLayout)
 
 	// 获取门店打印机状态
-	p := Printer{}
-	p, err = p.Show([]string{"store_id = ? AND mid = ?"}, []interface{}{fo.StoreId, fo.Mid})
-	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-		return err
+	_, err = new(FoodOrder).SendPrinter(fo, printOrder, store.StoreName, appointmentTime, true)
+
+	return err
+
+}
+
+func (model *FoodOrder) GetDeliveryFee(store Store) (foodOrder FoodOrder, err error) {
+
+	addr := Address{}
+	tx := cmf.NewDb().Where("id = ?", model.AddressId).First(&addr)
+
+	if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
+		return foodOrder, tx.Error
 	}
 
-	if p.Id > 0 {
-		myResult := new(base.Printer).Printer(p.Sn, content, "1")
-		fmt.Println("myResult", myResult)
-	} else {
-		fmt.Println("请先绑定打印机！")
+	if tx.RowsAffected == 0 {
+		return foodOrder, errors.New("地址不存在！")
 	}
 
-	return nil
+	name := addr.Name
+	if name == "" {
+		return foodOrder, errors.New("收货人姓名不能为空！")
+	}
 
+	model.Name = name
+	model.Mobile = strconv.Itoa(addr.Mobile)
+
+	address := addr.Address + addr.Room
+	geo := GeoAddress(address)
+
+	if len(geo.MapGeoCodes) == 0 {
+		return foodOrder, errors.New("该地址不存在")
+	}
+
+	if len(geo.MapGeoCodes) > 1 {
+		return foodOrder, errors.New("该地址不够详细，请补全详细地址")
+	}
+
+	location := geo.MapGeoCodes[0].Location
+
+	lMap := strings.Split(location, ",")
+
+	longitude, _ := strconv.ParseFloat(lMap[0], 64)
+	latitude, _ := strconv.ParseFloat(lMap[1], 64)
+
+	// 获取当前外卖配置
+	takeJson := saasModel.Options("takeout", store.Mid)
+
+	var takeOut TakeOut
+	_ = json.Unmarshal([]byte(takeJson), &takeOut)
+
+	distance := util.EarthDistance(latitude, longitude, store.Latitude, store.Longitude)
+
+	// 超出距离
+	if distance > takeOut.DeliveryDistance {
+		return foodOrder, errors.New("超过配送距离！")
+	}
+
+	model.Address = address
+
+	// 起送费
+	sf := takeOut.StartFee
+	fmt.Println("sf起送价", sf)
+	// 剩余配送距离
+
+	lastKm, _ := decimal.NewFromFloat(distance - takeOut.StartKm).Round(0).Float64()
+
+	if lastKm <= 0 {
+		lastKm = 0
+	}
+
+	lastFee := lastKm * takeOut.StepFee
+	fmt.Println("阶梯式报价：", lastFee)
+
+	deliveryFee := sf + lastFee
+	deliveryFee, _ = decimal.NewFromFloat(deliveryFee).Round(2).Float64()
+
+	model.DeliveryFee = deliveryFee
+
+	return *model, nil
+}
+
+type Content struct {
+	Printer `json:"printer"`
+	Content string `json:"content"`
+}
+
+// 发送打印订单请求
+func (model *FoodOrder) SendPrinter(fo FoodOrder, printOrder []map[string]string, storeName string, appointmentTime string, canPrinter bool) (content []Content, err error) {
+	// 获取门店打印机状态
+	var printers []Printer
+	tx := cmf.NewDb().Where("store_id = ? AND mid = ?", fo.StoreId, fo.Mid).Find(&printers)
+	if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
+		return content, tx.Error
+	}
+
+	content = make([]Content, 0)
+
+	for _, p := range printers {
+		printer := printerPlugin.Printer{}
+		if p.Brand == "feie" {
+			// 打印机打印订单
+			printer.Type = "feie"
+		} else if p.Brand == "xprinter" {
+			printer.Type = "xprinter"
+		} else {
+			return content, errors.New("打印机类型错误")
+		}
+
+		pContent := printer.FormatPrinter(printOrder, "58mm")
+
+		pf := printerPlugin.PrinterFormat{
+			Brand:           p.Brand,
+			OrderType:       fo.OrderType,
+			StoreName:       storeName,
+			PayType:         fo.PayType,
+			DeskName:        fo.DeskName,
+			QueueNo:         fo.QueueNo,
+			OrderDetail:     pContent,
+			CouponFee:       strconv.FormatFloat(fo.CouponFee, 'f', -1, 64),
+			OriginalFee:     strconv.FormatFloat(fo.OriginalFee, 'f', -1, 64),
+			Fee:             strconv.FormatFloat(fo.Fee, 'f', -1, 64),
+			BoxFee:          strconv.FormatFloat(fo.BoxFee, 'f', -1, 64),
+			DeliveryFee:     strconv.FormatFloat(fo.DeliveryFee, 'f', -1, 64),
+			Address:         fo.Address,
+			Name:            fo.Name,
+			Mobile:          fo.Mobile,
+			AppointmentTime: appointmentTime,
+			Remark:          fo.Remark,
+		}
+
+		pItemContent := pf.Format("58mm")
+
+		content = append(content, Content{
+			Printer: p,
+			Content: pItemContent,
+		})
+
+		fmt.Println("pItemContent", pItemContent)
+		cmfLog.Save(pItemContent, "test.log")
+
+		if p.Id > 0 && canPrinter {
+			if p.Brand == "feie" {
+				myResult := new(base.Printer).Printer(p.Sn, pItemContent, 1)
+				fmt.Println("myResult", myResult)
+			}
+
+			if p.Brand == "xprinter" {
+				myResult := new(xpyunYun.Printer).Printer(p.Sn, pItemContent, 1)
+				fmt.Println("myResult", myResult.Content)
+			}
+		}
+	}
+
+	return content, nil
 }

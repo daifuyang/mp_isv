@@ -26,13 +26,13 @@ type MpIsvAuth struct {
 }
 
 type AlipayAuthResult struct {
-	MpIsvAuth       *model.MpIsvAuth          `json:"mp_isv_auth"`
-	MpTheme         *saasModel.MpTheme        `json:"mp_theme"`
-	BusinessInfo    *resModel.BusinessInfo    `json:"business_info"`
-	MpThemeVersion  *saasModel.MpThemeVersion `json:"mp_theme_version"`
-	TemplateVersion *model.AlipayIsvApp       `json:"template_version"`
-	AuditVersion    *saasModel.MpThemeVersion `json:"audit_version"`
-	OnlineVersion   *saasModel.MpThemeVersion `json:"online_version"`
+	MpIsvAuth      *model.MpIsvAuth          `json:"mp_isv_auth"`
+	MpTheme        *saasModel.MpTheme        `json:"mp_theme"`
+	BusinessInfo   *resModel.BusinessInfo    `json:"business_info"`
+	MpThemeVersion *saasModel.MpThemeVersion `json:"mp_theme_version"`
+	CanUpdate      int                       `json:"can_update"`
+	AuditVersion   *saasModel.MpThemeVersion `json:"audit_version"`
+	OnlineVersion  *saasModel.MpThemeVersion `json:"online_version"`
 }
 
 func (rest MpIsvAuth) Show(c *gin.Context) {
@@ -45,17 +45,10 @@ func (rest MpIsvAuth) Show(c *gin.Context) {
 		return
 	}
 
-	t := c.Query("type")
-
-	if t == "" {
-		rest.rc.Error(c, "类型不能为空", nil)
-		return
-	}
-
 	// 获取小程序mid
 	mid, _ := c.Get("mid")
 
-	result, err := rest.GetAuth(mid, rewrite.Id, t)
+	result, err := rest.GetAuth(mid, rewrite.Id)
 
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)
@@ -66,10 +59,10 @@ func (rest MpIsvAuth) Show(c *gin.Context) {
 
 }
 
-func (rest MpIsvAuth) GetAuth(mid interface{}, tenantId int, t string) (AlipayAuthResult, error) {
+func (rest MpIsvAuth) GetAuth(mid interface{}, tenantId int) (AlipayAuthResult, error) {
 
 	query := []string{"mp_id = ?", "tenant_id = ?", "type = ?"}
-	queryArgs := []interface{}{mid, tenantId, t}
+	queryArgs := []interface{}{mid, tenantId, "alipay"}
 
 	isvAuth := model.MpIsvAuth{}
 
@@ -79,6 +72,9 @@ func (rest MpIsvAuth) GetAuth(mid interface{}, tenantId int, t string) (AlipayAu
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return result, err
 	}
+
+	data.AppAuthToken = ""
+	data.AppRefreshToken = ""
 
 	result.MpIsvAuth = data
 
@@ -99,8 +95,8 @@ func (rest MpIsvAuth) GetAuth(mid interface{}, tenantId int, t string) (AlipayAu
 	json.Unmarshal([]byte(businessJson), &bi)
 	mpTheme.AlipayCategoryIds = bi.MiniCategoryIds
 	result.MpTheme = mpTheme
-	result.BusinessInfo = &bi
 
+	result.BusinessInfo = &bi
 	upMpTheme := saasModel.MpTheme{}
 	if mpTheme != nil &&
 		// 如果接口加密秘钥为空
@@ -111,10 +107,8 @@ func (rest MpIsvAuth) GetAuth(mid interface{}, tenantId int, t string) (AlipayAu
 		aesResult := new(base.Oauth).AesSet(bizContent)
 
 		if aesResult.Code == "10000" {
-
 			aesKey := aesResult.AesKey
 			upMpTheme.EncryptKey = aesKey
-
 		} else {
 			fmt.Println("aesResult", aesResult)
 		}
@@ -122,8 +116,9 @@ func (rest MpIsvAuth) GetAuth(mid interface{}, tenantId int, t string) (AlipayAu
 	}
 
 	app, _ := new(model.AlipayIsvApp).Show()
-	result.TemplateVersion = &app
+	// result.TemplateVersion = &app
 
+	// 获取模板版本号
 	bizContent := make(map[string]interface{}, 0)
 	bizContent["bundle_id"] = "com.alipay.alipaywallet"
 	vResult := new(mini.Version).VersionListQuery(bizContent)
@@ -142,6 +137,14 @@ func (rest MpIsvAuth) GetAuth(mid interface{}, tenantId int, t string) (AlipayAu
 				queryResult := new(mini.Audit).DetailQuery(bizContent)
 
 				if queryResult.Response.Code == "10000" {
+					if queryResult.Response.Status == "WAIT_RELEASE" {
+						bizContent = make(map[string]interface{}, 0)
+						bizContent["app_version"] = appVersion
+						onlineResult := new(mini.Version).Online(bizContent)
+						if onlineResult.Response.Code == "10000" {
+							status = "online"
+						}
+					}
 					if queryResult.Response.Status == "RELEASE" {
 						status = "online"
 					}
@@ -168,31 +171,39 @@ func (rest MpIsvAuth) GetAuth(mid interface{}, tenantId int, t string) (AlipayAu
 
 			version := saasModel.MpThemeVersion{}
 
-			tx := cmf.NewDb().Where("version = ?", appVersion).First(&version)
+			tx := cmf.NewDb().Where("version = ? AND  type = ?", appVersion, "alipay").First(&version)
 
 			if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 				return result, err
 			}
 
 			vData := saasModel.MpThemeVersion{
-				Mid:             mid.(int),
-				TemplateId:      app.TemplateAppId,
-				TemplateVersion: app.Version,
-				Version:         appVersion,
-				Status:          status,
+				Mid:        mid.(int),
+				TemplateId: app.TemplateAppId,
+				Version:    appVersion,
+				Type:       "alipay",
+				Status:     status,
+			}
+
+			if status == "online" {
+				vData.IsAudit = 0
 			}
 
 			if tx.RowsAffected == 0 {
+				vData.TemplateVersion = app.Version
 				vData.CreateAt = time.Now().Unix()
 				tx := cmf.NewDb().Create(&vData)
 				if tx.Error != nil {
 					return result, err
 				}
 			} else {
-				vData.UpdateAt = time.Now().Unix()
-				tx := cmf.NewDb().Where("id  = ?", version.Id).Updates(&vData)
-				if tx.Error != nil {
-					return result, err
+
+				if vData.Status != status {
+					vData.UpdateAt = time.Now().Unix()
+					tx := cmf.NewDb().Debug().Where("id  = ?", version.Id).Updates(&vData)
+					if tx.Error != nil {
+						return result, err
+					}
 				}
 			}
 		}
@@ -201,7 +212,7 @@ func (rest MpIsvAuth) GetAuth(mid interface{}, tenantId int, t string) (AlipayAu
 		fmt.Println(vResult.Response)
 	}
 
-	version, err := new(saasModel.MpThemeVersion).Show([]string{"mid = ?"}, []interface{}{mid})
+	version, err := new(saasModel.MpThemeVersion).Show([]string{"mid = ? AND type = ?"}, []interface{}{mid, "alipay"})
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return result, err
 	}
@@ -209,7 +220,7 @@ func (rest MpIsvAuth) GetAuth(mid interface{}, tenantId int, t string) (AlipayAu
 	result.MpThemeVersion = version
 
 	// 获取审核版本
-	auditVersion, err := new(saasModel.MpThemeVersion).Show([]string{"mid = ?", "is_audit = ?"}, []interface{}{mid, 1})
+	auditVersion, err := new(saasModel.MpThemeVersion).Show([]string{"mid = ?", "type = ?", "is_audit = ?"}, []interface{}{mid, "alipay", 1})
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return result, err
 	}
@@ -219,13 +230,18 @@ func (rest MpIsvAuth) GetAuth(mid interface{}, tenantId int, t string) (AlipayAu
 	}
 
 	// 获取线上
-	onlineVersion, err := new(saasModel.MpThemeVersion).Show([]string{"mid = ?", "status = ?"}, []interface{}{mid, "online"})
+	onlineVersion, err := new(saasModel.MpThemeVersion).Show([]string{"mid = ?", "type = ?", "status = ?"}, []interface{}{mid, "alipay", "online"})
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return result, err
 	}
 
 	if onlineVersion != nil {
 		result.OnlineVersion = onlineVersion
+	}
+
+	// 判断是否可升级，当前用户的模板未在审核且当前模板版本不等于线上小程序版本
+	if version != nil && version.IsAudit == 0 && app.Version != version.TemplateVersion {
+		result.CanUpdate = 1
 	}
 
 	return result, nil

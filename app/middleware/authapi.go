@@ -43,16 +43,19 @@ func ValidationBearerToken(c *gin.Context) {
 	userArr := strings.Split(userID, "@")
 
 	userId := userArr[0]
-	userType := userArr[1]
-	tenantId := userArr[2]
+	if len(userArr) == 3 {
+		userType := userArr[1]
+		tenantId := userArr[2]
+		tenantIdInt, _ := strconv.Atoi(tenantId)
+		c.Set("account_type", userType)
+		c.Set("tenant_id", tenantIdInt)
+	}
 
 	userIdInt, _ := strconv.Atoi(userId)
-	tenantIdInt, _ := strconv.Atoi(tenantId)
 
 	c.Set("scope", scope)
 	c.Set("user_id", userIdInt)
-	c.Set("account_type", userType)
-	c.Set("tenant_id", tenantIdInt)
+
 
 	c.Next()
 }
@@ -68,8 +71,14 @@ func ValidationAdmin(c *gin.Context) {
 		}
 	} else {
 		cmf.ManualDb(cmf.Conf().Database.Name)
-		currentUser := new(model.User).CurrentUser(c)
+		currentUser ,err := new(model.User).CurrentUser(c)
+		if err != nil {
+			new(controller.Rest).Error(c, "该用户不存在！", nil)
+			c.Abort()
+			return
+		}
 		userType = currentUser.UserType
+		fmt.Println("currentUser",currentUser)
 	}
 
 	c.Set("userType", userType)

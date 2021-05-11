@@ -7,11 +7,14 @@ require (
 	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751
 	github.com/aliyun/alibaba-cloud-sdk-go v1.61.991
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
+	github.com/fatih/structs v1.1.0
 	github.com/gin-contrib/sessions v0.0.3
 	github.com/gin-gonic/gin v1.6.3
 	github.com/gincmf/alipayEasySdk v0.0.1
 	github.com/gincmf/cmf v0.0.6
 	github.com/gincmf/feieSdk v0.0.1
+	github.com/gincmf/wechatEasySdk v0.0.1
+	github.com/gincmf/xpyunSdk v0.0.1
 	github.com/go-openapi/spec v0.20.0 // indirect
 	github.com/go-playground/validator/v10 v10.4.1 // indirect
 	github.com/go-redis/redis v6.15.9+incompatible
@@ -44,4 +47,8 @@ replace github.com/gincmf/cmf v0.0.6 => ../cmf
 
 replace github.com/gincmf/alipayEasySdk v0.0.1 => ../alipay-easysdk-go
 
+replace github.com/gincmf/wechatEasySdk v0.0.1 => ../wechat-easysdk-go
+
 replace github.com/gincmf/feieSdk v0.0.1 => ../feie-sdk
+
+replace github.com/gincmf/xpyunSdk v0.0.1 => ../xpyun-sdk

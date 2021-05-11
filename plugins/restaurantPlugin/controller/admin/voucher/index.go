@@ -16,6 +16,7 @@ import (
 	"github.com/gincmf/alipayEasySdk/marketing"
 	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
+	"github.com/gincmf/cmf/data"
 	cmfLog "github.com/gincmf/cmf/log"
 	"gorm.io/gorm"
 	"strconv"
@@ -80,8 +81,8 @@ func (rest *Index) List(c *gin.Context) {
 
 	mid, _ := c.Get("mid")
 
-	var query = []string{"mid = ?"}
-	var queryArgs = []interface{}{mid}
+	var query = []string{"mid = ? AND status = ?"}
+	var queryArgs = []interface{}{mid, 1}
 
 	data, err := new(model.Voucher).List(query, queryArgs)
 
@@ -138,6 +139,10 @@ func (rest *Index) Edit(c *gin.Context) {
 	}
 
 	err := c.ShouldBindJSON(&form)
+	if err != nil {
+		c.JSON(400, gin.H{"msg": err.Error()})
+		return
+	}
 
 	publishEndTime := form.PublishEndTime
 
@@ -174,10 +179,10 @@ func (rest *Index) Edit(c *gin.Context) {
 	}
 
 	timeLayout := "2006-01-02 15:04:05" //转化所需模板
-	tmp, _ := time.ParseInLocation(timeLayout, voucher.PublishStartTime, time.Local)
+	tmp := voucher.PublishStartTime
 	tsUnix := tmp.Unix()
 
-	tmp, _ = time.ParseInLocation(timeLayout, voucher.PublishEndTime, time.Local)
+	tmp = voucher.PublishEndTime
 	teUnix := tmp.Unix()
 
 	tmp, _ = time.ParseInLocation(timeLayout, publishEndTime, time.Local)
@@ -198,7 +203,7 @@ func (rest *Index) Edit(c *gin.Context) {
 		return
 	}
 
-	voucher.PublishEndTime = publishEndTime
+	voucher.PublishEndTime = tmp
 
 	storeIds := form.StoreIds
 
@@ -463,13 +468,16 @@ func (rest *Index) Store(c *gin.Context) {
 	vatJson, _ := json.Marshal(form.VoucherAvailableTime)
 	descJson, _ := json.Marshal(form.VoucherDescription)
 
+	publishStartTime, _ := time.ParseInLocation(data.TimeLayout, form.PublishStartTime, time.Local)
+	publishEndTime ,_ := time.ParseInLocation(data.TimeLayout, form.PublishEndTime, time.Local)
+
 	voucher := model.Voucher{
 		Mid:                  mid.(int),
 		VoucherName:          form.VoucherName,
 		Type:                 form.Type,
 		VoucherType:          form.VoucherType,
-		PublishStartTime:     form.PublishStartTime,
-		PublishEndTime:       form.PublishEndTime,
+		PublishStartTime:     publishStartTime,
+		PublishEndTime:       publishEndTime,
 		VoucherValidPeriod:   string(voucherValidPeriodJson),
 		VoucherAvailableTime: string(vatJson),
 		VoucherDescription:   string(descJson),
@@ -590,14 +598,17 @@ func (rest *Index) Delete(c *gin.Context) {
 		return
 	}
 
-	if v.TemplateId == "" {
-		v.DeleteAt = time.Now().Unix()
+	if v.Status != 2 {
+		rest.rc.Success(c, "未过期的优惠券无法删除！", nil)
+		return
+	}
 
-		tx = cmf.NewDb().Where("id = ? AND mid = ?", rewrite.Id, mid).Updates(&v)
-		if tx.Error != nil {
-			rest.rc.Error(c, tx.Error.Error(), nil)
-			return
-		}
+	v.DeleteAt = time.Now().Unix()
+
+	tx = cmf.NewDb().Where("id = ? AND mid = ?", rewrite.Id, mid).Updates(&v)
+	if tx.Error != nil {
+		rest.rc.Error(c, tx.Error.Error(), nil)
+		return
 	}
 
 	rest.rc.Success(c, "删除成功！", nil)

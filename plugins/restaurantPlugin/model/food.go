@@ -73,14 +73,17 @@ type FoodStoreHouse struct {
 	Content          string                   `gorm:"type:text" json:"content"`
 	CreateAt         int64                    `gorm:"type:bigint(20)" json:"create_at"`
 	UpdateAt         int64                    `gorm:"type:bigint(20)" json:"update_at"`
-	DeleteAt         int64                    `gorm:"type:bigint(20);comment:'删除时间';default:0" json:"delete_at"`
+	DeleteAt         int64                    `gorm:"type:bigint(20);comment:删除时间;default:0" json:"delete_at"`
 	CreateTime       string                   `gorm:"-" json:"create_time"`
 	UpdateTime       string                   `gorm:"-" json:"update_time"`
 	Category         []FoodCategory           `gorm:"-" json:"category"`
+	Weight           float64                  `gorm:"type:float(5);comment:重量（kg）;" json:"weight"`
+	Unit             string                   `gorm:"type:varchar(20);comment:商品单位;" json:"unit"`
 	DishType         string                   `gorm:"type:varchar(40);comment:菜品类型;" json:"dish_type"`
 	Flavor           string                   `gorm:"type:varchar(40);comment:菜品口味;" json:"flavor"`
 	CookingMethod    string                   `gorm:"type:varchar(40);comment:菜品做法;" json:"cooking_method"`
-	Status           int                      `gorm:"type:tinyint(3);comment:菜品状态;" json:"status"`
+	Status           int                      `gorm:"type:tinyint(3);comment:菜品状态;菜品状态（0 => 下架；1 => 上架）;not null" json:"status"`
+	ListOrder        float64                  `gorm:"type:float(10);comment:排序;default:10000;not null" json:"list_order"`
 	paginate         cmfModel.Paginate        `gorm:"-"`
 	Db               *gorm.DB                 `gorm:"-" json:"-"`
 }
@@ -273,7 +276,7 @@ func (model Food) ListByCategory(query []string, queryArgs []interface{}) ([]Foo
 	result := cmf.NewDb().Table(prefix+"food f").Select("f.*,fc.id as category_id,fc.name as category_name").
 		Joins("INNER JOIN "+prefix+"food_category_post fcp ON fcp.food_id = f.id").
 		Joins("INNER JOIN "+prefix+"food_category fc ON fcp.food_category_id = fc.id").
-		Where(queryStr, queryArgs...).Scan(&foodCate)
+		Where(queryStr, queryArgs...).Order("f.list_order desc,f.id desc").Scan(&foodCate)
 
 	if result.Error != nil {
 		return foodCate, result.Error
@@ -438,7 +441,7 @@ func (model Food) Show(query []string, queryArgs []interface{}) (Food, error) {
 
 	queryStr := strings.Join(query, " AND ")
 	food := Food{}
-	result := db.Debug().Where(queryStr, queryArgs...).First(&food)
+	result := db.Where(queryStr, queryArgs...).First(&food)
 	food.PrevPath = util.GetFileUrl(food.Thumbnail)
 	if result.Error != nil {
 		return food, result.Error
@@ -503,7 +506,7 @@ func (model Food) Update() (Food, error) {
 
 	food, err := food.Show(query, queryArgs)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound){
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return food, errors.New("该菜品不不存在！")
 		}
 		return Food{}, err

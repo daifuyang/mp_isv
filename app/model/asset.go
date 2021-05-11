@@ -22,7 +22,7 @@ type Asset struct {
 	FileSize   int64  `gorm:"type:int(11);comment:文件大小;not null" json:"file_size"`
 	CreateAt   int64  `gorm:"type:bigint(20);comment:上传时间;default:0" json:"create_at"`
 	Status     int    `gorm:"type:tinyint(3);comment:文件状态;default:1" json:"status"`
-	FileKey    string `gorm:"type:varchar(64);comment:文件惟一码;not null" json:"file_key"`
+	FileKey    string `gorm:"type:varchar(64);comment:文件唯一码;not null" json:"file_key"`
 	RemarkName string `gorm:"type:varchar(100);comment:文件备注名;not null" json:"remark_name"`
 	FileName   string `gorm:"type:varchar(100);comment:文件索引名;not null" json:"file_name"`
 	FilePath   string `gorm:"type:varchar(100);comment:文件路径;not null" json:"file_path"`

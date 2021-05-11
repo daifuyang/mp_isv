@@ -6,6 +6,7 @@
 package home
 
 import (
+	"fmt"
 	"gincmf/app/model"
 	"github.com/gin-gonic/gin"
 	cmf "github.com/gincmf/cmf/bootstrap"
@@ -61,9 +62,9 @@ func (v *Qrcode) Index(c *gin.Context) {
 	}
 
 	qrcode := model.Qrcode{}
-	tx := cmf.Db().Debug().Where("code = ?", rewrite.Id).First(&qrcode)
+	tx := cmf.Db().Where("code = ?", rewrite.Id).First(&qrcode)
 	if tx.Error != nil {
-		c.String(200, "<p>"+tx.Error.Error()+"</p>")
+		v.Error("该二维码非指定点餐二维码！")
 		return
 	}
 
@@ -74,26 +75,43 @@ func (v *Qrcode) Index(c *gin.Context) {
 
 	status.UnBind = true
 
-	if uaType == "alipay" {
-
-		vals := url.Values{}
-		vals.Add("query", "aqrfid=1643")
-		query := vals.Encode()
-		platformapi := "alipays://platformapi/startapp?appId=2021001192675085&page=pages/index/index&query=" + query
-
-		c.Redirect(301,platformapi)
-
-		return
-
-	}
 
 	if qrcode.Status == 2 {
 		status.UnBind = false
 		status.Deactivate = true
 	}
 
+	fmt.Println("qrcode",qrcode)
+
 	// 判断绑定状态
 	if qrcode.Status == 1 {
+
+		status.UnBind = false
+		status.Deactivate = false
+
+		fmt.Println(uaType)
+
+		if uaType == "alipay" {
+
+			queryUrl,err := url.Parse("?"+qrcode.Query)
+			if err != nil {
+				fmt.Println("err",queryUrl)
+			}
+
+			vals := queryUrl.Query()
+			vals.Add("aqrfid", qrcode.Aqrfid)
+			query := vals.Encode()
+			query = url.QueryEscape(query)
+			fmt.Println("query",query)
+			platformapi := "alipays://platformapi/startapp?appId="+qrcode.AliAppId+"&page="+qrcode.Page+"&query=" + query
+
+			fmt.Println("platformapi",platformapi)
+
+			c.Redirect(301,platformapi)
+
+			return
+
+		}
 
 	}
 

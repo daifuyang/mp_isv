@@ -22,6 +22,7 @@ import (
 	"gorm.io/gorm"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -131,7 +132,7 @@ func (rest *Auth) Redirect(c *gin.Context) {
 		Type     string `json:"type"`
 	}
 	err := json.Unmarshal(decoded, &stateMap)
-	fmt.Println("err",err)
+	fmt.Println("err", err)
 
 	tenant := saasModel.Tenant{}
 	tx := cmf.Db().Where("tenant_id = ?", stateMap.TenantId).First(&tenant)
@@ -145,8 +146,9 @@ func (rest *Auth) Redirect(c *gin.Context) {
 		return
 	}
 
+	db := "tenant_" + strconv.Itoa(tenant.TenantId)
 	mp := saasModel.MpTheme{}
-	tx = cmf.NewDb().Where("mid = ?", stateMap.Mid).First(&mp)
+	tx =cmf.TempDb(db).Where("mid = ?", stateMap.Mid).First(&mp)
 	if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, tx.Error.Error(), nil)
 		return
@@ -183,16 +185,18 @@ func (rest *Auth) Redirect(c *gin.Context) {
 		mpId := stateMap.Mid
 		t := stateMap.Type
 
-		/*query := []string{"user_id = ?", "auth_app_id = ?"}
-		queryArgs := []interface{}{userId, authAppId}
+		query := []string{"user_id = ?", "mp_id = ?","type = ?"}
+		queryArgs := []interface{}{userId, mpId,"alipay"}
 		queryStr := strings.Join(query, " AND ")
-		result := cmf.Db().Where(queryStr, queryArgs...).Order("id desc").First(&auth)*/
+		tx := cmf.Db().Where(queryStr, queryArgs...).Order("id desc").First(&auth)
+		if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
+			rest.rc.Error(c, "获取失败！"+tx.Error.Error(), nil)
+		}
 
 		auth.TenantId = tenantId
 		auth.MpId = mpId
 		auth.Type = t
 		auth.UserId = userId
-		auth.AuthAppId = authAppId
 		auth.AppAuthToken = appAuthToken
 		auth.AppRefreshToken = appRefreshToken
 		auth.ExpiresIn = expiresIn
@@ -200,11 +204,11 @@ func (rest *Auth) Redirect(c *gin.Context) {
 
 		if auth.Id == 0 {
 			auth.CreateAt = time.Now().Unix()
-			cmf.Db().Debug().Create(&auth)
+			cmf.Db().Create(&auth)
 		} else {
 
 			if authAppId != auth.AuthAppId {
-				rest.rc.Error(c, "重新授权的账号与当前绑定的账号不一致", nil)
+				rest.rc.Error(c, "重新授权的账号与当前绑定的账号不一致，如需换绑请先解绑", nil)
 				return
 			}
 
@@ -240,8 +244,8 @@ func (rest *Auth) Token(c *gin.Context) {
 		return
 	}
 
-	base := base.Oauth{}
-	data := base.GetSystemToken(code)
+
+	data := new( base.Oauth ).GetSystemToken(code)
 
 	if data.Response.UserId == "" {
 		rest.rc.Error(c, "获取失败！"+data.ErrorResponse.SubMsg, data.ErrorResponse)
@@ -259,8 +263,6 @@ func (rest *Auth) Token(c *gin.Context) {
 		rest.rc.Error(c, err.Error(), nil)
 		return
 	}
-
-	fmt.Println("partData", partData)
 
 	// 当前三方关系不存在 新建第三方用户
 	if partData.OpenId == "" {

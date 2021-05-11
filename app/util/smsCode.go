@@ -15,9 +15,9 @@ import (
 )
 
 type smsCode struct {
-	Phone  int `json:"phone"`
+	Phone  int    `json:"phone"`
 	Code   string `json:"-"`
-	Expire int64 `json:"expire"`
+	Expire int64  `json:"expire"`
 }
 
 var SmsCodeArr map[int]*smsCode
@@ -54,6 +54,8 @@ func SmsCode(mobile int) (*smsCode, error) {
 		Code:   code,
 		Expire: time.Now().Unix() + 60*2,
 	}
+
+	fmt.Println("SmsCodeArr[mobile]",SmsCodeArr[mobile])
 
 	return SmsCodeArr[mobile], nil
 }

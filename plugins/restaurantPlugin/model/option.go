@@ -47,6 +47,8 @@ type EatIn struct {
 
 type TakeOut struct {
 	Status             int     `json:"status"`
+	FirstClass         string  `json:"first_class"`
+	SecondClass        string  `json:"second_class"`
 	ImmediateDelivery  int     `json:"immediate_delivery"`  // 立即配送
 	EnabledAppointment int     `json:"enabled_appointment"` // 启用预约
 	Day                int     `json:"day"`                 //可预约天数

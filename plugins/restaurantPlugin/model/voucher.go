@@ -21,28 +21,28 @@ import (
 
 // 优惠券
 type Voucher struct {
-	Id                   int     `json:"id"`
-	Mid                  int     `gorm:"type:bigint(20);comment:对应小程序id;not null" json:"mid"`
-	VoucherName          string  `gorm:"type:varchar(30);comment:优惠券名称，仅供商家可查看;not null" json:"voucher_name"`
-	Type                 int     `gorm:"type:tinyint(2);default:0;comment:0.全场优惠券，1.单品优惠券;not null" json:"type"`
-	VoucherType          string  `gorm:"type:varchar(64);comment:券类型，详见支付宝微信;not null" json:"voucher_type"`
-	PublishStartTime     string  `gorm:"type:datetime;comment:发放开始时间;not null" json:"publish_start_time"`
-	PublishEndTime       string  `gorm:"type:datetime;comment:发放结束时间;not null" json:"publish_end_time"`
-	VoucherValidPeriod   string  `gorm:"type:json;comment:券有效期;not null" json:"voucher_valid_period"`
-	VoucherAvailableTime string  `gorm:"type:json;comment:券可用时段;not null" json:"voucher_available_time"`
-	VoucherDescription   string  `gorm:"type:json;comment:券使用说明;not null" json:"voucher_description"`
-	VoucherQuantity      int     `gorm:"type:int(10);comment:拟发行券的数量。单位为张" json:"voucher_quantity"`
-	Amount               float64 `gorm:"type:decimal(10,2);comment:面额。每张代金券可以抵扣的金额。币种为人民币，单位为元。" json:"amount"`
-	TotalAmount          float64 `gorm:"type:decimal(12,2);comment:券总金额（仅用于不定额券）" json:"total_amount"`
-	FloorAmount          float64 `gorm:"type:decimal(12,2);comment:最低额度。设置券使用门槛，只有订单金额大于等于最低额度时券才能使用。" json:"floor_amount"`
-	CreateAt             int64   `gorm:"type:bigint(20)" json:"create_at"`
-	UpdateAt             int64   `gorm:"type:bigint(20)" json:"update_at"`
-	DeleteAt             int64   `gorm:"type:bigint(20);comment:'删除时间';default:0" json:"delete_at"`
-	CreateTime           string  `gorm:"-" json:"create_time"`
-	UpdateTime           string  `gorm:"-" json:"update_time"`
-	TemplateId           string  `gorm:"type:varchar(28);comment:模板ID;" json:"template_id"`
-	SyncToAlipay         int     `gorm:"type:tinyint(2);default:0;comment:同步到支付宝卡包;not null" json:"sync_to_alipay"`
-	Status               int     `gorm:"type:tinyint(2);default:1;comment:状态;not null" json:"status"`
+	Id                   int       `json:"id"`
+	Mid                  int       `gorm:"type:bigint(20);comment:对应小程序id;not null" json:"mid"`
+	VoucherName          string    `gorm:"type:varchar(30);comment:优惠券名称，仅供商家可查看;not null" json:"voucher_name"`
+	Type                 int       `gorm:"type:tinyint(2);default:0;comment:0.全场优惠券，1.单品优惠券;not null" json:"type"`
+	VoucherType          string    `gorm:"type:varchar(64);comment:券类型，详见支付宝微信;not null" json:"voucher_type"`
+	PublishStartTime     time.Time `gorm:"type:datetime;comment:发放开始时间;not null" json:"publish_start_time"`
+	PublishEndTime       time.Time `gorm:"type:datetime;comment:发放结束时间;not null" json:"publish_end_time"`
+	VoucherValidPeriod   string    `gorm:"type:json;comment:券有效期;not null" json:"voucher_valid_period"`
+	VoucherAvailableTime string    `gorm:"type:json;comment:券可用时段;not null" json:"voucher_available_time"`
+	VoucherDescription   string    `gorm:"type:json;comment:券使用说明;not null" json:"voucher_description"`
+	VoucherQuantity      int       `gorm:"type:int(10);comment:拟发行券的数量。单位为张" json:"voucher_quantity"`
+	Amount               float64   `gorm:"type:decimal(10,2);comment:面额。每张代金券可以抵扣的金额。币种为人民币，单位为元。" json:"amount"`
+	TotalAmount          float64   `gorm:"type:decimal(12,2);comment:券总金额（仅用于不定额券）" json:"total_amount"`
+	FloorAmount          float64   `gorm:"type:decimal(12,2);comment:最低额度。设置券使用门槛，只有订单金额大于等于最低额度时券才能使用。" json:"floor_amount"`
+	CreateAt             int64     `gorm:"type:bigint(20)" json:"create_at"`
+	UpdateAt             int64     `gorm:"type:bigint(20)" json:"update_at"`
+	DeleteAt             int64     `gorm:"type:bigint(20);comment:'删除时间';default:0" json:"delete_at"`
+	CreateTime           string    `gorm:"-" json:"create_time"`
+	UpdateTime           string    `gorm:"-" json:"update_time"`
+	TemplateId           string    `gorm:"type:varchar(28);comment:模板ID;" json:"template_id"`
+	SyncToAlipay         int       `gorm:"type:tinyint(2);default:0;comment:同步到支付宝卡包;not null" json:"sync_to_alipay"`
+	Status               int       `gorm:"type:tinyint(2);default:1;comment:状态;not null" json:"status"`
 	paginate             cmfModel.Paginate
 }
 
@@ -105,8 +105,13 @@ func (model *Voucher) AutoMigrate() {
 	cmf.NewDb().AutoMigrate(&VoucherStorePost{})
 	cmf.NewDb().AutoMigrate(&VoucherPost{})
 
-	// 设置优惠券状态为失效
 	prefix := cmf.Conf().Database.Prefix
+
+	// 设置优惠券魔板为失效状态
+	cmf.NewDb().Exec("drop event if exists voucher")
+	cmf.NewDb().Exec("CREATE EVENT voucher ON SCHEDULE EVERY 1 SECOND DO UPDATE " + prefix + "voucher SET status = 2 WHERE UNIX_TIMESTAMP(publish_end_time) < UNIX_TIMESTAMP(NOW())")
+	// 设置优惠券状态为失效
+
 	cmf.NewDb().Exec("drop event if exists voucherPost")
 	cmf.NewDb().Exec("CREATE EVENT voucherPost ON SCHEDULE EVERY 1 SECOND DO UPDATE " + prefix + "voucher_post SET status = 2 WHERE valid_end_at < UNIX_TIMESTAMP(NOW())")
 }
@@ -140,15 +145,8 @@ func (model *Voucher) Index(c *gin.Context, query []string, queryArgs []interfac
 	const layout = "2006-01-02 15:04:05"
 	for k, v := range voucher {
 
-		pstUnix, _ := time.Parse("2006-01-02T15:04:05+08:00", v.PublishStartTime)
-
-		publishStartTime := pstUnix.Format(layout)
-
-		voucher[k].PublishStartTime = publishStartTime
-
-		petUnix, _ := time.Parse("2006-01-02T15:04:05+08:00", v.PublishEndTime)
-		publishEndTime := petUnix.Format(layout)
-		voucher[k].PublishEndTime = publishEndTime
+		voucher[k].PublishStartTime = v.PublishStartTime
+		voucher[k].PublishEndTime = v.PublishEndTime
 
 		voucher[k].CreateTime = time.Unix(v.CreateAt, 0).Format(layout)
 		voucher[k].UpdateTime = time.Unix(v.UpdateAt, 0).Format(layout)
@@ -183,15 +181,8 @@ func (model *Voucher) List(query []string, queryArgs []interface{}) ([]Voucher, 
 	const layout = "2006-01-02 15:04:05"
 	for k, v := range voucher {
 
-		pstUnix, _ := time.Parse("2006-01-02T15:04:05+08:00", v.PublishStartTime)
-
-		publishStartTime := pstUnix.Format(layout)
-
-		voucher[k].PublishStartTime = publishStartTime
-
-		petUnix, _ := time.Parse("2006-01-02T15:04:05+08:00", v.PublishEndTime)
-		publishEndTime := petUnix.Format(layout)
-		voucher[k].PublishEndTime = publishEndTime
+		voucher[k].PublishStartTime = v.PublishStartTime
+		voucher[k].PublishEndTime = v.PublishEndTime
 
 		voucher[k].CreateTime = time.Unix(v.CreateAt, 0).Format(layout)
 		voucher[k].UpdateTime = time.Unix(v.UpdateAt, 0).Format(layout)
@@ -220,15 +211,6 @@ func (model *Voucher) Show(query []string, queryArgs []interface{}) (Voucher, er
 
 	result := cmf.NewDb().Where(queryStr, queryArgs...).First(&v)
 
-	const layout = "2006-01-02 15:04:05"
-	pstUnix, _ := time.Parse("2006-01-02T15:04:05+08:00", v.PublishStartTime)
-	publishStartTime := pstUnix.Format(layout)
-	v.PublishStartTime = publishStartTime
-
-	petUnix, _ := time.Parse("2006-01-02T15:04:05+08:00", v.PublishEndTime)
-	publishEndTime := petUnix.Format(layout)
-	v.PublishEndTime = publishEndTime
-
 	v.CreateTime = time.Unix(v.CreateAt, 0).Format("2006-01-02 15:04:05")
 	v.UpdateTime = time.Unix(v.UpdateAt, 0).Format("2006-01-02 15:04:05")
 
@@ -254,7 +236,7 @@ func (model *VoucherPost) Index(c *gin.Context, query []string, queryArgs []inte
 	queryStr := strings.Join(query, " AND ")
 	var total int64 = 0
 
-	var voucherResult []VoucherResult
+	var voucherResult = make([]VoucherResult, 0)
 
 	prefix := cmf.Conf().Database.Prefix
 
@@ -283,6 +265,7 @@ func (model *VoucherPost) Index(c *gin.Context, query []string, queryArgs []inte
 	}
 
 	paginate := cmfModel.Paginate{Data: voucherResult, Current: current, PageSize: pageSize, Total: total}
+
 	if len(voucherResult) == 0 {
 		paginate.Data = make([]string, 0)
 	}
@@ -298,7 +281,7 @@ func (model *VoucherPost) List(query []string, queryArgs []interface{}) ([]Vouch
 	queryStr := strings.Join(query, " AND ")
 	var total int64 = 0
 
-	var voucherResult []VoucherResult
+	var voucherResult = make([]VoucherResult, 0)
 
 	prefix := cmf.Conf().Database.Prefix
 

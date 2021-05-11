@@ -16,9 +16,9 @@ import (
 func ApiListenRouter() {
 
 	// 全局中间件
-	cmf.HandleFunc = append(cmf.HandleFunc, middleware.AllowCors)
+	cmf.HandleFunc = append(cmf.HandleFunc, middleware.AllowCors, middleware.BaseController)
 
-	adminGroup := cmf.Group("api/admin", middleware.ValidationBearerToken, middleware.TenantDb, middleware.ValidationAdmin, middleware.ApiBaseController)
+	adminGroup := cmf.Group("api/admin", middleware.ValidationBearerToken, middleware.MainDb, middleware.ValidationAdmin, middleware.ApiBaseController)
 	{
 		adminGroup.Rest("/settings", new(admin.Settings))
 		adminGroup.Rest("/upload", new(admin.Upload))
@@ -32,6 +32,10 @@ func ApiListenRouter() {
 		adminGroup.Post("/auth_access", new(admin.AuthAccess).Store)
 		adminGroup.Get("/notice/:id", new(admin.Notice).Show)
 		adminGroup.Post("/notice/:id/read", new(admin.Notice).Read)
+		adminGroup.Post("/qrcode/generate", new(admin.Qrcode).Generate)
+		adminGroup.Post("/qrcode/bind_aqrfid", new(admin.Qrcode).BindAqrfid)
+		adminGroup.Get("/qrcode/detail/:id", new(admin.Qrcode).Show)
+
 	}
 
 	// 获取短信验证码
@@ -54,6 +58,11 @@ func ApiListenRouter() {
 		v1.Get("/shop_category/last/:id", new(common.ShopCategory).Last)
 		v1.Get("/shop_category/detail/:id", new(common.ShopCategory).One)
 
+		// 获取菜品类目
+		v1.Get("/takeout_category", new(common.FoodCategory).Get)
+		v1.Get("/takeout_category/list/:id", new(common.FoodCategory).List)
+		v1.Get("/takeout_category/detail/:id", new(common.FoodCategory).One)
+
 		// 获取小程序类目
 		v1.Get("/mini_category/sync", new(common.MiniCategory).Sync)
 		v1.Get("/mini_category", new(common.MiniCategory).Get)
@@ -61,8 +70,16 @@ func ApiListenRouter() {
 		v1.Get("/mini_category/last/:id", new(common.MiniCategory).Last)
 		v1.Get("/mini_category/detail/:id", new(common.MiniCategory).One)
 
+		// 获取微信开户银行
+		v1.Get("/bank/list", new(common.Bank).Get)
+		v1.Get("/bank/list_like", new(common.Bank).GetLike)
+
+		v1.Get("/wx_category", new(common.WxCategory).Get)
+
 		// 获取通用模板主题
-		v1.Get("/mp/theme",new(common.MpTheme).Get)
+		v1.Get("/mp/theme", new(common.MpTheme).Get)
+
+		v1.Get("/qrcode/:id", new(common.Qrcode).Get)
 	}
 
 	// 清除缓存
@@ -85,7 +102,7 @@ func ApiListenRouter() {
 			Data: nil,
 			Msg:  "同步成功！",
 		})
-	},middleware.MainDb)
+	}, middleware.MainDb)
 
 	cmf.Get("/api/alipay_isv_app", new(admin.Settings).AlipayApp)
 

@@ -25,7 +25,10 @@ type MpTheme struct {
 	AppDesc            string  `gorm:"type:varchar(200);comment:小程序应用描述，20-200个字;not null" json:"app_desc"`
 	AlipayCategoryIds  string  `gorm:"-" json:"alipay_category_ids"`
 	AlipayExpQrCodeUrl string  `gorm:"type:varchar(255);comment:支付宝小程序体验版二维码;not null" json:"alipay_exp_qr_code_url"`
-	EncryptKey         string  `gorm:"type:varchar(40);comment:小程序接口加密内容;not null" json:"encrypt_key"`
+	WechatExpQrCodeUrl string  `gorm:"type:varchar(255);comment:微信小程序体验版二维码;not null" json:"wechat_exp_qr_code_url"`
+	WechatQrCodeUrl    string  `gorm:"type:varchar(255);comment:微信小程序正式版二维码;not null" json:"wechat_qr_code_url"`
+	EncryptKey         string  `gorm:"type:varchar(40);comment:小程序接口加密内容;not null" json:"-"`
+	SubMchid           string  `gorm:"type:varchar(32);comment:微信支付绑定商户号" json:"sub_mchid"`
 	CreateAt           int64   `gorm:"type:bigint(20);comment:创建时间;default:0" json:"create_at"`
 	UpdateAt           int64   `gorm:"type:bigint(20);comment:更新时间;default:0" json:"update_at"`
 	CreateTime         string  `gorm:"-" json:"create_time"`
@@ -49,7 +52,7 @@ type MpThemeVersion struct {
 	TemplateId      string `gorm:"type:varchar(32);comment:小程序构建模板id;not null" json:"template_id"`
 	TemplateVersion string `gorm:"type:varchar(64);comment:小程序构建模板版本;not null" json:"template_version"`
 	IsAudit         int    `gorm:"type:tinyint(3);comment:小程序版本审核状态;not null" json:"is_audit"`
-	Status          string `gorm:"type:varchar(10);default:wait;comment:小程序版本状态(gray:灰度，wait:待审核,reject:已拒绝,audit:已审核，online:已上线，offline：下架);not null;" json:"status"`
+	Status          string `gorm:"type:varchar(10);default:wait;comment:小程序版本状态(gray:灰度，wait:待审核,reject:已拒绝，audit:已审核，online:已上线，offline：下架);not null;" json:"status"`
 	RejectReason    string `gorm:"type:varchar(512);" json:"reject_reason"`
 	Type            string `gorm:"type:varchar(20);comment:授权商户小程序类型;not null" json:"type"`
 	CreateAt        int64  `gorm:"type:bigint(20);comment:创建时间;default:0" json:"create_at"`

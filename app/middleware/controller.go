@@ -9,6 +9,15 @@ import (
 
 func BaseController(c *gin.Context) {
 
+	scheme :="http://"
+
+	if c.Request.TLS != nil {
+		scheme ="https://"
+	}
+
+	domain := scheme+c.Request.Host
+
+	cmf.SetConf("domain",domain)
 }
 
 func HomeBaseController(c *gin.Context) {

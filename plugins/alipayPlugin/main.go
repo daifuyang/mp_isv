@@ -36,8 +36,8 @@ func Init() {
 		"version":     "1.0",
 		"charset":     "utf-8",
 		"notifyUrl":   host + "/api/v1/app/alipay/receive_notify",
-		"AppCertPath": "./data/pem",
-		"AliCertPath": "./data/pem",
+		"appCertPath": "./data/pem",
+		"aliCertPath": "./data/pem",
 		"encryptType": "AES",
 		"encryptKey":  "aPhwK45wyiS3sABRv+BseA==",
 	}

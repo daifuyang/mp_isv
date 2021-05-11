@@ -27,9 +27,10 @@ func StartMigrate() {
 	new(mpIsvAuth).AutoMigrate()
 	new(tenant).AutoMigrate()
 	new(AdminMenu).AutoMigrate()
-	new(Region).AutoMigrate()
-	new(shopCategory).AutoMigrate()
-	new(model.MiniCategory).AutoMigrate()
+	// new(Region).AutoMigrate()
+	// new(shopCategory).AutoMigrate()
+	// new(takeCategory).AutoMigrate()
+	// new(model.MiniCategory).AutoMigrate()
 	new(model.Qrcode).AutoMigrate()
 
 	new(role).AutoMigrate()
@@ -43,6 +44,8 @@ func StartMigrate() {
 
 	// 主题模板
 	new(model.MpTheme).AutoMigrate()
+	// new(Bank).AutoMigrate()
+	new(model.WxpayCategory).AutoMigrate()
 
 	model.AutoAdminMenu()
 

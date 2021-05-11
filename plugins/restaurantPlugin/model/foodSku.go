@@ -26,6 +26,7 @@ type FoodSku struct {
 	Price            float64  `gorm:"type:decimal(9,2);comment:规格售价;not null" json:"price"`
 	Volume           int      `gorm:"type:int(11);comment:销量" json:"volume"`        // 销量
 	Remark           string   `gorm:"type:varchar(255);comment:规格备注" json:"remark"` // 销量
+	Weight           float64  `gorm:"type:float(5);comment:重量（kg）;" json:"weight"`
 	Db               *gorm.DB `gorm:"-" json:"-"`
 }
 

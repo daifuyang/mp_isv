@@ -7,12 +7,13 @@ package plugins
 
 import (
 	"gincmf/plugins/alipayPlugin"
-	"gincmf/plugins/feiePlugin"
 	"gincmf/plugins/portalPlugin"
+	"gincmf/plugins/printerPlugin"
 	"gincmf/plugins/qiniuPlugin"
 	"gincmf/plugins/queuePlugin"
 	"gincmf/plugins/restaurantPlugin"
 	"gincmf/plugins/saasPlugin"
+	"gincmf/plugins/wechatPlugin"
 )
 
 func AutoRegister() {
@@ -21,7 +22,8 @@ func AutoRegister() {
 	restaurantPlugin.Init()
 	saasPlugin.Init()
 	queuePlugin.Init()
-	feiePlugin.Init()
+	printerPlugin.Init()
 	portalPlugin.Init()
 	qiniuPlugin.Init()
+	wechatPlugin.Init()
 }

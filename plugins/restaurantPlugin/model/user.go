@@ -34,17 +34,20 @@ type User struct {
 	EndTime      string  `gorm:"-" json:"end_time,omitempty"`
 	VipCanOpen   bool    `gorm:"-" json:"vip_can_open"`
 	Type         string  `gorm:"->" json:"type"`
+	UserId       int     `gorm:"->" json:"user_id"`
 	OpenId       string  `gorm:"->" json:"open_id"`
 	MemberStatus int     `gorm:"->" json:"member_status"`
+	SessionKey   string  `gorm:"->" json:"session_key"`
 	paginate     cmfModel.Paginate
 }
 
 type ThirdPart struct {
-	Id     int    `json:"id"`
-	Mid    int    `gorm:"type:bigint(20);comment:对应小程序id;not null" json:"mid"`
-	Type   string `gorm:"type:varchar(10);not null" json:"type"`
-	UserId int    `gorm:"type:int(11);not null" json:"user_id"`
-	OpenId string `gorm:"type:varchar(20);not null" json:"open_id"`
+	Id         int    `json:"id"`
+	Mid        int    `gorm:"type:bigint(20);comment:对应小程序id;not null" json:"mid"`
+	Type       string `gorm:"type:varchar(10);not null" json:"type"`
+	UserId     int    `gorm:"type:int(11);not null" json:"user_id"`
+	OpenId     string `gorm:"type:varchar(128);not null" json:"open_id"`
+	SessionKey string `gorm:"type:varchar(255);not null" json:"session_key"`
 }
 
 func (model *User) Show(query []string, queryArgs []interface{}) (User, error) {
@@ -52,7 +55,8 @@ func (model *User) Show(query []string, queryArgs []interface{}) (User, error) {
 	var user User
 	queryStr := strings.Join(query, " AND ")
 	prefix := cmf.Conf().Database.Prefix
-	tx := cmf.NewDb().Table(prefix+"user u").Select("u.*,mc.vip_num,mc.vip_level,mc.vip_name,mc.start_at,mc.end_at,mc.create_at,mc.update_at,mc.delete_at,mc.status as member_status").
+	tx := cmf.NewDb().Table(prefix+"user u").Select("u.*,tp.open_id,tp.session_key,mc.vip_num,mc.vip_level,mc.vip_name,mc.start_at,mc.end_at,mc.create_at,mc.update_at,mc.delete_at,mc.status as member_status").
+		Joins("LEFT JOIN "+prefix+"third_part tp ON tp.user_id = u.id").
 		Joins("LEFT JOIN "+prefix+"member_card mc ON u.id = mc.user_id").
 		Where(queryStr, queryArgs...).
 		Scan(&user)
@@ -171,9 +175,9 @@ func (model *User) GetBalance(userId int) (float64, error) {
 
 }
 
-func (model *User) GetMpUser(id int) (User, error) {
+func (model *User) GetMpUser(id int, typeStr string) (User, error) {
 	u := User{}
-	u, err := model.Show([]string{"u.id = ? AND user_status = ?"}, []interface{}{id, 1})
+	u, err := model.Show([]string{"u.id = ? AND user_status = ? AND type = ?"}, []interface{}{id, 1, typeStr})
 	if err != nil {
 		return u, err
 	}
@@ -188,9 +192,10 @@ func (model *User) CurrentMpUser(c *gin.Context) User {
 	user := session.Get("mp_user")
 	userId, _ := c.Get("mp_user_id")
 	userIdInt, _ := userId.(int)
+	mpType, _ := c.Get("mp_type")
 
 	if user == nil {
-		u, err := model.Show([]string{"u.id = ? AND user_status = ?"}, []interface{}{userId, 1})
+		u, err := model.Show([]string{"u.id = ? AND user_status = ? AND type = ?"}, []interface{}{userId, 1, mpType})
 		if err != nil {
 			return u
 		}
@@ -218,9 +223,10 @@ func (model *User) CurrentMpUser(c *gin.Context) User {
 
 type UserPart struct {
 	User
-	Mid    int    `json:"mid"`
-	Type   string `json:"type"`
-	OpenId string `json:"open_id"`
+	Mid        int    `json:"mid"`
+	Type       string `json:"type"`
+	OpenId     string `json:"open_id"`
+	SessionKey string `json:"session_key"`
 }
 
 /**
@@ -246,9 +252,10 @@ func (model UserPart) Show(query []string, queryArgs []interface{}) (UserPart, e
 
 	prefix := cmf.Conf().Database.Prefix
 
-	result := cmf.NewDb().Table(prefix+"third_part tp").Select("tp.type,tp.open_id,u.*").
+	result := cmf.NewDb().Table(prefix+"third_part tp").Select("u.*,tp.type,tp.user_id,tp.open_id,tp.session_key").
 		Joins("LEFT JOIN "+prefix+"user u ON tp.user_id = u.id").
 		Where(queryStr, queryArgs...).Order("tp.id desc").Scan(&up)
+
 	if result.Error != nil {
 		return up, result.Error
 	}

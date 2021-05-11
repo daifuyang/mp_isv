@@ -16,13 +16,13 @@ type ShopCategory struct {
 	TopId        string `gorm:"type:varchar(20);comment:类目顶级父类id;default:0;not null" json:"top_id"`
 }
 
-type CategoryResult struct {
+type categoryResult struct {
 	Value    string           `json:"value"`
 	Label    string           `json:"label"`
-	Children []CategoryResult `json:"children"`
+	Children []categoryResult `json:"children"`
 }
 
-func (model *ShopCategory) ShopCategory() []CategoryResult {
+func (model *ShopCategory) ShopCategory() []categoryResult {
 	// 第一步查询出全部的省市区
 	var ShopCategory []ShopCategory
 	cmf.Db().Find(&ShopCategory)
@@ -49,13 +49,13 @@ func (model *ShopCategory) GetOneById(CategoryId string) ShopCategory {
 	return ShopCategory
 }
 
-func recursionAddShopCategory(ShopCategory []ShopCategory, parentId string) []CategoryResult {
+func recursionAddShopCategory(ShopCategory []ShopCategory, parentId string) []categoryResult {
 	// 遍历当前层级
-	var results []CategoryResult
+	var results []categoryResult
 	for _, v := range ShopCategory {
 
 		if parentId == v.ParentId {
-			result := CategoryResult{
+			result := categoryResult{
 				Value: v.CategoryId,
 				Label: v.CategoryName,
 			}

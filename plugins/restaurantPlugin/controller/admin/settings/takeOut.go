@@ -50,20 +50,8 @@ func (rest *TakeOut) Show(c *gin.Context) {
 func (rest *TakeOut) Edit(c *gin.Context) {
 
 	var form struct {
-		StoreId            int     `json:"store_id"`
-		Status             int     `json:"status"`
-		ImmediateDelivery  int     `json:"immediate_delivery"`  // 立即配送
-		EnabledAppointment int     `json:"enabled_appointment"` // 启用预约
-		Day                int     `json:"day"`                 //可预约天数
-		EnabledSellClear   int     `json:"enabled_sell_clear"`  // 启用自动沽清
-		SellClear          string  `json:"sell_clear"`
-		StopBeforeMin      int     `json:"stop_before_min"`
-		AutomaticOrder     int     `json:"automatic_order"`   // 自动接单
-		DeliveryDistance   float64 `json:"delivery_distance"` // 配送距离
-		StartKm            float64 `json:"start_km"`          // 起步km
-		StartFee           float64 `json:"start_fee"`         // 起步价格
-		StepKm             float64 `json:"step_km"`           // 阶梯距离
-		StepFee            float64 `json:"step_fee"`          // 阶梯价格
+		StoreId int `json:"store_id"`
+		model.TakeOut
 	}
 
 	err := c.ShouldBindJSON(&form)
@@ -90,6 +78,16 @@ func (rest *TakeOut) Edit(c *gin.Context) {
 	status := 0
 	if form.Status == 1 {
 		status = 1
+	}
+
+	if form.FirstClass == "" {
+		rest.rc.Error(c, "一级类目不能为空！", nil)
+		return
+	}
+
+	if form.SecondClass == "" {
+		rest.rc.Error(c, "二级类目不能为空！", nil)
+		return
 	}
 
 	immediateDelivery := 0
@@ -132,6 +130,8 @@ func (rest *TakeOut) Edit(c *gin.Context) {
 	op.OptionName = "takeout"
 	ei := model.TakeOut{
 		Status:             status,
+		FirstClass:         form.FirstClass,
+		SecondClass:        form.SecondClass,
 		ImmediateDelivery:  immediateDelivery,
 		EnabledSellClear:   enabledSellClear,
 		SellClear:          form.SellClear,

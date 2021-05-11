@@ -9,7 +9,6 @@ import (
 	appMigrate "gincmf/app/migrate"
 	"gincmf/app/model"
 	saasMigrate "gincmf/plugins/saasPlugin/migrate"
-	saasModel "gincmf/plugins/saasPlugin/model"
 	cmf "github.com/gincmf/cmf/bootstrap"
 	"testing"
 )
@@ -17,9 +16,9 @@ import (
 func Test_Migrate(t *testing.T) {
 	cmf.Initialize("./data/conf/config.json")
 	appMigrate.StartMigrate()
-	cmf.ManualDb("tenant_1830418899")
+	cmf.ManualDb("tenant_562847651")
 	saasMigrate.AutoMigrate()
-	new(saasModel.Role).Init(123456)
+	//new(saasModel.Role).Init(123456)
 	// 创建当前租户的七牛云空间
 
 	/*user := saasModel.AdminUser{

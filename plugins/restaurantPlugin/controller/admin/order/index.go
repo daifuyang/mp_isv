@@ -11,9 +11,12 @@ import (
 	"github.com/gin-gonic/gin"
 	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
+	cmfData "github.com/gincmf/cmf/data"
 	cmfLog "github.com/gincmf/cmf/log"
 	"github.com/gorilla/websocket"
 	"gorm.io/gorm"
+	"strconv"
+	"time"
 )
 
 type Index struct {
@@ -354,14 +357,12 @@ func (rest *Index) Show(c *gin.Context) {
 
 /**
  * @Author return <1140444693@qq.com>
- * @Description 申请退款
- * @Date 2021/3/11 16:2:23
+ * @Description 获取退款详情
+ * @Date 2021/5/10 12:29:29
  * @Param
  * @return
  **/
-
-func (rest *Index) Refund(c *gin.Context) {
-
+func (rest *Index) RefundShow(c *gin.Context) {
 	var rewrite struct {
 		Id int `uri:"id"`
 	}
@@ -388,14 +389,97 @@ func (rest *Index) Refund(c *gin.Context) {
 		return
 	}
 
+	var result []resModel.FoodOrderRefund
+	tx := cmf.NewDb().Where("mid = ? and order_id = ?", mid, data.OrderId).Find(&result)
+	if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
+		rest.rc.Error(c, tx.Error.Error(), nil)
+		return
+	}
+
+	if len(result) == 0 {
+		result = make([]resModel.FoodOrderRefund, 0)
+	}
+
+	rest.rc.Success(c, "获取成功", result)
+
+}
+
+/**
+ * @Author return <1140444693@qq.com>
+ * @Description 申请退款
+ * @Date 2021/3/11 16:2:23
+ * @Param
+ * @return
+ **/
+
+func (rest *Index) Refund(c *gin.Context) {
+
+	var rewrite struct {
+		Id int `uri:"id"`
+	}
+
+	if err := c.ShouldBindUri(&rewrite); err != nil {
+		c.JSON(400, gin.H{"msg": err.Error()})
+		return
+	}
+
+	mid, _ := c.Get("mid")
+
+	refundFee := c.PostForm("refund_fee")
+
+	if refundFee == "" {
+		rest.rc.Error(c, "退款金额不能为空！", nil)
+		return
+	}
+
+	refundFeeFloat, err := strconv.ParseFloat(refundFee, 64)
+	if err != nil {
+		rest.rc.Error(c, "退款金额不是有效值！", nil)
+		return
+	}
+
+	refundReason := c.PostForm("refund_reason")
+
+	if refundReason == "" {
+		rest.rc.Error(c, "退款理由不能为空！", nil)
+		return
+	}
+
+	var query = []string{"fo.mid = ?", " fo.id = ? "}
+	var queryArgs = []interface{}{mid, rewrite.Id, "TRADE_SUCCESS"}
+
+	data, err := new(resModel.FoodOrder).ShowByStore(query, queryArgs)
+
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
+	if data.Id == 0 {
+		rest.rc.Error(c, "订单不存在", nil)
+		return
+	}
+
 	if !(data.OrderStatus == "TRADE_SUCCESS" || data.OrderStatus == "TRADE_FINISHED") {
 		rest.rc.Error(c, "订单状态不正确", nil)
 		return
 	}
 
-	err = data.Refund()
+	if data.RefundFee < refundFeeFloat {
+		rest.rc.Error(c, "非法退款，超出可退金额", nil)
+		return
+	}
+
+	authorizerAccessToken, akExist := c.Get("authorizerAccessToken")
+
+	at := ""
+	if akExist {
+		at = authorizerAccessToken.(string)
+	}
+
+	err = data.Refund(refundFeeFloat, refundReason, at)
 	if err != nil {
-		rest.rc.Error(c,err.Error(),nil)
+		rest.rc.Error(c, err.Error(), nil)
 		return
 	}
 
@@ -508,10 +592,18 @@ func (rest *Index) ReceivedOrRefused(c *gin.Context) {
 
 	// 拒绝订单，退款
 	if os == "0" {
-		err = data.Refund()
+
+		authorizerAccessToken, akExist := c.Get("authorizerAccessToken")
+
+		at := ""
+		if akExist {
+			at = authorizerAccessToken.(string)
+		}
+
+		err = data.Refund(data.RefundFee, "商家主动拒绝订单", at)
 		if err != nil {
 			tx.RollbackTo("sp1")
-			rest.rc.Error(c,err.Error(),nil)
+			rest.rc.Error(c, err.Error(), nil)
 			return
 		}
 	}
@@ -519,5 +611,136 @@ func (rest *Index) ReceivedOrRefused(c *gin.Context) {
 	tx.Commit()
 
 	rest.rc.Success(c, msg, nil)
+
+}
+
+/**
+ * @Author return <1140444693@qq.com>
+ * @Description // 设置订单为完成状态
+ * @Date 2021/5/10 13:36:31
+ * @Param
+ * @return
+ **/
+
+func (rest *Index) Finished(c *gin.Context) {
+
+	var rewrite struct {
+		Id int `uri:"id"`
+	}
+
+	if err := c.ShouldBindUri(&rewrite); err != nil {
+		c.JSON(400, gin.H{"msg": err.Error()})
+		return
+	}
+
+	mid, _ := c.Get("mid")
+
+	var query = []string{"fo.mid = ?", " fo.id = ? "}
+	var queryArgs = []interface{}{mid, rewrite.Id, "TRADE_SUCCESS"}
+
+	data, err := new(resModel.FoodOrder).ShowByStore(query, queryArgs)
+
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
+	if data.Id == 0 {
+		rest.rc.Error(c, "订单不存在", nil)
+		return
+	}
+
+	if data.OrderStatus != "TRADE_SUCCESS" {
+		rest.rc.Error(c, "订单状态不正确", nil)
+		return
+	}
+
+	tx := cmf.NewDb().Where("mid = ? AND id = ?", mid, data.Id).Updates(&resModel.FoodOrder{
+		OrderStatus: "TRADE_FINISHED",
+	})
+
+	if tx.Error != nil {
+		rest.rc.Error(c, tx.Error.Error(), nil)
+		return
+	}
+
+	rest.rc.Success(c, "订单修改成功", nil)
+
+}
+
+/**
+ * @Author return <1140444693@qq.com>
+ * @Description 重打订单
+ * @Date 2021/5/10 13:41:4
+ * @Param
+ * @return
+ **/
+
+func (rest *Index) OrderPrinter(c *gin.Context) {
+
+	var rewrite struct {
+		Id int `uri:"id"`
+	}
+
+	if err := c.ShouldBindUri(&rewrite); err != nil {
+		c.JSON(400, gin.H{"msg": err.Error()})
+		return
+	}
+
+	mid, _ := c.Get("mid")
+
+	var query = []string{"fo.mid = ?", " fo.id = ? "}
+	var queryArgs = []interface{}{mid, rewrite.Id, "TRADE_SUCCESS"}
+
+	data, err := new(resModel.FoodOrder).ShowByStore(query, queryArgs)
+
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
+	if data.Id == 0 {
+		rest.rc.Error(c, "订单不存在", nil)
+		return
+	}
+
+	var fod []resModel.FoodOrderDetail
+	tx := cmf.NewDb().Where("order_id = ?", data.OrderId).Find(&fod)
+	if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
+		rest.rc.Error(c, tx.Error.Error(), nil)
+		return
+	}
+
+	var printOrder = make([]map[string]string, 0)
+
+	for _, v := range fod {
+
+		// 打印订单详情信息
+		var printOrderItem = make(map[string]string, 0)
+
+		title := v.FoodName
+		if v.SkuDetail != "" {
+			title += "-" + v.SkuDetail
+		}
+
+		printOrderItem["title"] = title
+		printOrderItem["count"] = strconv.Itoa(v.Count)
+		printOrderItem["food_id"] = strconv.Itoa(v.FoodId)
+		printOrderItem["total"] = strconv.FormatFloat(v.Total, 'f', -1, 64)
+		printOrder = append(printOrder, printOrderItem)
+
+	}
+
+	// 打印机打印订单
+	appointmentTime := time.Unix(data.AppointmentAt, 0).Format(cmfData.TimeLayout)
+
+	// 获取门店打印机状态
+	_, err = new(resModel.FoodOrder).SendPrinter(data, printOrder, data.StoreName, appointmentTime, true)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
+	rest.rc.Success(c, "打印成功", nil)
 
 }

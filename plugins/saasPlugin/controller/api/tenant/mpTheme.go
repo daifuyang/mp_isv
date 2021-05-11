@@ -11,10 +11,10 @@ import (
 	"fmt"
 	appModel "gincmf/app/model"
 	"gincmf/app/util"
+	portalModel "gincmf/plugins/portalPlugin/model"
 	resModel "gincmf/plugins/restaurantPlugin/model"
 	"gincmf/plugins/saasPlugin/model"
 	saasModel "gincmf/plugins/saasPlugin/model"
-	portalModel "gincmf/plugins/portalPlugin/model"
 	"github.com/gin-gonic/gin"
 	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
@@ -265,21 +265,21 @@ func (rest *MpTheme) Store(c *gin.Context) {
 
 	mpTheme := model.MpTheme{}
 	if themeId > 0 {
-		tx := cmf.NewDb().Where("id = ?",themeId).Find(&mpTheme)
+		tx := cmf.NewDb().Where("id = ?", themeId).Find(&mpTheme)
 		if tx.Error != nil {
-			rest.rc.Error(c,tx.Error.Error(),nil)
+			rest.rc.Error(c, tx.Error.Error(), nil)
 			return
 		}
 	}
 
 	saasTheme := saasModel.MpTheme{
-		Mid:      mid,
-		Name:     name,
+		Mid:       mid,
+		Name:      name,
 		Thumbnail: mpTheme.Thumbnail,
-		ThemeId:  themeId,
-		TenantId: tenantId,
-		AppLogo:  appLogo,
-		CreateAt: time.Now().Unix(),
+		ThemeId:   themeId,
+		TenantId:  tenantId,
+		AppLogo:   appLogo,
+		CreateAt:  time.Now().Unix(),
 	}
 
 	var mpThemePage []model.MpThemePage
@@ -299,33 +299,33 @@ func (rest *MpTheme) Store(c *gin.Context) {
 				Home:     1,
 				CreateAt: time.Now().Unix(),
 			})
-		}else {
+		} else {
 			var pages []appModel.MpThemePage
 			prefix := cmf.Conf().Database.Prefix
 			cmf.Db().Debug().Table(prefix+"mp_theme t").Select("p.*").
 				Joins("INNER JOIN  "+prefix+"mp_theme_page p ON t.id = p.theme_id").
-				Where("t.id = ?",themeId).Scan(&pages)
+				Where("t.id = ?", themeId).Scan(&pages)
 
-			mpThemePage = make([]saasModel.MpThemePage,0)
-			for _,v := range pages {
+			mpThemePage = make([]saasModel.MpThemePage, 0)
+			for _, v := range pages {
 				spItem := saasModel.MpThemePage{
-					ThemeId: saasTheme.Id,
-					Mid: mid,
-					Title: v.Title,
-					Home: v.Home,
-					File: v.File,
-					Style: v.Style,
+					ThemeId:     saasTheme.Id,
+					Mid:         mid,
+					Title:       v.Title,
+					Home:        v.Home,
+					File:        v.File,
+					Style:       v.Style,
 					ConfigStyle: v.Style,
-					More: v.More,
-					ConfigMore: v.More,
-					CreateAt: time.Now().Unix(),
-					UpdateAt: time.Now().Unix(),
+					More:        v.More,
+					ConfigMore:  v.More,
+					CreateAt:    time.Now().Unix(),
+					UpdateAt:    time.Now().Unix(),
 				}
-				mpThemePage = append(mpThemePage,spItem)
+				mpThemePage = append(mpThemePage, spItem)
 			}
 		}
 
-		fmt.Println("mpThemePage",mpThemePage)
+		fmt.Println("mpThemePage", mpThemePage)
 
 		// 插入主题单页面
 		if err := tx.Create(&mpThemePage).Error; err != nil {
@@ -417,7 +417,7 @@ func (rest *MpTheme) UnOauth(c *gin.Context) {
 
 	oauth := appModel.MpIsvAuth{}
 
-	tx := cmf.NewDb().Where("tenant_id = ? AND mp_id = ?", tenant.TenantId, mid).First(&oauth)
+	tx := cmf.Db().Where("tenant_id = ? AND mp_id = ? AND  id = ?", tenant.TenantId, mid, rewrite.Id).First(&oauth)
 
 	if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, tx.Error.Error(), nil)
@@ -429,7 +429,7 @@ func (rest *MpTheme) UnOauth(c *gin.Context) {
 		return
 	}
 
-	tx = cmf.NewDb().Where("tenant_id = ? AND mp_id = ?", tenant.TenantId, mid).Delete(&oauth)
+	tx = cmf.Db().Where("tenant_id = ? AND mp_id = ? AND  id = ?", tenant.TenantId, mid, rewrite.Id).Delete(&oauth)
 	if tx.Error != nil {
 		rest.rc.Error(c, tx.Error.Error(), nil)
 		return

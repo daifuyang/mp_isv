@@ -10,8 +10,11 @@ import (
 	"fmt"
 	"gincmf/plugins/restaurantPlugin/model"
 	"github.com/gin-gonic/gin"
+	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
 	"github.com/gincmf/feieSdk/base"
+	xpyunYun "github.com/gincmf/xpyunSdk/base"
+	xpyunYunModel "github.com/gincmf/xpyunSdk/model"
 	"gorm.io/gorm"
 	"strings"
 	"time"
@@ -135,7 +138,7 @@ func (rest *Printer) Save(id int, c *gin.Context) {
 	}
 
 	key := form.Key
-	if key == "" {
+	if t == "feie" && key == "" {
 		rest.rc.Error(c, "key不能为空！", nil)
 		return
 	}
@@ -176,6 +179,27 @@ func (rest *Printer) Save(id int, c *gin.Context) {
 			return
 		}
 
+	case "xprinter":
+		brand = "xprinter"
+
+		// 删除原来的打印关系
+		new(xpyunYun.Printer).Delete(sn)
+
+		// 添加打印机
+		snList := []*xpyunYunModel.AddPrinterRequestItem{
+			{
+				Sn: sn,
+				Name: name,
+			},
+		}
+		xpRes := new(xpyunYun.Printer).Add(snList)
+
+		if xpRes.Content.Code != 0 {
+			rest.rc.Error(c,xpRes.Content.Msg, nil)
+			fmt.Println(xpRes.Content)
+			return
+		}
+
 	default:
 		rest.rc.Error(c, "打印机品牌错误！", nil)
 		return
@@ -208,6 +232,8 @@ func (rest *Printer) Save(id int, c *gin.Context) {
 
 func (rest *Printer) Delete(c *gin.Context) {
 
+	mid, _ := c.Get("mid")
+
 	var rewrite struct {
 		Id int `uri:"id"`
 	}
@@ -216,5 +242,34 @@ func (rest *Printer) Delete(c *gin.Context) {
 		return
 	}
 
-	rest.rc.Success(c, "操作成功Delete", nil)
+	id := rewrite.Id
+
+	printer := model.Printer{}
+
+	var err error
+
+	if id > 0 {
+		printer, err = new(model.Printer).Show([]string{"id = ? AND mid = ?"}, []interface{}{id, mid})
+		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+			rest.rc.Error(c, err.Error(), printer)
+			return
+		}
+	}
+
+	tx := cmf.NewDb().Where("mid = ? AND id = ?",mid,id).Delete(&model.Printer{})
+
+	if tx.Error != nil {
+		rest.rc.Error(c, tx.Error.Error(), nil)
+		return
+	}
+
+	if printer.Brand == "feie" {
+		new(base.Printer).Delete(printer.Sn)
+	}
+
+	if printer.Brand == "xprinter" {
+		new(xpyunYun.Printer).Delete(printer.Sn)
+	}
+
+	rest.rc.Success(c, "操作成功", nil)
 }

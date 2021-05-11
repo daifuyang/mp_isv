@@ -20,6 +20,7 @@ import (
 	"github.com/gincmf/cmf/controller"
 	cmfLog "github.com/gincmf/cmf/log"
 	cmfUtil "github.com/gincmf/cmf/util"
+	"github.com/gincmf/wechatEasySdk/merchant"
 	uuid "github.com/nu7hatch/gouuid"
 	"io"
 	"log"
@@ -131,6 +132,74 @@ func (rest *Assets) Store(c *gin.Context) {
 	rest.rc.Success(c, "上传成功", result)
 }
 
+/**
+ * @Author return <1140444693@qq.com>
+ * @Description 微信上传
+ * @Date 2021/4/27 19:17:59
+ * @Param
+ * @return
+ **/
+func (rest *Assets) WechatStore(c *gin.Context) {
+
+	file, err := c.FormFile("file")
+
+	if err != nil {
+		rest.rc.Error(c, "文件不能为空！", nil)
+		return
+	}
+
+	fileType := c.DefaultPostForm("type", "0")
+
+	suffixArr := strings.Split(file.Filename, ".")
+	suffix := suffixArr[len(suffixArr)-1]
+
+	switch fileType {
+	case "0":
+		iExtensionArr := []string{"jpg", "png"}
+		iResult := util.ToLowerInArray(suffix, iExtensionArr)
+		fmt.Println("iResult", iResult)
+		if !iResult {
+			rest.rc.Error(c, "【"+suffix+"】不是合法的图片后缀！", nil)
+			return
+		}
+	case "1":
+		iExtensionArr := []string{"mp4"}
+		iResult := util.ToLowerInArray(suffix, iExtensionArr)
+		fmt.Println("iResult", iResult)
+		if !iResult {
+			rest.rc.Error(c, "【"+suffix+"】不是合法的视频后缀！", nil)
+			return
+		}
+	}
+
+	var fileList map[string]string
+
+	type tempAssets struct {
+		FileName string `json:"file_name"`
+		FilePath string `json:"file_path"`
+		PrevPath string `json:"prev_path"`
+		MediaId  string `json:"media_id"`
+	}
+	var result tempAssets
+
+	fileList, err = wechatUpload(c, file, fileType)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
+	mediaResult, err := new(merchant.Media).Upload(util.GetAbsPath(fileList["filePath"]))
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
+	result = tempAssets{FileName: fileList["fileName"], FilePath: fileList["filePath"], PrevPath: fileList["prevPath"], MediaId: mediaResult.MediaId}
+
+	rest.rc.Success(c, "上传成功", result)
+
+}
+
 /*
  * @restApi(
  *     'name'  		=> '删除资源文件',
@@ -220,7 +289,6 @@ func handleUpload(c *gin.Context, file *multipart.FileHeader, fileType string) (
 	fmt.Println("suffix", suffix)
 
 	//获取后缀列表
-	middleware.MainDb(c)
 	uploadSetting := appModel.GetUploadSetting(c)
 	middleware.TenantDb(c)
 
@@ -356,6 +424,117 @@ func handleUpload(c *gin.Context, file *multipart.FileHeader, fileType string) (
 	tempMap["fileName"] = fileNameSuffix
 	tempMap["filePath"] = filePath
 	tempMap["prevPath"] = util.GetFileUrl(filePath)
+
+	return tempMap, nil
+}
+
+func wechatUpload(c *gin.Context, file *multipart.FileHeader, fileType string) (map[string]string, error) {
+
+	mid, _ := c.Get("mid")
+
+	tempFile, tempErr := file.Open()
+	defer tempFile.Close()
+
+	if tempErr != nil {
+		fmt.Println("tempErr", tempErr)
+	}
+
+	var fileSize int64 = 0
+
+	type Size interface {
+		Size() int64
+	}
+
+	if sizeInterface, ok := tempFile.(Size); ok {
+		fileSize = sizeInterface.Size()
+	}
+
+	if fileSize/1024 > 2048 {
+		return map[string]string{}, errors.New("附件不能超过2M！")
+	}
+
+	suffixArr := strings.Split(file.Filename, ".")
+
+	suffix := suffixArr[len(suffixArr)-1]
+
+	fmt.Println("suffix", suffix)
+
+	//获取后缀列表
+	uploadSetting := appModel.GetUploadSetting(c)
+	middleware.TenantDb(c)
+
+	switch fileType {
+	case "0":
+		iExtensionArr := strings.Split(uploadSetting.Image.Extensions, ",")
+		iResult := util.ToLowerInArray(suffix, iExtensionArr)
+		fmt.Println("iResult", iResult)
+		if !iResult {
+			return nil, errors.New("【" + suffix + "】不是合法的图片后缀！")
+		}
+	case "1":
+		aExtensionArr := strings.Split(uploadSetting.Audio.Extensions, ",")
+		if !util.ToLowerInArray(suffix, aExtensionArr) {
+			return nil, errors.New("【" + suffix + "】不是合法的音频后缀！")
+		}
+	case "2":
+		vExtensionArr := strings.Split(uploadSetting.Video.Extensions, ",")
+		if !util.ToLowerInArray(suffix, vExtensionArr) {
+			return nil, errors.New("【" + suffix + "】不是合法的音频后缀！")
+		}
+	case "3":
+		fExtensionArr := strings.Split(uploadSetting.File.Extensions, ",")
+		if !util.ToLowerInArray(suffix, fExtensionArr) {
+			return nil, errors.New("【" + suffix + "】不是合法的附件后缀！")
+		}
+
+	default:
+		return nil, errors.New("非法访问")
+		c.Abort()
+	}
+
+	path := "public/uploads"
+	t := time.Now()
+	timeArr := []int{t.Year(), int(t.Month()), t.Day()}
+
+	var timeDir string
+	for key, timeInt := range timeArr {
+
+		current := strconv.Itoa(timeInt)
+		if key > 0 {
+			if len(current) <= 1 {
+				current = "0" + current
+			}
+		}
+		// tempStr := "/" + current
+		timeDir += current
+	}
+
+	temPath := "default"
+	if mid.(int) > 0 {
+		temPath = "tenant/" + strconv.Itoa(mid.(int))
+	}
+
+	fileUuid, err := uuid.NewV4()
+
+	fileName := cmfUtil.GetMd5(fileUuid.String() + suffixArr[0])
+	fileNameSuffix := fileName + "." + suffix
+
+	uploadPath := temPath + "/" + timeDir + "/"
+	filePath := uploadPath + fileNameSuffix
+	realpath := path + "/" + filePath
+
+	_, err = os.Stat(path + "/" + uploadPath)
+	if err != nil {
+		os.MkdirAll(path+"/"+uploadPath, os.ModePerm)
+	}
+
+	// 上传文件至指定目录
+	c.SaveUploadedFile(file, realpath)
+
+	tempMap := make(map[string]string, 0)
+	tempMap["fileName"] = fileNameSuffix
+	tempMap["filePath"] = filePath
+	tempMap["prevPath"] = util.GetFileUrl(filePath, false)
 
 	return tempMap, nil
 }

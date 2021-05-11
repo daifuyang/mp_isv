@@ -20,8 +20,7 @@ SET FOREIGN_KEY_CHECKS = 0;
 -- ----------------------------
 -- Table structure for {prefix}shop_category
 -- ----------------------------
-DROP TABLE IF EXISTS `{prefix}shop_category`;
-CREATE TABLE `{prefix}shop_category`
+CREATE TABLE IF NOT EXISTS `{prefix}shop_category`
 (
     `category_id`   varchar(20) NOT NULL,
     `category_name` varchar(20) NOT NULL COMMENT '类目名称',
@@ -35,7 +34,7 @@ CREATE TABLE `{prefix}shop_category`
 -- ----------------------------
 -- Records of {prefix}shop_category
 -- ----------------------------
-BEGIN;
+
 INSERT INTO `{prefix}shop_category`
 VALUES ('1001', '便利店', 2, 'P0101', 'S01');
 INSERT INTO `{prefix}shop_category`
@@ -274,6 +273,5 @@ INSERT INTO `{prefix}shop_category`
 VALUES ('S01', '超市便利店', 0, '0', '0');
 INSERT INTO `{prefix}shop_category`
 VALUES ('S08', '美食', 0, '0', '0');
-COMMIT;
 
 SET FOREIGN_KEY_CHECKS = 1;

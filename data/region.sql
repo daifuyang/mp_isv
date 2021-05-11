@@ -18,8 +18,7 @@ SET FOREIGN_KEY_CHECKS = 0;
 -- ----------------------------
 -- Table structure for `{prefix}region`
 -- ----------------------------
-DROP TABLE IF EXISTS `{prefix}region`;
-CREATE TABLE `{prefix}region`
+CREATE TABLE IF NOT EXISTS `{prefix}region`
 (
     `area_id`   mediumint(6) NOT NULL,
     `area_name` varchar(100) NOT NULL,

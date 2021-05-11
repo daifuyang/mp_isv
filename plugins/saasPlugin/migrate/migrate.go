@@ -10,6 +10,7 @@ import (
 	"gincmf/plugins/portalPlugin"
 	"gincmf/plugins/restaurantPlugin"
 	"gincmf/plugins/saasPlugin/model"
+	wechatMigrate "gincmf/plugins/wechatPlugin/migrate"
 	cmf "github.com/gincmf/cmf/bootstrap"
 )
 
@@ -37,6 +38,8 @@ func AutoMigrate() {
 	new(model.AdminUser).AutoMigrate()
 	cmf.NewDb().AutoMigrate(&model.AdminNotice{})
 	cmf.NewDb().AutoMigrate(&appModel.PayLog{})
+
+	new(wechatMigrate.Migrate).AutoMigrate()
 
 	appModel.AutoAdminMenu()
 

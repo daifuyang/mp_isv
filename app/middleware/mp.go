@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"gincmf/app/model"
+	resModel "gincmf/plugins/restaurantPlugin/model"
 	"github.com/gin-gonic/gin"
 	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
@@ -49,7 +50,6 @@ func ValidationMp(c *gin.Context) {
 	}
 
 	if appId == "" {
-		fmt.Println("ValidationMp,小程序app_id不能为空")
 		controller.Rest{}.Error(c, "小程序app_id不能为空！", nil)
 		c.Abort()
 		return
@@ -76,6 +76,7 @@ func ValidationMp(c *gin.Context) {
 	mid := mpAuth.MpId
 
 	c.Set("mid", mid)
+	c.Set("tenant_id", mpAuth.TenantId)
 	c.Set("app_id", appId)
 	c.Set("mp_type", mpAuth.Type)
 	c.Set("alipay_json", string(alipayJson))
@@ -151,14 +152,14 @@ func ValidationOpenId(c *gin.Context) {
 	r.ParseForm()
 	openId := strings.Join(r.Form["open_id"], "")
 
-	if openId == "" {
+	if openId == "" || openId == "0" {
 		controller.Rest{}.Error(c, "小程序open_id不能为空！", nil)
 		c.Abort()
 		return
 	}
 
 	tp := model.ThirdPart{}
-	result := cmf.NewDb().Where("open_id", openId).First(&tp)
+	result := cmf.NewDb().Where("open_id = ?", openId).First(&tp)
 	if result.RowsAffected == 0 {
 		controller.Rest{}.Error(c, "用户open_id不存在！", nil)
 		c.Abort()
@@ -175,28 +176,37 @@ func ValidationBindMobile(c *gin.Context) {
 	r.ParseForm()
 	openId := strings.Join(r.Form["open_id"], "")
 
-	if openId == "" {
+	if openId == "" || openId == "0" {
 		controller.Rest{}.Error(c, "小程序open_id不能为空！", nil)
 		c.Abort()
 		return
 	}
 
-	tp := model.ThirdPart{}
-	result := cmf.NewDb().Where("open_id", openId).First(&tp)
-	if result.RowsAffected == 0 {
+	mid, _ := c.Get("mid")
+
+	u := resModel.User{}
+	// 查询当前手机号用户是否存在
+	prefix := cmf.Conf().Database.Prefix
+
+	tx := cmf.NewDb().Table(prefix+"user u").Select("u.*,part.open_id,part.user_id,part.type").
+		Joins("INNER JOIN "+prefix+"third_part part ON u.id = part.user_id").
+		Where("open_id = ? AND  u.mid = ?", openId, mid).
+		Scan(&u)
+
+	if tx.RowsAffected == 0 {
 		controller.Rest{}.Error(c, "用户open_id不存在！", nil)
 		c.Abort()
 		return
 	}
 
-	if tp.UserId == 0 {
+	if u.Id == 0 {
 		c.JSON(http.StatusOK, model.ReturnData{Code: 20000, Msg: "请先绑定手机号！"})
 		c.Abort()
 		return
 	}
 
-	c.Set("mp_user_id", tp.UserId)
-	c.Set("open_id", tp.OpenId)
+	c.Set("mp_user_id", u.UserId)
+	c.Set("open_id", u.OpenId)
 	c.Next()
 
 }

@@ -78,7 +78,7 @@ func (rest *Assets) Get(c *gin.Context) {
  */
 func (rest *Assets) Show(c *gin.Context) {
 	var rewrite struct {
-		id int `uri:"id"`
+		Id int `uri:"id"`
 	}
 	if err := c.ShouldBindUri(&rewrite); err != nil {
 		c.JSON(400, gin.H{"msg": err.Error()})

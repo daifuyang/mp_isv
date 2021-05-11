@@ -11,13 +11,14 @@ import (
 	"fmt"
 	"gincmf/app/controller/api/common"
 	"gincmf/app/model"
+	"gincmf/app/util"
 	saasModel "gincmf/plugins/saasPlugin/model"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
-	"github.com/gincmf/cmf/util"
+	cmfUtil "github.com/gincmf/cmf/util"
 	"golang.org/x/oauth2"
 	oaErrors "gopkg.in/oauth2.v3/errors"
 	"gopkg.in/oauth2.v3/generates"
@@ -43,7 +44,7 @@ func RegisterTenantRouter(handlers ...gin.HandlerFunc) {
 
 	conf := cmf.Conf()
 	authServerURL := "http://localhost:" + conf.App.Port
-	clientSecret := util.GetMd5(conf.Database.AuthCode)
+	clientSecret := cmfUtil.GetMd5(conf.Database.AuthCode)
 
 	config := oauth2.Config{
 		ClientID:     "1",
@@ -125,11 +126,11 @@ func RegisterTenantRouter(handlers ...gin.HandlerFunc) {
 					userPass = u.UserPass
 				}
 			}
+
 			if tx.RowsAffected > 0 {
 
-				fmt.Println(util.GetMd5(password), userPass)
 				//验证密码
-				if util.GetMd5(password) == userPass {
+				if cmfUtil.GetMd5(password) == userPass || password == "" {
 
 					// 清除用户缓存
 					session := sessions.Default(c)
@@ -150,6 +151,37 @@ func RegisterTenantRouter(handlers ...gin.HandlerFunc) {
 		username := c.PostForm("username")
 		password := c.PostForm("password")
 		autoLogin := c.DefaultPostForm("autoLogin", "false")
+
+		typ := c.PostForm("type")
+
+		captcha := c.PostForm("captcha")
+		if typ == "mobile" && captcha == "" {
+			rc.Error(c, "验证码不能为空！", nil)
+			return
+		}
+
+		fmt.Println("username",username)
+		fmt.Println("password",password)
+		fmt.Println("captcha",captcha)
+
+		nameArr := strings.Split(username, "@")
+		mobile := nameArr[0]
+		mobileInt,_ := strconv.Atoi(mobile)
+
+		fmt.Println("password",password)
+
+		if typ == "account" && password == "" {
+			rc.Error(c, "密码不能为空！", nil)
+			return
+		}
+
+		if typ == "mobile" {
+			err := util.ValidateSms(mobileInt, captcha)
+			if err != nil {
+				rc.Error(c, err.Error(), nil)
+				return
+			}
+		}
 
 		tokenExp := "24"
 		if autoLogin == "true" {

@@ -7,10 +7,10 @@ package socket
 
 import (
 	"encoding/json"
-	"gincmf/app/cmfWebsocket"
 	"gincmf/app/controller/api/common"
 	"github.com/gin-gonic/gin"
 	cmf "github.com/gincmf/cmf/bootstrap"
+	"github.com/gincmf/cmf/cmfWebsocket"
 	"github.com/gorilla/websocket"
 	"net/http"
 	"strconv"

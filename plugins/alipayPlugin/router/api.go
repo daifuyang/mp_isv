@@ -27,7 +27,7 @@ func ApiListenRouter() {
 		adminGroup.Get("/alipay/auth/:id", new(admin.MpIsvAuth).Show, middleware.ValidationMerchant, aliMidd.ValidationAlipay, aliMidd.AppAuthToken)
 
 		// 版本上传
-		adminGroup.Get("/alipay/upload", new(mini.Version).Upload, middleware.ValidationMerchant, aliMidd.ValidationAlipay, aliMidd.AppAuthToken)
+		adminGroup.Post("/alipay/upload", new(mini.Version).Upload, middleware.ValidationMerchant, aliMidd.ValidationAlipay, aliMidd.AppAuthToken)
 
 		// 版本审核
 		adminGroup.Get("/alipay/audit", new(mini.Version).Audit, middleware.ValidationMerchant, aliMidd.ValidationAlipay, aliMidd.AppAuthToken)
