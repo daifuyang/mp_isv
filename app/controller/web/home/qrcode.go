@@ -8,9 +8,11 @@ package home
 import (
 	"fmt"
 	"gincmf/app/model"
+	wechatMiddle "gincmf/plugins/wechatPlugin/middleware"
 	"github.com/gin-gonic/gin"
 	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/view"
+	"github.com/gincmf/wechatEasySdk/open"
 	"net/url"
 	"regexp"
 	"strings"
@@ -41,12 +43,16 @@ func (v *Qrcode) Index(c *gin.Context) {
 		uaType = "alipay"
 	}
 
-	regBool, err = regexp.MatchString("weixin", ua)
-	if err != nil {}
+	regBool, err = regexp.MatchString("micromessenger", ua)
+	if err != nil {
+	}
 
 	if regBool {
 		uaType = "wechat"
 	}
+
+	fmt.Println("ua", ua)
+	fmt.Println("uaType", uaType)
 
 	iTemplate, _ := c.Get("template")
 	v.Template = iTemplate.(view.Template)
@@ -75,47 +81,70 @@ func (v *Qrcode) Index(c *gin.Context) {
 
 	status.UnBind = true
 
-
 	if qrcode.Status == 2 {
 		status.UnBind = false
 		status.Deactivate = true
 	}
 
-	fmt.Println("qrcode",qrcode)
-
 	// 判断绑定状态
+	canOpen := false
 	if qrcode.Status == 1 {
 
 		status.UnBind = false
 		status.Deactivate = false
 
-		fmt.Println(uaType)
+		if qrcode.AliAppId != "" {
 
-		if uaType == "alipay" {
+			canOpen = true
 
-			queryUrl,err := url.Parse("?"+qrcode.Query)
+			queryUrl, err := url.Parse("?" + qrcode.Query)
 			if err != nil {
-				fmt.Println("err",queryUrl)
+				fmt.Println("err", queryUrl)
 			}
 
 			vals := queryUrl.Query()
 			vals.Add("aqrfid", qrcode.Aqrfid)
 			query := vals.Encode()
 			query = url.QueryEscape(query)
-			fmt.Println("query",query)
-			platformapi := "alipays://platformapi/startapp?appId="+qrcode.AliAppId+"&page="+qrcode.Page+"&query=" + query
-
-			fmt.Println("platformapi",platformapi)
-
-			c.Redirect(301,platformapi)
-
-			return
-
+			// fmt.Println("query",query)
+			platformapi := "alipays://platformapi/startapp?appId=" + qrcode.AliAppId + "&page=" + qrcode.Page + "&query=" + query
+			v.Assign("platformapi", platformapi)
 		}
 
-	}
+		// 获取回调授权authorizationCode
+		accessToken, exist := c.Get("accessToken")
+		if exist {
+			authorizerAccessToken, err := wechatMiddle.GetAuthorizerAccessToken(qrcode.Mid, qrcode.TenantId, accessToken.(string))
 
+			if err != nil {
+				if uaType == "wechat" {
+					v.Error("请联系商户开通微信小程序！")
+					return
+				}
+			} else {
+				canOpen = true
+				var bizContent = map[string]interface{}{
+					"path":  "/" + qrcode.Page,
+					"query": qrcode.Query,
+				}
+
+				schemeResponse := new(open.Wxa).GenerateUrlLink(authorizerAccessToken, bizContent)
+				if schemeResponse.Errcode != 0 && uaType == "wechat" {
+					v.Error(schemeResponse.Errmsg)
+					return
+				}
+
+				v.Assign("wechatScheme", schemeResponse.UrlLink)
+			}
+		}
+		v.Assign("uaType", uaType)
+	}
 	v.Assign("status", status)
 
-	v.Fetch("qrcode.html")
+	if canOpen {
+		v.Fetch("openMp.html")
+	} else {
+		v.Fetch("qrcode.html")
+	}
+
 }

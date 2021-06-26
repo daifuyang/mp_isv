@@ -12,6 +12,12 @@ import (
 	"time"
 )
 
+type Style struct {
+	PrimaryColor string `json:"primaryColor"`
+	Color        string `json:"color"`
+	BorderColor  string `json:"borderColor"`
+}
+
 type MpTheme struct {
 	Id                 int     `json:"id"`
 	Mid                int     `gorm:"type:bigint(20);comment:小程序加密编号;not null" json:"mid"`
@@ -23,6 +29,8 @@ type MpTheme struct {
 	AppLogo            string  `gorm:"type:varchar(255);comment:小程序应用logo图标;not null" json:"app_logo"`
 	AppLogoPrev        string  `gorm:"-" json:"app_logo_prev"`
 	AppDesc            string  `gorm:"type:varchar(200);comment:小程序应用描述，20-200个字;not null" json:"app_desc"`
+	Style              string  `gorm:"type:json;comment:主题文件用户公共样式" json:"style"`
+	StyleJson          Style   `gorm:"-" json:"styleJson"`
 	AlipayCategoryIds  string  `gorm:"-" json:"alipay_category_ids"`
 	AlipayExpQrCodeUrl string  `gorm:"type:varchar(255);comment:支付宝小程序体验版二维码;not null" json:"alipay_exp_qr_code_url"`
 	WechatExpQrCodeUrl string  `gorm:"type:varchar(255);comment:微信小程序体验版二维码;not null" json:"wechat_exp_qr_code_url"`
@@ -68,10 +76,10 @@ type MpThemePage struct {
 	Home        int    `gorm:"type:tinyint(3);comment:是否为首页;not null;default:0" json:"home"`
 	Title       string `gorm:"type:varchar(20);comment:页面名称;not null" json:"title"`
 	File        string `gorm:"type:varchar(20);comment:页面路径;not null" json:"file"`
-	Style       string `gorm:"type:text;comment:主题文件用户公共样式" json:"style"`
-	ConfigStyle string `gorm:"type:text;comment:主题文件默认公共样式" json:"config_style"`
-	More        string `gorm:"type:text;comment:主题文件用户配置文件" json:"more"`
-	ConfigMore  string `gorm:"type:text;comment:主题文件默认配置文件" json:"config_more"`
+	Style       string `gorm:"type:json;comment:主题文件用户公共样式" json:"style"`
+	ConfigStyle string `gorm:"type:json;comment:主题文件默认公共样式" json:"config_style"`
+	More        string `gorm:"type:json;comment:主题文件用户配置文件" json:"more"`
+	ConfigMore  string `gorm:"type:json;comment:主题文件默认配置文件" json:"config_more"`
 	CreateAt    int64  `gorm:"type:bigint(20)" json:"create_at"`
 	UpdateAt    int64  `gorm:"type:bigint(20)" json:"update_at"`
 }

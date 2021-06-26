@@ -136,7 +136,9 @@ func (model PortalPost) IndexByCategory(c *gin.Context, query []string, queryArg
 		Joins("LEFT JOIN "+prefix+"portal_category_post cp ON p.id = cp.post_id").
 		Joins("LEFT JOIN "+prefix+"portal_category pc ON pc.id = cp.category_id").
 		Joins("LEFT JOIN "+prefix+"user u ON u.id = p.user_id").
-		Where(queryStr, queryArgs...).Count(&total)
+		Where(queryStr, queryArgs...).
+		Group("p.id").
+		Order("id desc").Count(&total)
 
 	type temp struct {
 		PortalPost
@@ -153,7 +155,7 @@ func (model PortalPost) IndexByCategory(c *gin.Context, query []string, queryArg
 		Joins("LEFT JOIN "+prefix+"portal_category pc ON pc.id = cp.category_id").
 		Joins("LEFT JOIN "+prefix+"user u ON u.id = p.user_id").
 		Where(queryStr, queryArgs...).Limit(pageSize).Offset((current - 1) * pageSize).
-		Group("p.id").Scan(&tempArr)
+		Group("p.id").Order("id desc").Scan(&tempArr)
 
 	if result.Error != nil {
 		return cmfModel.Paginate{}, nil
@@ -170,7 +172,7 @@ func (model PortalPost) IndexByCategory(c *gin.Context, query []string, queryArg
 		updateTime := time.Unix(v.UpdateAt, 0).Format("2006-01-02 15:04:05")
 		tempArr[k].UpdateTime = updateTime
 
-		tempArr[k].ThumbnailPrev = util.GetFileUrl(v.Thumbnail)
+		tempArr[k].ThumbnailPrev = util.GetFileUrl(v.Thumbnail,"clipper")
 
 		m := More{}
 		json.Unmarshal([]byte(v.More), &m)
@@ -217,7 +219,7 @@ func (model PortalPost) Show(query []string, queryArgs []interface{}) (post Port
 	updateTime := time.Unix(post.UpdateAt, 0).Format("2006-01-02 15:04:05")
 	post.UpdateTime = updateTime
 
-	post.ThumbnailPrev = util.GetFileUrl(post.Thumbnail)
+	post.ThumbnailPrev = util.GetFileUrl(post.Thumbnail,"clipper")
 
 	m := More{}
 

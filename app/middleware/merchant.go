@@ -6,10 +6,14 @@
 package middleware
 
 import (
+	"errors"
+	"gincmf/app/model"
 	saasModel "gincmf/plugins/saasPlugin/model"
 	"github.com/gin-gonic/gin"
+	"github.com/gincmf/alipayEasySdk"
 	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
+	"gorm.io/gorm"
 	"net/http"
 	"strconv"
 	"strings"
@@ -37,8 +41,28 @@ func ValidationMerchant(c *gin.Context) {
 
 	mid := midMap[0]
 
+	var mpAuth []model.MpIsvAuth
+	tx := cmf.Db().Where("mp_id = ?", mid).Order("id desc").Find(&mpAuth)
+	if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
+		new(controller.Rest).Error(c, tx.Error.Error(), nil)
+		c.Abort()
+		return
+	}
+
+	if tx.RowsAffected > 0 {
+		for _, v := range mpAuth {
+			if v.Type == "wechat" {
+				c.Set("wechat", true)
+			}
+			if v.Type == "alipay" {
+				c.Set("alipay", true)
+				alipayEasySdk.SetOption("AppAuthToken", v.AppAuthToken)
+			}
+		}
+	}
+
 	// 验证当前小程序是否存在
-	tx := cmf.NewDb().Where("mid = ?", mid).First(&saasModel.MpTheme{})
+	tx = cmf.NewDb().Where("mid = ?", mid).First(&saasModel.MpTheme{})
 
 	if tx.RowsAffected == 0 {
 		new(controller.Rest).ErrorCode(c, 20001, "小程序编号不正确！", nil)

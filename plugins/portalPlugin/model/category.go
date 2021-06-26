@@ -255,7 +255,7 @@ func (model *PortalCategory) Show() (tempPortalCategory, error) {
 	}
 
 	tpc.PortalCategory = category
-	tpc.PrevPath = util.GetFileUrl(tpc.Thumbnail)
+	tpc.PrevPath = util.GetFileUrl(tpc.Thumbnail,"clipper")
 
 	return tpc, nil
 }

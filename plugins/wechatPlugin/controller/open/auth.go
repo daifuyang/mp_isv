@@ -75,7 +75,12 @@ func (rest *Auth) PreAuthCode(c *gin.Context) {
 
 	e := p.Encode()
 
-	accessToken, _ := c.Get("accessToken")
+	accessToken, exist := c.Get("accessToken")
+
+	if !exist {
+		rest.rc.Error(c,"accessToken以失效",nil)
+		return
+	}
 
 	options := wechatEasySdk.OpenOptions()
 
@@ -178,7 +183,12 @@ func (rest *Auth) Redirect(c *gin.Context) {
 	}
 
 	// 获取accessToken
-	accessToken, _ := c.Get("accessToken")
+	accessToken, exist := c.Get("accessToken")
+
+	if !exist {
+		rest.rc.Error(c, "accessToken不存在！", nil)
+		return
+	}
 
 	options := wechatEasySdk.OpenOptions()
 
@@ -217,15 +227,42 @@ func (rest *Auth) Redirect(c *gin.Context) {
 
 	if auth.Id == 0 {
 		auth.CreateAt = time.Now().Unix()
-		cmf.Db().Debug().Create(&auth)
+		cmf.Db().Create(&auth)
 	} else {
 		if authAppId != auth.AuthAppId {
 			rest.rc.Error(c, "重新授权的账号与当前绑定的账号不一致", nil)
 			return
 		}
 		auth.UpdateAt = time.Now().Unix()
-		cmf.Db().Debug().Updates(&auth)
+		cmf.Db().Updates(&auth)
 	}
+
+	bizContent = map[string]interface{}{
+		"action": "add",
+		"requestdomain": []string{
+			"https://console.mashangdian.cn",
+		},
+		"wsrequestdomain": []string{
+			"https://console.mashangdian.cn",
+		},
+		"uploaddomain": []string{
+			"https://console.mashangdian.cn",
+		},
+		"downloaddomain": []string{
+			"https://console.mashangdian.cn",
+		},
+	}
+
+	new(open.Wxa).ModifyDomain(accessToken.(string), bizContent)
+
+	bizContent = map[string]interface{}{
+		"action": "add",
+		"webviewdomain": []string{
+			"https://console.mashangdian.cn",
+		},
+	}
+
+	new(open.Wxa).SetWebViewDomain(accessToken.(string), bizContent)
 
 	c.Redirect(301, redirect)
 	return

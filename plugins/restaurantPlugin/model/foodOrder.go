@@ -22,11 +22,13 @@ import (
 	cmfModel "github.com/gincmf/cmf/model"
 	cmfUtil "github.com/gincmf/cmf/util"
 	"github.com/gincmf/feieSdk/base"
+	wechatEasySdkOpen "github.com/gincmf/wechatEasySdk/open"
 	"github.com/gincmf/wechatEasySdk/pay"
 	wechatUtil "github.com/gincmf/wechatEasySdk/util"
 	xpyunYun "github.com/gincmf/xpyunSdk/base"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
+	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -53,6 +55,7 @@ type FoodOrder struct {
 	OrderType       int                        `gorm:"type:tinyint(3);comment:订单类型（1 => 门店扫码就餐; 2 => 门店堂食就餐; 3 => 门店打包外带; 4 => 外卖;not null" json:"order_type"`
 	AppointmentTime string                     `gorm:"->" json:"appointment_time"`
 	AppointmentAt   int64                      `gorm:"type:bigint(20);comment:预约取餐时间" json:"appointment_at"`
+	AppointmentType int64                      `gorm:"type:tinyint(3);comment:是否预约单" json:"appointment_type"`
 	OrderDetail     string                     `gorm:"type:json;comment:订单详情;not null" json:"order_detail"`
 	FoodDetail      []FoodOrderDetail          `gorm:"-" json:"food_detail"`
 	FoodCount       int                        `gorm:"-" json:"food_count"`
@@ -85,6 +88,14 @@ type FoodOrder struct {
 	Db              *gorm.DB                   `gorm:"-" json:"-"`
 	AppId           string                     `gorm:"-" json:"app_id"`
 	RequestPayment  wechatModel.RequestPayment `gorm:"-" json:"request_payment"`
+	OpenId          string                     `gorm:"-" json:"open_id"`
+	AccessToken     string                     `gorm:"-" json:"access_token"`
+	GoodsWeight     float64                    `gorm:"-" json:"goods_weight"`
+	DeliveryToken   string                     `gorm:"-" json:"delivery_token"`
+	DeliveryId      string                     `gorm:"-" json:"delivery_id"`
+	DeliveryName    string                     `gorm:"-" json:"delivery_name"`
+	DeliveryFree    float64                    `gorm:"-" json:"delivery_free"`
+	ShopOrderId     string                     `gorm:"-" json:"shop_order_id"`
 }
 
 // 退款明细
@@ -221,8 +232,47 @@ func (model FoodOrder) IndexByStore(c *gin.Context, query []string, queryArgs []
 			fod[dk].CategoryId = categoryId
 			fod[dk].Food = food
 
-			fod[dk].FoodThumbnailPrev = util.GetFileUrl(dv.FoodThumbnail)
+			fod[dk].FoodThumbnailPrev = util.GetFileUrl(dv.FoodThumbnail, "thumbnail500x500")
 			count = count + dv.Count
+
+			var material []material
+			json.Unmarshal([]byte(dv.Material), &material)
+
+			// 增加加料描述
+			materialRemark := ""
+			for _, item := range material {
+				materialRemark += item.MaterialName + "|"
+			}
+
+			var tasty []tasty
+			json.Unmarshal([]byte(dv.Tasty), &tasty)
+
+			tastyRemark := ""
+
+			for _, item := range tasty {
+				tastyRemark += item.AttrValue + "|"
+			}
+
+			title := dv.FoodName
+
+			if dv.SkuDetail != "" {
+				title += "-" + dv.SkuDetail
+			}
+
+			remark := materialRemark + tastyRemark
+
+			remarkRune := []rune(remark)
+
+			if len(remarkRune) > 1 {
+				remark = string(remarkRune[0 : len(remarkRune)-1])
+			}
+
+			if remark != "" {
+				title += "-" + remark
+			}
+
+			fod[dk].FoodName = title
+
 		}
 
 		fo[k].FoodDetail = fod
@@ -279,7 +329,7 @@ func (model FoodOrder) ShowByStore(query []string, queryArgs []interface{}) (Foo
 
 		food := Food{}
 		cmf.NewDb().Where("id = ?", dv.FoodId).First(&food)
-		food.PrevPath = util.GetFileUrl(food.Thumbnail)
+		food.PrevPath = util.GetFileUrl(food.Thumbnail, "thumbnail500x500")
 
 		fod[dk].CategoryId = categoryId
 		fod[dk].Food = food
@@ -288,7 +338,7 @@ func (model FoodOrder) ShowByStore(query []string, queryArgs []interface{}) (Foo
 			dv.FoodThumbnail = "template/food.png"
 		}
 
-		fod[dk].FoodThumbnailPrev = util.GetFileUrl(dv.FoodThumbnail)
+		fod[dk].FoodThumbnailPrev = util.GetFileUrl(dv.FoodThumbnail, "thumbnail500x500")
 		count = count + dv.Count
 
 		var material []material
@@ -297,7 +347,7 @@ func (model FoodOrder) ShowByStore(query []string, queryArgs []interface{}) (Foo
 		// 增加加料描述
 		materialRemark := ""
 		for _, item := range material {
-			materialRemark += " | " + item.MaterialName
+			materialRemark += item.MaterialName + "|"
 		}
 
 		var tasty []tasty
@@ -306,10 +356,28 @@ func (model FoodOrder) ShowByStore(query []string, queryArgs []interface{}) (Foo
 		tastyRemark := ""
 
 		for _, item := range tasty {
-			tastyRemark = " | " + item.AttrValue
+			tastyRemark += item.AttrValue + "|"
 		}
 
-		fod[dk].FoodName = dv.FoodName + materialRemark + tastyRemark
+		title := dv.FoodName
+
+		if dv.SkuDetail != "" {
+			title += "-" + dv.SkuDetail
+		}
+
+		remark := materialRemark + tastyRemark
+
+		remarkRune := []rune(remark)
+
+		if len(remarkRune) > 1 {
+			remark = string(remarkRune[0 : len(remarkRune)-1])
+		}
+
+		if remark != "" {
+			title += "-" + remark
+		}
+
+		fod[dk].FoodName = title
 
 	}
 
@@ -695,14 +763,16 @@ func (model *FoodOrder) Refund(refundFee float64, refundReason string, authorize
 		bizContent["out_trade_no"] = model.OrderId
 		bizContent["trade_no"] = model.TradeNo
 		bizContent["refund_amount"] = refundFee
+		bizContent["out_request_no"] = time.Now().Unix()
 		bizContent["refund_reason"] = refundReason
 		refundResult := new(payment.Common).Refund(bizContent)
 
 		if refundResult.Response.Code != "10000" {
+			fmt.Println("refundResult.Response", refundResult.Response)
 			return errors.New("退款失败！")
 		}
 
-		userMpType = "alipay"
+		userMpType = "alipay-mp"
 
 	}
 
@@ -732,13 +802,14 @@ func (model *FoodOrder) Refund(refundFee float64, refundReason string, authorize
 		bizContent := make(map[string]interface{}, 0)
 
 		refund := decimal.NewFromFloat(refundFee).Round(2).Mul(decimal.NewFromInt(100)).IntPart()
+		total := decimal.NewFromFloat(model.OriginalFee).Round(2).Mul(decimal.NewFromInt(100)).IntPart()
 
 		bizContent["sub_mchid"] = theme.SubMchid
 		bizContent["out_trade_no"] = model.OrderId
 		bizContent["out_refund_no"] = "refund_" + strconv.FormatInt(time.Now().Unix(), 10)
 		bizContent["amount"] = map[string]interface{}{
 			"refund":   refund,
-			"total":    refund,
+			"total":    total,
 			"currency": "CNY",
 		}
 		bizContent["reason"] = refundReason
@@ -749,7 +820,7 @@ func (model *FoodOrder) Refund(refundFee float64, refundReason string, authorize
 			return errors.New(refundsResponse.Message)
 		}
 
-		userMpType = "wechat"
+		userMpType = "wechat-mp"
 
 	}
 
@@ -762,6 +833,7 @@ func (model *FoodOrder) Refund(refundFee float64, refundReason string, authorize
 
 		wxSubscribe := Subscribe{
 			Id:          model.Id,
+			Mid:         model.Mid,
 			AccessToken: model.FormId,
 			StoreName:   model.StoreName,
 			OrderId:     model.OrderId,
@@ -863,7 +935,6 @@ func (model *FoodOrder) Refund(refundFee float64, refundReason string, authorize
 			tScore := scoreMap.PayScore * int(refundFee)
 			score = score - tScore
 			remark := "退款"
-
 
 			// 保存到数据库
 			sLog := appModel.ScoreLog{
@@ -970,7 +1041,14 @@ func (model *FoodOrder) Printer() error {
 
 }
 
-func (model *FoodOrder) GetDeliveryFee(store Store) (foodOrder FoodOrder, err error) {
+/**
+ * @Author return <1140444693@qq.com>
+ * @Description 获取预付费订单
+ * @Date 2021/6/15 14:11:1
+ * @Param
+ * @return
+ **/
+func (model *FoodOrder) GetDeliveryFee(store Store, deliveryGoods []DeliveryGoods) (foodOrder FoodOrder, err error) {
 
 	addr := Address{}
 	tx := cmf.NewDb().Where("id = ?", model.AddressId).First(&addr)
@@ -1002,6 +1080,7 @@ func (model *FoodOrder) GetDeliveryFee(store Store) (foodOrder FoodOrder, err er
 		return foodOrder, errors.New("该地址不够详细，请补全详细地址")
 	}
 
+	city := geo.MapGeoCodes[0].City
 	location := geo.MapGeoCodes[0].Location
 
 	lMap := strings.Split(location, ",")
@@ -1022,11 +1101,137 @@ func (model *FoodOrder) GetDeliveryFee(store Store) (foodOrder FoodOrder, err er
 		return foodOrder, errors.New("超过配送距离！")
 	}
 
+	// 企业主体
+	businessJson := saasModel.Options("business_info", model.Mid)
+	bi := BusinessInfo{}
+	_ = json.Unmarshal([]byte(businessJson), &bi)
+
+	// 获取微信三方平台的预订单价格
+
+	var partnerDeliveryFee float64 = 0
+
+	// 开启外卖功能
+
+	deliveryName := "商家配送"
+	deliveryId := "self"
+
+	// 查询是否开通第三方配送
+	var immediateDelivery []ImmediateDelivery
+	tx = cmf.NewDb().Where("status", 1).Find(&immediateDelivery)
+	if tx.Error != nil {
+		return foodOrder, tx.Error
+	}
+
+	var (
+		deliveryItem    ImmediateDelivery
+		deliveryPercent = takeOut.DeliveryPercent
+	)
+
+	for _, v := range immediateDelivery {
+		if v.IsMain == 1 {
+			deliveryItem = v
+			deliveryName = v.DeliveryName
+			deliveryId = v.DeliveryId
+			break
+		}
+	}
+
+	deliveryTimes := takeOut.DeliveryTimes
+	canUse := new(ImmediateDelivery).CanUseTime(deliveryTimes)
+
+	var (
+		shopOrderId string
+	)
+
+	if canUse && model.AccessToken != "" && takeOut.Status == 1 && deliveryItem.Id > 0 {
+
+		yearStr, monthStr, dayStr := util.CurrentDate()
+		insertKey := "mp_isv" + strconv.Itoa(model.Mid) + ":immDelivery:" + yearStr + monthStr + dayStr
+		date := yearStr + monthStr + dayStr
+		shopOrderId = util.DateUuid("DADA", insertKey, date, model.Mid)
+
+		bizContent := make(map[string]interface{}, 0)
+		bizContent["shopid"] = deliveryItem.Shopid
+		bizContent["shop_order_id"] = shopOrderId
+		bizContent["shop_no"] = store.StoreNumber
+
+		dSign := bizContent["shopid"].(string) + bizContent["shop_order_id"].(string) + deliveryItem.AppSecret
+		bizContent["delivery_sign"] = cmfUtil.GetSha1(dSign)
+		bizContent["delivery_id"] = deliveryItem.DeliveryId
+		bizContent["openid"] = model.OpenId
+
+		imgUrl := bi.BrandLogo
+
+		if imgUrl == "" {
+			imgUrl = "https://cdn.mashangdian.cn/default/20210309/ebe1b4a577be63063872eff0dc98a287.jpg!clipper"
+		}
+
+		bizContent["shop"] = map[string]interface{}{
+			"wxa_path":    "/page/order/detail",
+			"img_url":     imgUrl,
+			"goods_name":  deliveryGoods[0].GoodName,
+			"goods_count": len(deliveryGoods),
+		}
+
+		bizContent["sender"] = map[string]interface{}{
+			"name":            store.ContactPerson,
+			"city":            store.CityName,
+			"address":         store.Address,
+			"address_detail":  store.Address,
+			"phone":           store.Phone,
+			"lng":             store.Longitude,
+			"lat":             store.Latitude,
+			"coordinate_type": 0,
+		}
+
+		bizContent["receiver"] = map[string]interface{}{
+			"name":            addr.Name,
+			"city":            city,
+			"address":         addr.Address,
+			"address_detail":  addr.Room,
+			"phone":           addr.Mobile,
+			"lng":             addr.Longitude,
+			"lat":             addr.Latitude,
+			"coordinate_type": 0,
+		}
+
+		bizContent["cargo"] = map[string]interface{}{
+			"goods_value":        model.TotalAmount,
+			"goods_weight":       model.GoodsWeight,
+			"cargo_first_class":  takeOut.FirstClass,
+			"cargo_second_class": takeOut.SecondClass,
+			"goods_detail": map[string][]DeliveryGoods{
+				"goods": deliveryGoods,
+			},
+		}
+
+		data := new(wechatEasySdkOpen.Delivery).PreAdd(model.AccessToken, bizContent)
+
+		if data.Errcode != 0 {
+
+			if data.Errcode == 40001 {
+				cmf.NewRedisDb().Set("accessToken", "", 0)
+				cmf.NewRedisDb().Set("authorizerAccessToken", "", 0)
+			}
+
+			return *model, errors.New(data.Errmsg)
+		}
+
+		if data.Resultcode != 0 {
+			return *model, errors.New(data.Resultmsg)
+		}
+
+		model.DeliveryToken = data.DeliveryToken
+		partnerDeliveryFee = data.Fee
+
+	}
+
+	model.DeliveryId = deliveryId
+	model.DeliveryName = deliveryName
 	model.Address = address
 
-	// 起送费
+	// 起送费（start_fee）
 	sf := takeOut.StartFee
-	fmt.Println("sf起送价", sf)
 	// 剩余配送距离
 
 	lastKm, _ := decimal.NewFromFloat(distance - takeOut.StartKm).Round(0).Float64()
@@ -1036,12 +1241,229 @@ func (model *FoodOrder) GetDeliveryFee(store Store) (foodOrder FoodOrder, err er
 	}
 
 	lastFee := lastKm * takeOut.StepFee
-	fmt.Println("阶梯式报价：", lastFee)
 
 	deliveryFee := sf + lastFee
 	deliveryFee, _ = decimal.NewFromFloat(deliveryFee).Round(2).Float64()
 
-	model.DeliveryFee = deliveryFee
+	totalAmount := partnerDeliveryFee
+
+	// 出资最大比例(开启第三方配送)
+	var freeFee float64 = 0
+	if takeOut.Status == 1 && deliveryItem.Id > 0 {
+		maxAmount, _ := decimal.NewFromFloat(model.TotalAmount).Mul(decimal.NewFromFloat(deliveryPercent)).Mul(decimal.NewFromFloat(0.01)).Float64()
+		if partnerDeliveryFee > maxAmount {
+			partnerDeliveryFee = partnerDeliveryFee - maxAmount
+			freeFee = maxAmount
+		} else {
+			freeFee = partnerDeliveryFee
+			partnerDeliveryFee = 0
+		}
+	} else {
+		// 自配送
+		partnerDeliveryFee = deliveryFee
+	}
+
+	model.DeliveryFee = math.Floor(partnerDeliveryFee)
+
+	wipeOff, _ := decimal.NewFromFloat(partnerDeliveryFee).Sub(decimal.NewFromFloat(model.DeliveryFee)).Float64()
+
+	model.DeliveryFree = freeFee + wipeOff
+
+	if shopOrderId != "" {
+
+		var deliveryMap = DeliveryMap{
+			ShopOrderId:   shopOrderId,
+			DeliveryToken: model.DeliveryToken,
+			DeliveryId:    model.DeliveryId,
+			DeliveryName:  model.DeliveryName,
+			TotalAmount:   totalAmount,
+			DeliveryFee:   model.DeliveryFee,
+			DeliveryFree:  model.DeliveryFree,
+		}
+
+		deliveryData, _ := json.Marshal(deliveryMap)
+
+		fmt.Println("deliveryData", string(deliveryData))
+
+		cmf.NewRedisDb().Set(model.DeliveryToken, string(deliveryData), time.Minute*5)
+	}
+
+	return *model, nil
+}
+
+/**
+ * @Author return <1140444693@qq.com>
+ * @Description 下正式单
+ * @Date 2021/6/15 14:14:22
+ * @Param
+ * @return
+ **/
+func (model *FoodOrder) AddOrder(store Store, deliveryGoods []DeliveryGoods) (foodOrder FoodOrder, err error) {
+
+	addr := Address{}
+	tx := cmf.NewDb().Where("id = ?", model.AddressId).First(&addr)
+
+	if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
+		return foodOrder, tx.Error
+	}
+
+	if tx.RowsAffected == 0 {
+		return foodOrder, errors.New("地址不存在！")
+	}
+
+	name := addr.Name
+	if name == "" {
+		return foodOrder, errors.New("收货人姓名不能为空！")
+	}
+
+	model.Name = name
+	model.Mobile = strconv.Itoa(addr.Mobile)
+
+	address := addr.Address + addr.Room
+	geo := GeoAddress(address)
+
+	if len(geo.MapGeoCodes) == 0 {
+		return foodOrder, errors.New("该地址不存在")
+	}
+
+	if len(geo.MapGeoCodes) > 1 {
+		return foodOrder, errors.New("该地址不够详细，请补全详细地址")
+	}
+
+	city := geo.MapGeoCodes[0].City
+	location := geo.MapGeoCodes[0].Location
+
+	lMap := strings.Split(location, ",")
+
+	longitude, _ := strconv.ParseFloat(lMap[0], 64)
+	latitude, _ := strconv.ParseFloat(lMap[1], 64)
+
+	// 获取当前外卖配置
+	takeJson := saasModel.Options("takeout", store.Mid)
+
+	var takeOut TakeOut
+	_ = json.Unmarshal([]byte(takeJson), &takeOut)
+
+	distance := util.EarthDistance(latitude, longitude, store.Latitude, store.Longitude)
+
+	// 超出距离
+	if distance > takeOut.DeliveryDistance {
+		return foodOrder, errors.New("超过配送距离！")
+	}
+
+	// 企业主体
+	businessJson := saasModel.Options("business_info", model.Mid)
+	bi := BusinessInfo{}
+	_ = json.Unmarshal([]byte(businessJson), &bi)
+
+	// 查询是否开通第三方配送
+	var immediateDelivery []ImmediateDelivery
+	tx = cmf.NewDb().Where("status", 1).Find(&immediateDelivery)
+	if tx.Error != nil {
+		return foodOrder, tx.Error
+	}
+
+	var (
+		deliveryItem ImmediateDelivery
+	)
+
+	for _, v := range immediateDelivery {
+		if v.IsMain == 1 {
+			deliveryItem = v
+			break
+		}
+	}
+
+	ido := ImmediateDeliveryOrder{
+		Mid:     model.Mid,
+		OrderId: model.OrderId,
+	}
+
+	fmt.Println("model.AccessToken", model.AccessToken)
+	fmt.Println("model.DeliveryToken", model.DeliveryToken)
+
+	if model.AccessToken != "" && model.DeliveryToken != "" && takeOut.Status == 1 && deliveryItem.Id > 0 {
+
+		shopOrderId := model.ShopOrderId
+
+		ido.OrderId = model.OrderId
+		ido.DeliveryId = deliveryItem.Shopid
+		ido.DeliveryName = deliveryItem.DeliveryName
+
+		bizContent := make(map[string]interface{}, 0)
+		bizContent["delivery_token"] = model.DeliveryToken
+		bizContent["shopid"] = deliveryItem.Shopid
+		bizContent["shop_order_id"] = shopOrderId
+		bizContent["shop_no"] = store.StoreNumber
+
+		dSign := bizContent["shopid"].(string) + bizContent["shop_order_id"].(string) + deliveryItem.AppSecret
+		bizContent["delivery_sign"] = cmfUtil.GetSha1(dSign)
+		bizContent["delivery_id"] = deliveryItem.DeliveryId
+		bizContent["openid"] = model.OpenId
+
+		imgUrl := bi.BrandLogo
+
+		if imgUrl == "" {
+			imgUrl = "https://cdn.mashangdian.cn/default/20210309/ebe1b4a577be63063872eff0dc98a287.jpg!clipper"
+		}
+
+		bizContent["shop"] = map[string]interface{}{
+			"wxa_path":    "/page/order/detail",
+			"img_url":     imgUrl,
+			"goods_name":  deliveryGoods[0].GoodName,
+			"goods_count": len(deliveryGoods),
+		}
+
+		bizContent["sender"] = map[string]interface{}{
+			"name":            store.ContactPerson,
+			"city":            store.CityName,
+			"address":         store.Address,
+			"address_detail":  store.Address,
+			"phone":           store.Phone,
+			"lng":             store.Longitude,
+			"lat":             store.Latitude,
+			"coordinate_type": 0,
+		}
+
+		bizContent["receiver"] = map[string]interface{}{
+			"name":            addr.Name,
+			"city":            city,
+			"address":         addr.Address,
+			"address_detail":  addr.Room,
+			"phone":           addr.Mobile,
+			"lng":             addr.Longitude,
+			"lat":             addr.Latitude,
+			"coordinate_type": 0,
+		}
+
+		bizContent["cargo"] = map[string]interface{}{
+			"goods_value":        model.TotalAmount,
+			"goods_weight":       model.GoodsWeight,
+			"cargo_first_class":  takeOut.FirstClass,
+			"cargo_second_class": takeOut.SecondClass,
+			"goods_detail": map[string][]DeliveryGoods{
+				"goods": deliveryGoods,
+			},
+		}
+
+		data := new(wechatEasySdkOpen.Delivery).OrderAdd(model.AccessToken, bizContent)
+
+		if data.Errcode != 0 {
+			return *model, errors.New(data.Errmsg)
+		}
+
+		ido.DeliveryToken = model.DeliveryToken
+		ido.ShopOrderId = shopOrderId
+		ido.WaybillId = data.WaybillId
+		ido.DeliveryFee, _ = decimal.NewFromInt(int64(data.Fee)).Round(2).Float64()
+		ido.DeliveryFree, _ = decimal.NewFromFloat(ido.DeliveryFee).Sub(decimal.NewFromFloat(model.DeliveryFee)).Round(2).Float64()
+		ido.BuyerPayAmount = model.DeliveryFee
+		ido.OrderStatus = data.OrderStatus
+		ido.CreateAt = time.Now().Unix()
+
+		cmf.NewDb().Create(&ido)
+
+	}
 
 	return *model, nil
 }
@@ -1049,6 +1471,7 @@ func (model *FoodOrder) GetDeliveryFee(store Store) (foodOrder FoodOrder, err er
 type Content struct {
 	Printer `json:"printer"`
 	Content string `json:"content"`
+	Count   int    `json:"count"`
 }
 
 // 发送打印订单请求
@@ -1073,8 +1496,6 @@ func (model *FoodOrder) SendPrinter(fo FoodOrder, printOrder []map[string]string
 			return content, errors.New("打印机类型错误")
 		}
 
-		pContent := printer.FormatPrinter(printOrder, "58mm")
-
 		pf := printerPlugin.PrinterFormat{
 			Brand:           p.Brand,
 			OrderType:       fo.OrderType,
@@ -1082,7 +1503,6 @@ func (model *FoodOrder) SendPrinter(fo FoodOrder, printOrder []map[string]string
 			PayType:         fo.PayType,
 			DeskName:        fo.DeskName,
 			QueueNo:         fo.QueueNo,
-			OrderDetail:     pContent,
 			CouponFee:       strconv.FormatFloat(fo.CouponFee, 'f', -1, 64),
 			OriginalFee:     strconv.FormatFloat(fo.OriginalFee, 'f', -1, 64),
 			Fee:             strconv.FormatFloat(fo.Fee, 'f', -1, 64),
@@ -1092,30 +1512,79 @@ func (model *FoodOrder) SendPrinter(fo FoodOrder, printOrder []map[string]string
 			Name:            fo.Name,
 			Mobile:          fo.Mobile,
 			AppointmentTime: appointmentTime,
+			OutTradeNo:      fo.OrderId,
+			TradeNo:         fo.TradeNo,
 			Remark:          fo.Remark,
 		}
 
-		pItemContent := pf.Format("58mm")
+		// 整单打印
+		if p.Pattern == 0 {
+			pContent := printer.FormatPrinter(printOrder, "58mm")
 
-		content = append(content, Content{
-			Printer: p,
-			Content: pItemContent,
-		})
+			pf.OrderDetail = pContent
+			pItemContent := pf.Format("58mm")
 
-		fmt.Println("pItemContent", pItemContent)
-		cmfLog.Save(pItemContent, "test.log")
+			content = append(content, Content{
+				Printer: p,
+				Content: pItemContent,
+				Count:   p.Count,
+			})
 
-		if p.Id > 0 && canPrinter {
-			if p.Brand == "feie" {
-				myResult := new(base.Printer).Printer(p.Sn, pItemContent, 1)
-				fmt.Println("myResult", myResult)
-			}
+			cmfLog.Save(pItemContent, "test-整单.log")
 
-			if p.Brand == "xprinter" {
-				myResult := new(xpyunYun.Printer).Printer(p.Sn, pItemContent, 1)
-				fmt.Println("myResult", myResult.Content)
+			if p.Id > 0 && canPrinter {
+				if p.Brand == "feie" {
+					myResult := new(base.Printer).Printer(p.Sn, pItemContent, p.Count)
+					fmt.Println("myResult", myResult)
+				}
+
+				if p.Brand == "xprinter" {
+					myResult := new(xpyunYun.Printer).Printer(p.Sn, pItemContent, p.Count)
+					fmt.Println("myResult", myResult.Content)
+				}
 			}
 		}
+
+		// 一菜一单
+		if p.Pattern == 1 {
+			fmt.Println("一菜一单")
+			for k, v := range printOrder {
+				var po []map[string]string
+				po = append(po, v)
+				pContent := printer.FormatPrinter(po, "58mm")
+
+				pf.OrderDetail = pContent
+				pf.Pattern = 1 // 标记为一菜一单
+				complete := false
+				if len(printOrder)-1 == k {
+					complete = true
+				}
+				pf.Complete = complete
+				pItemContent := pf.Format("58mm")
+
+				cmfLog.Save(pItemContent, "test-一菜.log")
+
+				content = append(content, Content{
+					Printer: p,
+					Content: pItemContent,
+					Count:   p.Count,
+				})
+
+				if p.Id > 0 && canPrinter {
+					if p.Brand == "feie" {
+						myResult := new(base.Printer).Printer(p.Sn, pItemContent, p.Count)
+						fmt.Println("myResult", myResult)
+					}
+
+					if p.Brand == "xprinter" {
+						myResult := new(xpyunYun.Printer).Printer(p.Sn, pItemContent, p.Count)
+						fmt.Println("myResult", myResult.Content)
+					}
+				}
+
+			}
+		}
+
 	}
 
 	return content, nil

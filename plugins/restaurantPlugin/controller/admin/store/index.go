@@ -211,7 +211,7 @@ func (rest Index) Show(c *gin.Context) {
 
 	tempData := temp{}
 	tempData.Store = storeData
-	tempData.PrevPath = util.GetFileUrl(tempData.StoreThumbnail)
+	tempData.PrevPath = util.GetFileUrl(tempData.StoreThumbnail,"clipper")
 
 	var returnData struct {
 		Store temp               `json:"store"`
@@ -432,7 +432,6 @@ func (rest Index) Edit(c *gin.Context) {
 
 	var storeHours []model.StoreHours
 	json.Unmarshal([]byte(hours), &storeHours)
-	fmt.Println("storeHours", storeHours)
 
 	if len(storeHours) == 0 && len(storeHours) > 2 {
 		rest.rc.Error(c, "营业时间长度非法！", nil)

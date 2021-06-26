@@ -27,10 +27,10 @@ func StartMigrate() {
 	new(mpIsvAuth).AutoMigrate()
 	new(tenant).AutoMigrate()
 	new(AdminMenu).AutoMigrate()
-	// new(Region).AutoMigrate()
-	// new(shopCategory).AutoMigrate()
-	// new(takeCategory).AutoMigrate()
-	// new(model.MiniCategory).AutoMigrate()
+	/*new(Region).AutoMigrate()
+	new(shopCategory).AutoMigrate()
+	new(takeCategory).AutoMigrate()
+	new(model.MiniCategory).AutoMigrate()*/
 	new(model.Qrcode).AutoMigrate()
 
 	new(role).AutoMigrate()

@@ -57,7 +57,7 @@ func (model DeskCategory) Index(c *gin.Context, query []string, queryArgs []inte
 	var total int64 = 0
 	cmf.NewDb().Model(deskCategory).Select("id").Where(queryStr, queryArgs...).Count(&total)
 
-	result := cmf.NewDb().Where(queryStr, queryArgs...).Limit(pageSize).Offset((current - 1) * pageSize).Find(&deskCategory)
+	result := cmf.NewDb().Where(queryStr, queryArgs...).Limit(pageSize).Offset((current - 1) * pageSize).Order("id desc").Find(&deskCategory)
 	if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return cmfModel.Paginate{}, result.Error
 	}
@@ -81,7 +81,7 @@ func (model DeskCategory) Show(query []string, queryArgs []interface{}) (DeskCat
 
 	category := DeskCategory{}
 	queryStr := strings.Join(query, " AND ")
-	result := cmf.NewDb().Debug().Where(queryStr, queryArgs...).First(&category)
+	result := cmf.NewDb().Where(queryStr, queryArgs...).First(&category)
 	if result.Error != nil {
 		return category, result.Error
 	}

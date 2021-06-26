@@ -64,7 +64,7 @@ func ExistPath(path string) (bool, error) {
 }
 
 // 获取真实url
-func GetFileUrl(path string,b ...bool) string {
+func GetFileUrl(path string, style ...string) string {
 
 	if path == "" {
 		return ""
@@ -74,15 +74,16 @@ func GetFileUrl(path string,b ...bool) string {
 
 	prevPath := domain + "/uploads/" + path
 
-	ishttps := strings.Contains(domain,"https://")
+	isHttps := strings.Contains(domain, "https://")
 	protocol := "http://"
-	if ishttps {
+	if isHttps {
 		protocol = "https://"
 	}
 
-	if len(b) == 0 {
+	if len(style) > 0 {
 		if cmf.QiuNiuConf().Enabled {
-			style := "clipper"
+
+			qiStyle := style[0]
 
 			if cmf.QiuNiuConf().IsHttps {
 				protocol = "https://"
@@ -92,7 +93,7 @@ func GetFileUrl(path string,b ...bool) string {
 
 			prevPath = domain + path
 
-			prevPath += "!" + style
+			prevPath += "!" + qiStyle
 
 		}
 	}
@@ -371,7 +372,7 @@ func ZipCreate(inFiles []string, targetName string) (result []string, err error)
 	fw, err := os.Create(targetName)
 	defer fw.Close()
 	if err != nil {
-		return result,err
+		return result, err
 	}
 
 	// 通过 fw 来创建 zip.Write
@@ -393,14 +394,14 @@ func ZipCreate(inFiles []string, targetName string) (result []string, err error)
 		// 通过文件信息，创建 zip 的文件信息
 		fh, err := zip.FileInfoHeader(fi)
 		if err != nil {
-			return result,err
+			return result, err
 		}
 
 		// 替换文件信息中的文件名
 		fileName := strings.Split(fPath, "/")
 		if len(fileName) < 1 {
 			err = errors.New("文件路径不合法")
-			return result,err
+			return result, err
 		}
 		fh.Name = fileName[len(fileName)-1]
 
@@ -412,7 +413,7 @@ func ZipCreate(inFiles []string, targetName string) (result []string, err error)
 		// 写入文件信息，并返回一个 Write 结构
 		w, err := zw.CreateHeader(fh)
 		if err != nil {
-			return result,err
+			return result, err
 		}
 
 		// 检测，如果不是标准文件就只写入头信息，不写入文件数据到 w
@@ -424,14 +425,14 @@ func ZipCreate(inFiles []string, targetName string) (result []string, err error)
 		fr, err = os.Open(fPath)
 
 		if err != nil {
-			return result,err
+			return result, err
 		}
 
 		// 将打开的文件 Copy 到 w
 		_, err = io.Copy(w, fr)
 		if err != nil {
 			result = append(result, err.Error())
-			return result,err
+			return result, err
 		}
 
 	}

@@ -37,7 +37,7 @@ type FoodCategoryStoreHouse struct {
 	UpdateTime string            `gorm:"-" json:"update_time"`
 	DeleteAt   int64             `gorm:"type:bigint(20);comment:'删除时间';default:0" json:"delete_at"`
 	Status     int               `gorm:"type:tinyint(3);comment:菜品分类状态（0 => 下架,1 => 上架）;default:1;not null" json:"status"`
-	ListOrder  float64           `gorm:"type:float(10);comment:排序;default:10000;not null" json:"list_order"`
+	ListOrder  float64           `gorm:"type:float;comment:排序;default:10000;not null" json:"list_order"`
 	paginate   cmfModel.Paginate `gorm:"-"`
 	Db         *gorm.DB          `gorm:"-" json:"-"`
 }
@@ -49,9 +49,9 @@ type FoodCategoryStoreHouse struct {
  * @Param
  * @return
  **/
-func (model FoodCategory) AutoMigrate() {
+func (model *FoodCategory) AutoMigrate() {
 	cmf.NewDb().AutoMigrate(&model)
-	cmf.NewDb().AutoMigrate(&FoodCategoryStoreHouse{})
+	// cmf.NewDb().AutoMigrate(&FoodCategoryStoreHouse{})
 }
 
 /**

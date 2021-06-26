@@ -18,6 +18,7 @@ import (
 	"github.com/gincmf/wechatEasySdk/open"
 	"gorm.io/gorm"
 	"strconv"
+	"time"
 )
 
 type MpIsvAuth struct {
@@ -62,7 +63,7 @@ func (rest *MpIsvAuth) Show(c *gin.Context) {
 
 	accessToken, exist := c.Get("authorizerAccessToken")
 	if !exist {
-		rest.rc.Error(c, "授权失败！", nil)
+		rest.rc.Error(c, "authorizerAccessToken 授权失败！", nil)
 		return
 	}
 
@@ -108,7 +109,7 @@ func (rest MpIsvAuth) GetAuth(mid interface{}, tenantId int, accessToken string)
 		return result, errors.New("小程序不存在或被删除")
 	}
 
-	mpTheme.WechatExpQrCodeUrl = util.GetFileUrl(mpTheme.WechatExpQrCodeUrl, true)
+	mpTheme.WechatExpQrCodeUrl = util.GetFileUrl(mpTheme.WechatExpQrCodeUrl)
 
 	businessJson := saasModel.Options("business_info", mid.(int))
 	bi := resModel.BusinessInfo{}
@@ -124,11 +125,13 @@ func (rest MpIsvAuth) GetAuth(mid interface{}, tenantId int, accessToken string)
 		return result, err
 	}
 
-	if version != nil && version.Status == "audit" {
+	if version != nil && version.Status == "wait" && version.IsAudit == 1 {
 		releaseResponse := new(open.Wxa).Release(accessToken)
-		if releaseResponse.Errcode == 0 {
+		if releaseResponse.Errcode == 0 || releaseResponse.Errcode == 85052 {
+			version.IsAudit = 0
 			version.Status = "online"
-			cmf.NewDb().Updates(&version)
+			version.UpdateAt = time.Now().Unix()
+			cmf.NewDb().Save(&version)
 		}
 	}
 

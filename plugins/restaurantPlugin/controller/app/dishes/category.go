@@ -15,6 +15,13 @@ type Category struct {
 	rc controller.Rest
 }
 
+/**
+ * @Author return <1140444693@qq.com>
+ * @Description 
+ * @Date 2021/5/15 21:12:45
+ * @Param
+ * @return
+ **/
 func (rest *Category) List(c *gin.Context) {
 
 	mid, _ := c.Get("mid")

@@ -132,6 +132,7 @@ func (rest *TakeOut) Edit(c *gin.Context) {
 		Status:             status,
 		FirstClass:         form.FirstClass,
 		SecondClass:        form.SecondClass,
+		MinPrice:           form.MinPrice,
 		ImmediateDelivery:  immediateDelivery,
 		EnabledSellClear:   enabledSellClear,
 		SellClear:          form.SellClear,
@@ -144,6 +145,8 @@ func (rest *TakeOut) Edit(c *gin.Context) {
 		StartFee:           form.StartFee,
 		StepKm:             form.StepKm,
 		StepFee:            form.StepFee,
+		DeliveryPercent:    form.DeliveryPercent,
+		DeliveryTimes:      form.DeliveryTimes,
 	}
 	val, err := json.Marshal(ei)
 	if err != nil {

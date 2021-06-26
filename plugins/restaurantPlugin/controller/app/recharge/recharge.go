@@ -18,6 +18,7 @@ import (
 	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
 	cmfUtil "github.com/gincmf/cmf/util"
+	"github.com/gincmf/wechatEasySdk"
 	"github.com/gincmf/wechatEasySdk/pay"
 	wechatUtil "github.com/gincmf/wechatEasySdk/util"
 	"gorm.io/gorm"
@@ -60,6 +61,13 @@ func (rest *Recharge) Show(c *gin.Context) {
 	json.Unmarshal([]byte(recJson), &recharge)
 
 	user := appModel.CurrentMpUser(c)
+
+	tx := cmf.NewDb().Where("id = ?",user.Id).First(&user)
+	if tx.Error != nil {
+		rest.rc.Error(c,tx.Error.Error(),nil)
+		return
+	}
+
 	balance := user.Balance
 
 	var result struct {
@@ -238,7 +246,10 @@ func (rest *Recharge) Pay(c *gin.Context) {
 			return
 		}
 
+		options := wechatEasySdk.OpenOptions()
 		bizContent := make(map[string]interface{}, 0)
+		bizContent["sp_appid"] = options.SpAppid
+		bizContent["sp_mchid"] = options.SpMchid
 		bizContent["out_trade_no"] = orderId
 		bizContent["sub_appid"] = appId
 		bizContent["sub_mchid"] = subMchid

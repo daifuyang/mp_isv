@@ -116,7 +116,7 @@ func (rest *Qrcode) Show(c *gin.Context) {
 		return
 	}
 
-	qp.FilePathPrev = util.GetFileUrl(qp.FilePath, true)
+	qp.FilePathPrev = util.GetFileUrl(qp.FilePath)
 
 	rest.rc.Success(c, "获取成功！", qp)
 
@@ -232,13 +232,8 @@ func (rest *Qrcode) Store(c *gin.Context) {
 	deskId := c.PostForm("desk_id")
 	desk := model.Desk{}
 
-	if deskId == "" {
-		rest.rc.Error(c, "桌号id不能为空！", nil)
-		return
-	}
-
 	deskName := "桌号"
-	if deskId != "0" {
+	if desk.Id > 0 {
 		tx = cmf.NewDb().Debug().Where("mid = ? AND id = ?", mid, deskId).First(&desk)
 		if tx.Error != nil {
 			if errors.Is(tx.Error, gorm.ErrRecordNotFound) {
@@ -284,7 +279,7 @@ func (rest *Qrcode) Store(c *gin.Context) {
 	qrcode.Mid = midInt
 	qrcode.TenantId = tenantInt
 	qrcode.UpdateAt = time.Now().Unix()
-	qrcode.Page = "/pages/store/index"
+	qrcode.Page = "pages/store/index"
 	qrcode.Query = query
 	qrcode.AliAppId = aliAppId
 	qrcode.Status = 1
@@ -292,7 +287,7 @@ func (rest *Qrcode) Store(c *gin.Context) {
 	qp := model.QrcodePost{}
 
 	tx = cmf.NewDb().Where("qrcode_code = ?", qrcode.Code).First(&qp)
-	if tx.Error != nil {
+	if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, tx.Error.Error(), nil)
 		return
 	}

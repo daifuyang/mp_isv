@@ -80,6 +80,7 @@ func ValidationAlipay(c *gin.Context) {
 	c.Set("alipay_json", string(mpJson))
 	c.Set("alipay_user_id", mpIsv.UserId)
 	c.Set("app_id", mpIsv.AuthAppId)
+	c.Set("mp_type", mpIsv.Type)
 
 	c.Next()
 

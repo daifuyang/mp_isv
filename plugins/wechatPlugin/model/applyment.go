@@ -7,6 +7,7 @@ package model
 
 import (
 	"encoding/json"
+	"gincmf/app/util"
 	saasModel "gincmf/plugins/saasPlugin/model"
 	"github.com/gin-gonic/gin"
 	cmf "github.com/gincmf/cmf/bootstrap"
@@ -26,18 +27,18 @@ type Applyment struct {
 	Id                int                 `json:"id"`
 	BusinessCode      string              `gorm:"type:varchar(128);comment:服务商自定义的唯一编号;not null" json:"business_code"`
 	ApplymentId       int                 `gorm:"type:bigint(20);comment:微信支付分配的申请单号;not null" json:"applyment_id"`
-	MediaList         string              `gorm:"type:json;comment:图片资源存储json;default:{}" json:"media_list"`
-	Form              string              `gorm:"type:json;comment:用户提交得资料;default:{};not null" json:"form"`
-	OriginForm        string              `gorm:"type:json;comment:用户提交得资料;default:{};not null" json:"origin_form"`
+	MediaList         string              `gorm:"type:json;comment:图片资源存储json" json:"media_list"`
+	Form              string              `gorm:"type:json;comment:用户提交得资料;not null" json:"form"`
+	OriginForm        string              `gorm:"type:json;comment:用户提交得资料;not null" json:"origin_form"`
 	CreateAt          int64               `gorm:"type:bigint(20)" json:"create_at"`
 	UpdateAt          int64               `gorm:"type:bigint(20)" json:"update_at"`
 	CreateTime        string              `gorm:"-" json:"create_time"`
 	UpdateTime        string              `gorm:"-" json:"update_time"`
 	SubMchid          string              `gorm:"type:varchar(32);comment:特约商户号，当申请单状态为APPLYMENT_STATE_FINISHED时才返回;" json:"sub_mchid"`
-	SignUrl           string              `gorm:"type:varchar(32);comment:微信签约二维码;" json:"sign_url"`
+	SignUrl           string              `gorm:"type:varchar(255);comment:微信签约二维码;" json:"sign_url"`
 	ApplymentState    string              `gorm:"type:varchar(32);comment:申请单状态;default:APPLYMENT_STATE_AUDITING" json:"applyment_state"`
 	ApplymentStateMsg string              `gorm:"type:text(1024);comment:申请单状态描述" json:"applyment_state_msg"`
-	AuditDetail       string              `gorm:"type:json;comment:驳回原因;default:{}" json:"audit_detail"`
+	AuditDetail       string              `gorm:"type:json;comment:驳回原因" json:"audit_detail"`
 	PayStatus         int                 `gorm:"-" json:"pay_status"` // 是否为微信支付收钱账号
 	AuditDetailObj    []map[string]string `gorm:"-" json:"audit_detail_obj"`
 	MerchantName      string              `gorm:"-" json:"merchant_name"`
@@ -237,7 +238,7 @@ func (model *Applyment) Index(c *gin.Context, query []string, queryArgs []interf
 		json.Unmarshal([]byte(v.AuditDetail), &applyment[k].AuditDetailObj)
 
 		applyment[k].PayStatus = 0
-		if theme.SubMchid !="" && theme.SubMchid == v.SubMchid {
+		if theme.SubMchid != "" && theme.SubMchid == v.SubMchid {
 			applyment[k].PayStatus = 1
 		}
 
@@ -270,6 +271,14 @@ func (model *Applyment) Show(query []string, queryArgs []interface{}) (applyment
 	json.Unmarshal([]byte(applyment.MediaList), &mlObj)
 
 	json.Unmarshal([]byte(applyment.AuditDetail), &applyment.AuditDetailObj)
+
+	for k, v := range mlObj.MiniProgram {
+		mlObj.MiniProgram[k].PrevPath = util.GetFileUrl(v.FilePath,"clipper")
+	}
+
+	for k, v := range mlObj.BusinessAddition {
+		mlObj.BusinessAddition[k].PrevPath = util.GetFileUrl(v.FilePath,"clipper")
+	}
 
 	applyment.OriginFormObj = form
 	applyment.MediaListObj = mlObj

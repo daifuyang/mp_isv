@@ -21,28 +21,49 @@ import (
 // 获取/刷新接口调用令牌
 func AuthorizerAccessToken(c *gin.Context) {
 
-	mid, _ := c.Get("mid")
+	mpType, _ := c.Get("mp_type")
 
-	tenantId, _ := c.Get("tenant_id")
+	wechat, wechatExist := c.Get("wechat")
 
+	if mpType == "wechat" || wechatExist && wechat.(bool) {
+
+		mid, _ := c.Get("mid")
+
+		tenantId, _ := c.Get("tenant_id")
+
+		accessToken, exist := c.Get("accessToken")
+
+		if accessToken != "" && exist {
+			authorizerAccessToken, err := GetAuthorizerAccessToken(mid, tenantId, accessToken.(string))
+			if err != nil {
+				new(controller.Rest).Error(c, err.Error(), nil)
+				c.Abort()
+				return
+			}
+
+			c.Set("authorizerAccessToken", authorizerAccessToken)
+		}
+	}
+
+	c.Next()
+
+}
+
+func GetAuthorizerAccessToken(mid interface{}, tenantId interface{}, accessToken string) (authorizerAccessToken string, err error) {
 	query := []string{"mp_id = ?", "tenant_id = ?", "type = ?"}
 	queryArgs := []interface{}{mid, tenantId, "wechat"}
 
 	isvAuth := model.MpIsvAuth{}
 	data, err := isvAuth.Show(query, queryArgs)
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-		new(controller.Rest).Error(c, err.Error(), nil)
-		c.Abort()
-		return
+		return authorizerAccessToken, err
 	}
 
-	if data.Id != 0 {
+	if data != nil && data.Id > 0 {
 
 		authorizerAccessToken := data.AppAuthToken
 
-		accessToken, exist := c.Get("accessToken")
-
-		if exist {
+		if accessToken != "" {
 
 			// 判断当前AuthorizerAccessToken是否过期
 			expireIn, _ := strconv.Atoi(data.ExpiresIn)
@@ -56,7 +77,7 @@ func AuthorizerAccessToken(c *gin.Context) {
 					"authorizer_refresh_token": data.AppRefreshToken,
 				}
 
-				result := new(open.Component).AuthorizerToken(accessToken.(string), bizContent)
+				result := new(open.Component).AuthorizerToken(accessToken, bizContent)
 
 				if result.Errcode == 0 {
 
@@ -68,27 +89,22 @@ func AuthorizerAccessToken(c *gin.Context) {
 					tx := cmf.Db().Where("id = ?", data.Id).Updates(&data)
 
 					if tx.Error != nil {
-						new(controller.Rest).Error(c, tx.Error.Error(), nil)
-						c.Abort()
-						return
+						return authorizerAccessToken, tx.Error
 					}
 
 					authorizerAccessToken = data.AppAuthToken
 
 				} else {
-					new(controller.Rest).Error(c, result.Errmsg, nil)
-					c.Abort()
-					return
+					return authorizerAccessToken, errors.New(result.Errmsg)
 				}
 
 			}
 
-			c.Set("authorizerAccessToken", authorizerAccessToken)
+			return authorizerAccessToken, nil
 
 		}
 
 	}
 
-	c.Next()
-
+	return authorizerAccessToken, errors.New("生成authorizerAccessToken失败！")
 }

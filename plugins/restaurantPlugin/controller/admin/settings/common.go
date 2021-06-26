@@ -10,6 +10,7 @@ import (
 	"errors"
 	"gincmf/app/util"
 	"gincmf/plugins/restaurantPlugin/model"
+	saasModel "gincmf/plugins/saasPlugin/model"
 	"github.com/gin-gonic/gin"
 	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
@@ -49,10 +50,40 @@ func (rest *Common) Show(c *gin.Context) {
 	}
 
 	res.BusinessInfo = bi
-	res.BrandLogoPrev = util.GetFileUrl(bi.BrandLogo)
-	res.BusinessPhotoPrev = util.GetFileUrl(bi.BusinessPhoto)
-	res.OutDoorPicPrev = util.GetFileUrl(bi.OutDoorPic)
-	res.FoodLicensePicPrev = util.GetFileUrl(bi.FoodLicensePic)
+	res.BrandLogoPrev = util.GetFileUrl(bi.BrandLogo,"clipper")
+	res.BusinessPhotoPrev = util.GetFileUrl(bi.BusinessPhoto,"clipper")
+	res.OutDoorPicPrev = util.GetFileUrl(bi.OutDoorPic,"clipper")
+	res.FoodLicensePicPrev = util.GetFileUrl(bi.FoodLicensePic,"clipper")
+
+	rest.rc.Success(c, "获取成功！", res)
+
+}
+
+func (rest *Common) MobileShow(c *gin.Context) {
+
+	mid, _ := c.Get("mid")
+	op := model.Option{}
+	result := cmf.NewDb().Where("option_name = ? AND mid = ?", "business_info", mid).First(&op)
+	if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		rest.rc.Error(c, result.Error.Error(), nil)
+		return
+	}
+	bi := model.BusinessInfo{}
+	json.Unmarshal([]byte(op.OptionValue), &bi)
+
+	var res struct {
+		model.BusinessInfo
+		BrandLogoPrev      string `json:"brand_logo_prev"`
+		BusinessPhotoPrev  string `json:"business_photo_prev"`
+		OutDoorPicPrev     string `json:"out_door_pic_prev"`
+		FoodLicensePicPrev string `json:"food_license_pic_prev"`
+	}
+
+	res.BusinessInfo = bi
+	res.BrandLogoPrev = util.GetFileUrl(bi.BrandLogo,"clipper")
+	res.BusinessPhotoPrev = util.GetFileUrl(bi.BusinessPhoto,"clipper")
+	res.OutDoorPicPrev = util.GetFileUrl(bi.OutDoorPic,"clipper")
+	res.FoodLicensePicPrev = util.GetFileUrl(bi.FoodLicensePic,"clipper")
 
 	rest.rc.Success(c, "获取成功！", res.Mobile)
 
@@ -151,6 +182,25 @@ func (rest *Common) Edit(c *gin.Context) {
 
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
+	// 存入主题logo
+	theme := saasModel.MpTheme{}
+	tx := cmf.NewDb().Where("mid = ?", mid).First(&theme)
+	if tx.Error != nil {
+		if errors.Is(tx.Error, gorm.ErrRecordNotFound) {
+			rest.rc.Error(c, "主题不存在！", nil)
+			return
+		}
+		rest.rc.Error(c, tx.Error.Error(), nil)
+		return
+	}
+
+	theme.AppLogo = brandLogo
+	tx = cmf.NewDb().Where("mid = ?", mid).Updates(&theme)
+	if tx.Error != nil {
+		rest.rc.Error(c, tx.Error.Error(), nil)
 		return
 	}
 

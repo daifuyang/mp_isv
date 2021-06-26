@@ -342,8 +342,6 @@ func (rest *User) BindMpMobile(c *gin.Context) {
 
 		aesGet := new(base.Oauth).AesGet(bizContent)
 
-		fmt.Println("aesGet", aesGet)
-
 		key := theme.EncryptKey
 
 		if aesGet.Code == "10000" {
@@ -352,8 +350,6 @@ func (rest *User) BindMpMobile(c *gin.Context) {
 			rest.rc.Error(c, "绑定失败！"+aesGet.SubMsg, aesGet)
 			return
 		}
-
-		fmt.Println("key", key)
 
 		enResult := new(base.Oauth).AesDeCrypt(encryptedData, key)
 		if enResult.Code == "10000" {

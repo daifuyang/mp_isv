@@ -196,13 +196,13 @@ func (rest *Qrcode) Generate(c *gin.Context) {
 		}
 
 		key := filename
-		if cmf.QiuNiuConf().Enabled == false {
+		/*if cmf.QiuNiuConf().Enabled {
 			// 同步到七牛云
 			key, err = new(cmf.QiNiu).UploadFile(filename, absPath)
 			if err != nil {
 				fmt.Println("err", err.Error())
 			}
-		}
+		}*/
 
 		path = append(path, absPath)
 
@@ -245,7 +245,7 @@ func (rest *Qrcode) Generate(c *gin.Context) {
 	errCount := strconv.Itoa(len(result))
 
 	rest.rc.Success(c, "发起成功！错误数："+errCount, gin.H{
-		"url": util.GetFileUrl("qrcode/out.zip", false),
+		"url": util.GetFileUrl("qrcode/out.zip"),
 		"err": result,
 	})
 

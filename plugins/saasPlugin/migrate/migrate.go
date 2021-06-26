@@ -39,6 +39,10 @@ func AutoMigrate() {
 	cmf.NewDb().AutoMigrate(&model.AdminNotice{})
 	cmf.NewDb().AutoMigrate(&appModel.PayLog{})
 
+	new(appModel.ScoreLog).AutoMigrate()
+	new(appModel.ExpLog).AutoMigrate()
+	new(appModel.RechargeLog).AutoMigrate()
+
 	new(wechatMigrate.Migrate).AutoMigrate()
 
 	appModel.AutoAdminMenu()

@@ -446,7 +446,7 @@ func (rest *Index) Refund(c *gin.Context) {
 	}
 
 	var query = []string{"fo.mid = ?", " fo.id = ? "}
-	var queryArgs = []interface{}{mid, rewrite.Id, "TRADE_SUCCESS"}
+	var queryArgs = []interface{}{mid, rewrite.Id}
 
 	data, err := new(resModel.FoodOrder).ShowByStore(query, queryArgs)
 

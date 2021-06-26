@@ -56,7 +56,7 @@ func (model *QrcodePost) Index(c *gin.Context, query []string, queryArgs []inter
 	tx := cmf.NewDb().Where(queryStr, queryArgs...).Limit(pageSize).Offset((current - 1) * pageSize).Order("id desc").Find(&qp)
 
 	for k, v := range qp {
-		qp[k].FilePathPrev = util.GetFileUrl(v.FilePath, true)
+		qp[k].FilePathPrev = util.GetFileUrl(v.FilePath, "clipper")
 		qp[k].CreateTime = time.Unix(v.CreateAt, 0).Format(data.TimeLayout)
 		qp[k].UpdateTime = time.Unix(v.UpdateAt, 0).Format(data.TimeLayout)
 	}

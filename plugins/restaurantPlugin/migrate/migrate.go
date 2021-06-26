@@ -39,4 +39,8 @@ func AutoMigrate() {
 
 	new(QrcodePost).AutoMigrate()
 
+	new(model.ImmediateDelivery).AutoMigrate()
+
+	new(model.ImmediateDeliveryOrder).AutoMigrate()
+
 }

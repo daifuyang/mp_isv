@@ -160,15 +160,9 @@ func RegisterTenantRouter(handlers ...gin.HandlerFunc) {
 			return
 		}
 
-		fmt.Println("username",username)
-		fmt.Println("password",password)
-		fmt.Println("captcha",captcha)
-
 		nameArr := strings.Split(username, "@")
 		mobile := nameArr[0]
 		mobileInt,_ := strconv.Atoi(mobile)
-
-		fmt.Println("password",password)
 
 		if typ == "account" && password == "" {
 			rc.Error(c, "密码不能为空！", nil)

@@ -104,6 +104,7 @@ func (rest MpIsvAuth) GetAuth(mid interface{}, tenantId int) (AlipayAuthResult, 
 
 		bizContent := make(map[string]string, 0)
 		bizContent["merchant_app_id"] = data.AuthAppId
+
 		aesResult := new(base.Oauth).AesSet(bizContent)
 
 		if aesResult.Code == "10000" {
@@ -125,6 +126,9 @@ func (rest MpIsvAuth) GetAuth(mid interface{}, tenantId int) (AlipayAuthResult, 
 
 	appVersion := ""
 	status := ""
+	isAudit := -1
+	reason := ""
+
 	if vResult.Response.Code == "10000" {
 
 		if len(vResult.Response.AppVersions) > 0 {
@@ -137,16 +141,30 @@ func (rest MpIsvAuth) GetAuth(mid interface{}, tenantId int) (AlipayAuthResult, 
 				queryResult := new(mini.Audit).DetailQuery(bizContent)
 
 				if queryResult.Response.Code == "10000" {
+
 					if queryResult.Response.Status == "WAIT_RELEASE" {
 						bizContent = make(map[string]interface{}, 0)
 						bizContent["app_version"] = appVersion
 						onlineResult := new(mini.Version).Online(bizContent)
 						if onlineResult.Response.Code == "10000" {
 							status = "online"
+							isAudit = 0
 						}
 					}
 					if queryResult.Response.Status == "RELEASE" {
 						status = "online"
+						isAudit = 0
+					}
+
+					if queryResult.Response.Status == "AUDIT_REJECT" {
+						status = "reject"
+						isAudit = 0
+						reason = queryResult.Response.RejectReason
+						fmt.Println("reason",reason)
+					}
+					if queryResult.Response.Status == "INIT" {
+						status = "init"
+						isAudit = 0
 					}
 				}
 
@@ -171,25 +189,30 @@ func (rest MpIsvAuth) GetAuth(mid interface{}, tenantId int) (AlipayAuthResult, 
 
 			version := saasModel.MpThemeVersion{}
 
-			tx := cmf.NewDb().Where("version = ? AND  type = ?", appVersion, "alipay").First(&version)
+			tx := cmf.NewDb().Where("version = ? AND  type = ?", appVersion, "alipay").Order("id desc").First(&version)
 
 			if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 				return result, err
 			}
 
-			vData := saasModel.MpThemeVersion{
-				Mid:        mid.(int),
-				TemplateId: app.TemplateAppId,
-				Version:    appVersion,
-				Type:       "alipay",
-				Status:     status,
+			if isAudit == -1 {
+				isAudit = version.IsAudit
+				status = version.Status
 			}
 
-			if status == "online" {
-				vData.IsAudit = 0
+			vData := saasModel.MpThemeVersion{
+				Mid:             mid.(int),
+				TemplateId:      app.TemplateAppId,
+				Version:         appVersion,
+				TemplateVersion: version.TemplateVersion,
+				RejectReason:    version.RejectReason,
+				Type:            "alipay",
+				IsAudit:         isAudit,
 			}
 
 			if tx.RowsAffected == 0 {
+				vData.Status = status
+				vData.RejectReason = reason
 				vData.TemplateVersion = app.Version
 				vData.CreateAt = time.Now().Unix()
 				tx := cmf.NewDb().Create(&vData)
@@ -197,10 +220,13 @@ func (rest MpIsvAuth) GetAuth(mid interface{}, tenantId int) (AlipayAuthResult, 
 					return result, err
 				}
 			} else {
-
-				if vData.Status != status {
+				if version.Status != status {
+					vData.Id = version.Id
+					vData.Status = status
+					vData.RejectReason = reason
+					vData.CreateAt = version.CreateAt
 					vData.UpdateAt = time.Now().Unix()
-					tx := cmf.NewDb().Debug().Where("id  = ?", version.Id).Updates(&vData)
+					tx := cmf.NewDb().Where("id  = ?", version.Id).Save(&vData)
 					if tx.Error != nil {
 						return result, err
 					}

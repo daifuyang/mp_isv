@@ -20,6 +20,7 @@ import (
 	"github.com/gincmf/cmf/controller"
 	"github.com/gincmf/cmf/data"
 	cmfUtil "github.com/gincmf/cmf/util"
+	"github.com/gincmf/wechatEasySdk"
 	"github.com/gincmf/wechatEasySdk/pay"
 	wechatUtil "github.com/gincmf/wechatEasySdk/util"
 	"gorm.io/gorm"
@@ -449,7 +450,10 @@ func (rest *Card) Send(c *gin.Context) {
 				return
 			}
 
+			options := wechatEasySdk.OpenOptions()
 			bizContent := make(map[string]interface{}, 0)
+			bizContent["sp_appid"] = options.SpAppid
+			bizContent["sp_mchid"] = options.SpMchid
 			bizContent["out_trade_no"] = orderId
 			bizContent["sub_appid"] = appId
 			bizContent["sub_mchid"] = subMchid

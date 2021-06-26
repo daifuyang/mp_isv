@@ -489,9 +489,9 @@
         "list_order": 10000
       },
       {
-        "unique_name": "app/settings/logistics",
+        "unique_name": "app/settings/delivery",
         "name": "物流设置",
-        "path": "/app/:mid/settings/logistics",
+        "path": "/app/:mid/settings/delivery",
         "icon": "",
         "hide_in_menu": 0,
         "list_order": 10000

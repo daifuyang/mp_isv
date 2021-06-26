@@ -67,6 +67,7 @@ type FoodStoreHouse struct {
 	Volume           int                      `gorm:"type:int(11);comment:销量" json:"volume"`                           // 销量
 	StartSale        int                      `gorm:"type:tinyint(3);comment:起售;default:1;not null" json:"start_sale"` // 最少起售
 	Thumbnail        string                   `gorm:"type:varchar(255);comment:菜品缩略图;not null" json:"thumbnail"`
+	AlipayMaterialId string                   `gorm:"type:varchar(256);comment:阿里素材标识;not null" json:"alipay_material_id"`
 	PrevPath         string                   `gorm:"-" json:"prev_path"`
 	Scene            int                      `gorm:"type:tinyint(3);comment:支持场景（0 =>全部；1=>堂食；2=>外卖）;default:0;not null" json:"scene"`
 	IsRecommend      int                      `gorm:"type:tinyint(3);comment:是否推荐菜;not null;default:0" json:"is_recommend"`
@@ -186,13 +187,14 @@ func (model Food) Index(c *gin.Context, query []string, queryArgs []interface{})
 		Joins("left join "+prefix+"food_category_post cp ON cp.food_id = f.id").
 		Group("f.id").
 		Where(queryStr, queryArgs...).Count(&total)
+
 	result := cmf.NewDb().Table(prefix+"food f").Select("f.*").
 		Joins("left join "+prefix+"food_category_post cp ON cp.food_id = f.id").
 		Group("f.id").
-		Where(queryStr, queryArgs...).Limit(pageSize).Offset((current - 1) * pageSize).Scan(&food)
+		Where(queryStr, queryArgs...).Limit(pageSize).Offset((current - 1) * pageSize).Order("list_order desc, id desc").Scan(&food)
 
 	for k, v := range food {
-		food[k].PrevPath = util.GetFileUrl(v.Thumbnail)
+		food[k].PrevPath = util.GetFileUrl(v.Thumbnail,"thumbnail500x500")
 		food[k].CreateTime = time.Unix(v.CreateAt, 0).Format("2006-01-02 15:04:05")
 		food[k].UpdateTime = time.Unix(v.UpdateAt, 0).Format("2006-01-02 15:04:05")
 	}
@@ -283,7 +285,12 @@ func (model Food) ListByCategory(query []string, queryArgs []interface{}) ([]Foo
 	}
 
 	for k, v := range foodCate {
-		foodCate[k].PrevPath = util.GetFileUrl(v.Thumbnail)
+
+		if v.Price == v.OriginalPrice {
+			foodCate[k].OriginalPrice = 0
+		}
+
+		foodCate[k].PrevPath = util.GetFileUrl(v.Thumbnail,"thumbnail500x500")
 		foodCate[k].CreateTime = time.Unix(v.CreateAt, 0).Format("2006-01-02 15:04:05")
 		foodCate[k].UpdateTime = time.Unix(v.UpdateAt, 0).Format("2006-01-02 15:04:05")
 	}
@@ -305,6 +312,10 @@ func (model Food) Detail(query []string, queryArgs []interface{}) (Food, error) 
 	if err != nil {
 		cmfLog.Error(err.Error())
 		return Food{}, err
+	}
+
+	if food.Price == food.OriginalPrice {
+		food.OriginalPrice = 0
 	}
 
 	if food.UseSku == 1 {
@@ -379,7 +390,7 @@ func (model Food) Detail(query []string, queryArgs []interface{}) (Food, error) 
 
 	}
 
-	food.PrevPath = util.GetFileUrl(food.Thumbnail)
+	food.PrevPath = util.GetFileUrl(food.Thumbnail,"thumbnail500x500")
 
 	// 启用口味
 	if food.UseTasty == 1 {
@@ -442,7 +453,7 @@ func (model Food) Show(query []string, queryArgs []interface{}) (Food, error) {
 	queryStr := strings.Join(query, " AND ")
 	food := Food{}
 	result := db.Where(queryStr, queryArgs...).First(&food)
-	food.PrevPath = util.GetFileUrl(food.Thumbnail)
+	food.PrevPath = util.GetFileUrl(food.Thumbnail,"thumbnail500x500")
 	if result.Error != nil {
 		return food, result.Error
 	}
@@ -474,13 +485,17 @@ func (model Food) Save() (Food, error) {
 	}
 
 	if food.Id == 0 {
-		result := model.Db.Debug().Create(&model)
+		result := model.Db.Create(&model)
 		if result.Error != nil {
 			return food, result.Error
 		}
 	} else {
 		model.DeleteAt = 0
-		return food, errors.New("该菜品已存在！")
+		model.CreateAt = 0
+		model.UpdateAt = 0
+		model.Id = food.Id
+		tx := model.Db.Save(&model)
+		return food, tx.Error
 	}
 
 	return model, nil
@@ -500,19 +515,23 @@ func (model Food) Update() (Food, error) {
 		model.Db = cmf.NewDb()
 	}
 
-	food := Food{}
+	food := Food{
+		FoodStoreHouse: FoodStoreHouse{
+			Db: model.Db,
+		},
+	}
 	query := []string{"mid = ?", "store_id = ?", "id = ?"}
 	queryArgs := []interface{}{model.Mid, model.StoreId, model.Id}
 
 	food, err := food.Show(query, queryArgs)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return food, errors.New("该菜品不不存在！")
+			return food, errors.New("该菜品不存在！")
 		}
 		return Food{}, err
 	}
 
-	result := model.Db.Debug().Where("id = ?", food.Id).Save(&model)
+	result := model.Db.Save(&model)
 	if result.Error != nil {
 		return food, result.Error
 	}
@@ -725,3 +744,5 @@ func (model *FoodMaterialPost) inFoodMaterialPost(foodId int, materialName strin
 
 	return false
 }
+
+

@@ -23,6 +23,8 @@ type Printer struct {
 	Name       string `gorm:"type:varchar(20);comment:设备名称;not null" json:"name"`
 	Type       string `gorm:"type:varchar(20);comment:打印机类型（cloud：云打印机）;not null" json:"type"`
 	Brand      string `gorm:"type:varchar(20);comment:设备品牌（feie：品牌）;not null" json:"brand"`
+	Pattern    int    `gorm:"type:tinyint(3);comment:打印模式（0：全部，1：一菜一单）;default:0;not null" json:"pattern"`
+	Count      int    `gorm:"type:int(11);comment:打印联数;default:1;not null" json:"count"`
 	Sn         string `gorm:"type:varchar(20);comment:设备SN号;not null" json:"sn"`
 	Key        string `gorm:"type:varchar(20);comment:设备Key;not null" json:"key"`
 	CreateAt   int64  `gorm:"type:bigint(20)" json:"create_at"`

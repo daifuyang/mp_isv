@@ -40,7 +40,7 @@ func (model *ContactButton) Show(mid int) (ContactButton,error) {
 
 	_ = json.Unmarshal([]byte(val), &cb)
 
-	cb.IconPrev = util.GetFileUrl(cb.Icon)
+	cb.IconPrev = util.GetFileUrl(cb.Icon,"clipper")
 
 	return cb, nil
 

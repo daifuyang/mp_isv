@@ -11,36 +11,37 @@ import (
 )
 
 type FoodOrder struct {
-	Id             int     `json:"id"`
-	Mid            int     `gorm:"type:bigint(20);comment:对应小程序id;not null" json:"mid"`
-	OrderId        string  `gorm:"type:varchar(40);comment:订单号;not null" json:"order_id"`
-	TradeNo        string  `gorm:"type:varchar(60);comment:支付宝订单号;not null" json:"trade_no"`
-	QueueNo        string  `gorm:"type:varchar(10);comment:取餐队列号;not null" json:"queue_no"`
-	PayType        string  `gorm:"type:varchar(10);comment:第三方支付类型;not null" json:"pay_type"`
-	StoreId        int     `gorm:"type:int(11);comment:所属门店id;not null" json:"store_id"`
-	OrderType      int     `gorm:"type:tinyint(3);comment:订单类型（1 => 门店扫码就餐; 2 => 门店堂食就餐; 3 => 门店打包外带; 4 => 外卖;not null" json:"order_type"`
-	AppointmentAt  int     `gorm:"type:bigint(20);comment:预约取餐时间" json:"appointment_at"`
-	OrderDetail    string  `gorm:"type:json;comment:订单详情;not null" json:"order_detail"`
-	BoxFee         float64 `gorm:"type:decimal(3,2);comment:餐盒费;default:0;not null" json:"box_fee"`
-	DeliveryFee    float64 `gorm:"type:decimal(3,2);comment:配送费;default:0;not null" json:"delivery_fee"`
-	CouponFee      float64 `gorm:"type:decimal(7,2);comment:优惠金额;default:0;not null" json:"coupon_fee"`
-	VoucherId      int     `gorm:"type:int(11);comment:优惠券id" json:"voucher_id"`
-	Remark         string  `gorm:"type:varchar(255);comment:备注" json:"remark"`
-	Fee            float64 `gorm:"type:decimal(7,2);comment:合计金额;default:0;not null" json:"fee"`
-	OriginalFee    float64 `gorm:"type:decimal(7,2);comment:原价金额;default:0;not null" json:"original_fee"`
-	DeskId         int     `gorm:"type:int(11);comment:桌号id" json:"desk_id"`
-	DeskName       string  `gorm:"type:varchar(40);comment:桌位名称详情" json:"desk_name"`
-	UserId         int     `gorm:"type:bigint(20);comment:下单人信息" json:"user_id"`
-	Name           string  `gorm:"type:varchar(20);comment:用户预留姓名" json:"name"`
-	Mobile         string  `gorm:"type:varchar(11);comment:用户预留手机号;not null" json:"mobile"`
-	Address        string  `gorm:"type:varchar(255);comment:用户预留收货地址" json:"address"`
-	AddressId      int     `gorm:"type:int(11);comment:选择地址id" json:"address_id"`
-	CreateAt       int64   `gorm:"type:bigint(20)" json:"create_at"`
-	FinishedAt     int64   `gorm:"type:int(11)" json:"finished_at"`
-	OrderStatus    string  `gorm:"type:varchar(20);comment:订单状态（WAIT_BUYER_PAY => 待支付，TRADE_SUCCESS => 待使用/已支付，TRADE_FINISHED=> 已完成，TRADE_REFUSED => 已拒绝，TRADE_CLOSED => 已关闭，TRADE_REFUND=>已退款）;default:WAIT_BUYER_PAY;not null" json:"order_status"`
-	DeliveryStatus string  `gorm:"type:varchar(20);comment:运输状态（TRADE_RECEIVED => 已接单，TRADE_DELIVERY => 运输中" json:"delivery_status"`
-	FormId         string  `gorm:"type:varchar(64);comment:支付宝推送formId;not null" json:"form_id"`
-	RefundFee      float64 `gorm:"type:decimal(7,2);comment:剩余可退金额;default:0;not null" json:"refund_fee"`
+	Id              int     `json:"id"`
+	Mid             int     `gorm:"type:bigint(20);comment:对应小程序id;not null" json:"mid"`
+	OrderId         string  `gorm:"type:varchar(40);comment:订单号;not null" json:"order_id"`
+	TradeNo         string  `gorm:"type:varchar(60);comment:支付宝订单号;not null" json:"trade_no"`
+	QueueNo         string  `gorm:"type:varchar(10);comment:取餐队列号;not null" json:"queue_no"`
+	PayType         string  `gorm:"type:varchar(10);comment:第三方支付类型;not null" json:"pay_type"`
+	StoreId         int     `gorm:"type:int(11);comment:所属门店id;not null" json:"store_id"`
+	OrderType       int     `gorm:"type:tinyint(3);comment:订单类型（1 => 门店扫码就餐; 2 => 门店堂食就餐; 3 => 门店打包外带; 4 => 外卖;not null" json:"order_type"`
+	AppointmentAt   int     `gorm:"type:bigint(20);comment:预约取餐时间" json:"appointment_at"`
+	AppointmentType int64   `gorm:"type:tinyint(3);comment:是否预约单;default:0" json:"appointment_type"`
+	OrderDetail     string  `gorm:"type:json;comment:订单详情;not null" json:"order_detail"`
+	BoxFee          float64 `gorm:"type:decimal(3,2);comment:餐盒费;default:0;not null" json:"box_fee"`
+	DeliveryFee     float64 `gorm:"type:decimal(3,2);comment:配送费;default:0;not null" json:"delivery_fee"`
+	CouponFee       float64 `gorm:"type:decimal(7,2);comment:优惠金额;default:0;not null" json:"coupon_fee"`
+	VoucherId       int     `gorm:"type:int(11);comment:优惠券id" json:"voucher_id"`
+	Remark          string  `gorm:"type:varchar(255);comment:备注" json:"remark"`
+	Fee             float64 `gorm:"type:decimal(7,2);comment:合计金额;default:0;not null" json:"fee"`
+	OriginalFee     float64 `gorm:"type:decimal(7,2);comment:原价金额;default:0;not null" json:"original_fee"`
+	DeskId          int     `gorm:"type:int(11);comment:桌号id" json:"desk_id"`
+	DeskName        string  `gorm:"type:varchar(40);comment:桌位名称详情" json:"desk_name"`
+	UserId          int     `gorm:"type:bigint(20);comment:下单人信息" json:"user_id"`
+	Name            string  `gorm:"type:varchar(20);comment:用户预留姓名" json:"name"`
+	Mobile          string  `gorm:"type:varchar(11);comment:用户预留手机号;not null" json:"mobile"`
+	Address         string  `gorm:"type:varchar(255);comment:用户预留收货地址" json:"address"`
+	AddressId       int     `gorm:"type:int(11);comment:选择地址id" json:"address_id"`
+	CreateAt        int64   `gorm:"type:bigint(20)" json:"create_at"`
+	FinishedAt      int64   `gorm:"type:int(11)" json:"finished_at"`
+	OrderStatus     string  `gorm:"type:varchar(20);comment:订单状态（WAIT_BUYER_PAY => 待支付，TRADE_SUCCESS => 待使用/已支付，TRADE_FINISHED=> 已完成，TRADE_REFUSED => 已拒绝，TRADE_CLOSED => 已关闭，TRADE_REFUND=>已退款）;default:WAIT_BUYER_PAY;not null" json:"order_status"`
+	DeliveryStatus  string  `gorm:"type:varchar(20);comment:运输状态（TRADE_RECEIVED => 已接单，TRADE_DELIVERY => 运输中" json:"delivery_status"`
+	FormId          string  `gorm:"type:varchar(64);comment:支付宝推送formId;not null" json:"form_id"`
+	RefundFee       float64 `gorm:"type:decimal(7,2);comment:剩余可退金额;default:0;not null" json:"refund_fee"`
 }
 
 // 定单明细表

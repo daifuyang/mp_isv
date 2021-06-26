@@ -48,6 +48,14 @@ func ApiListenRouter() {
 
 		wechatGroup.Post("/register_weapp", new(open.Wxa).FastRegisterWeApp, wechatMiddle.AccessToken)
 
+		// 绑定模板消息通知
+		wechatGroup.Get("/add_template", new(open.Wxa).AddTemplate, middleware.ValidationBearerToken, middleware.TenantDb, middleware.ValidationMerchant, wechatMiddle.AccessToken, wechatMiddle.AuthorizerAccessToken) // 授权回调
+
+		wechatGroup.Get("/template_list", new(open.Wxa).GetTemplates, middleware.ValidationMp) // 授权回调
+
+		// 开通及时配送权限
+		wechatGroup.Post("/delivery/:id", new(open.Wxa).OpenDelivery, middleware.ValidationBearerToken, middleware.TenantDb, middleware.ValidationMerchant, wechatMiddle.AccessToken, wechatMiddle.AuthorizerAccessToken) // 授权回调
+
 	}
 
 }

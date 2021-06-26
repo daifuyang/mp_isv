@@ -178,7 +178,7 @@ func (rest *Post) Show(c *gin.Context) {
 	}
 
 	result.PortalPost = post
-	result.ThumbPrevPath = util.GetFileUrl(result.Thumbnail)
+	result.ThumbPrevPath = util.GetFileUrl(result.Thumbnail,"clipper")
 	result.AudioPrevPath = util.GetFileUrl(result.Audio)
 	result.VideoPrevPath = util.GetFileUrl(result.Video)
 

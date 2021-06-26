@@ -389,14 +389,10 @@ func handleUpload(c *gin.Context, file *multipart.FileHeader, fileType string) (
 	fileTypeInt, _ := strconv.Atoi(fileType)
 	//保存到数据库
 
-	key := filePath
 	if cmf.QiuNiuConf().Enabled {
 		// 同步到七牛云
-		key, err = new(cmf.QiNiu).UploadFile(filePath, util.GetAbsPath(filePath))
+		new(cmf.QiNiu).UploadFile(filePath, util.GetAbsPath(filePath))
 	}
-
-	fmt.Println("key", key)
-	fmt.Println("err", err)
 
 	assets := model.Asset{
 		Mid: mid.(int),
@@ -423,7 +419,7 @@ func handleUpload(c *gin.Context, file *multipart.FileHeader, fileType string) (
 
 	tempMap["fileName"] = fileNameSuffix
 	tempMap["filePath"] = filePath
-	tempMap["prevPath"] = util.GetFileUrl(filePath)
+	tempMap["prevPath"] = util.GetFileUrl(filePath,"clipper")
 
 	return tempMap, nil
 }
@@ -534,7 +530,7 @@ func wechatUpload(c *gin.Context, file *multipart.FileHeader, fileType string) (
 	tempMap := make(map[string]string, 0)
 	tempMap["fileName"] = fileNameSuffix
 	tempMap["filePath"] = filePath
-	tempMap["prevPath"] = util.GetFileUrl(filePath, false)
+	tempMap["prevPath"] = util.GetFileUrl(filePath)
 
 	return tempMap, nil
 }

@@ -11,6 +11,7 @@ import (
 	"gincmf/plugins/restaurantPlugin/controller/admin/action"
 	"gincmf/plugins/restaurantPlugin/controller/admin/card"
 	"gincmf/plugins/restaurantPlugin/controller/admin/dashboard"
+	"gincmf/plugins/restaurantPlugin/controller/admin/delivery"
 	"gincmf/plugins/restaurantPlugin/controller/admin/desk"
 	"gincmf/plugins/restaurantPlugin/controller/admin/dishes"
 	"gincmf/plugins/restaurantPlugin/controller/admin/member"
@@ -46,11 +47,13 @@ func ApiListenRouter() {
 		// 菜单管理
 		adminGroup.Get("/dishes/store", new(store.Index).IndexWithFoodCount)
 		adminGroup.Rest("/dishes/food", new(dishes.Food))
+		adminGroup.Post("/dishes/food_import", new(dishes.Food).ImportMenus)
 		adminGroup.Post("/dishes/food_list_order", new(dishes.Food).ListOrder)
 		adminGroup.Post("/dishes/food_status/:id", new(dishes.Food).SetStatus)
 		adminGroup.Get("/dishes/food_list", new(dishes.Food).List)
 		adminGroup.Rest("/dishes/category", new(dishes.Category))
 		adminGroup.Get("/dishes/category_list", new(dishes.Category).List)
+		adminGroup.Post("/dishes/category_list_order", new(dishes.Category).ListOrder)
 
 		adminGroup.Get("/dishes/dish_type", new(dishes.Food).DishType)
 		adminGroup.Get("/dishes/flavor", new(dishes.Food).Flavor)
@@ -82,6 +85,12 @@ func ApiListenRouter() {
 
 		// 充值订单
 		adminGroup.Get("/order/recharge", new(order.Recharge).Get)
+
+		// 订单详情
+		adminGroup.Get("/order/recharge/:id", new(order.Recharge).Show)
+
+		// 订单退款
+		adminGroup.Post("/order/recharge_refund/:id", new(order.Recharge).Refund)
 
 		// 确认订单
 		adminGroup.Post("/order/confirm", new(order.Index).Confirm)
@@ -148,6 +157,8 @@ func ApiListenRouter() {
 
 		// 绑定桌码
 		adminGroup.Rest("/qrcode", new(qrocde.Qrcode), AliMiddle.ValidationAlipay)
+
+		adminGroup.Rest("/immediate_delivery", new(delivery.ImmediateDelivery), wechatMiddle.AccessToken, wechatMiddle.AuthorizerAccessToken)
 	}
 
 	// 小程序路由注册
@@ -188,7 +199,7 @@ func ApiListenRouter() {
 		appGroup.Get("/order/card", new(rtCard.Order).Get, middleware.ValidationBindMobile)
 
 		// 获取运费
-		appGroup.Post("/order/delivery_fee/:id", new(rtOrder.Order).DeliveryFee, rtMiddle.ValidationStore)
+		appGroup.Post("/order/delivery_fee/:id", new(rtOrder.Order).DeliveryFee, middleware.ValidationBindMobile, rtMiddle.ValidationStore, wechatMiddle.AccessToken, wechatMiddle.AuthorizerAccessToken)
 
 		// 创建订单
 		appGroup.Post("/order/pre_create", new(rtOrder.Order).PreCreate, middleware.ValidationBindMobile, AliMiddle.AppAuthToken, rtMiddle.ValidationStore, wechatMiddle.AccessToken, wechatMiddle.AuthorizerAccessToken)
@@ -231,7 +242,7 @@ func ApiListenRouter() {
 
 		appGroup.Get("/contact/alipay", new(contact.Contact).Get)
 
-		appGroup.Get("/settings/common", new(settings.Common).Show)
+		appGroup.Get("/settings/common", new(settings.Common).MobileShow)
 
 	}
 

@@ -16,7 +16,7 @@ import (
 func ApiListenRouter() {
 
 	// 全局中间件
-	cmf.HandleFunc = append(cmf.HandleFunc, middleware.AllowCors, middleware.BaseController)
+	cmf.HandleFunc = append(cmf.HandleFunc, middleware.AllowCors, middleware.InitDomain)
 
 	adminGroup := cmf.Group("api/admin", middleware.ValidationBearerToken, middleware.MainDb, middleware.ValidationAdmin, middleware.ApiBaseController)
 	{
@@ -35,7 +35,6 @@ func ApiListenRouter() {
 		adminGroup.Post("/qrcode/generate", new(admin.Qrcode).Generate)
 		adminGroup.Post("/qrcode/bind_aqrfid", new(admin.Qrcode).BindAqrfid)
 		adminGroup.Get("/qrcode/detail/:id", new(admin.Qrcode).Show)
-
 	}
 
 	// 获取短信验证码

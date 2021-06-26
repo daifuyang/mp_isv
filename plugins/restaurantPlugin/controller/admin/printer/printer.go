@@ -97,6 +97,8 @@ func (rest *Printer) Save(id int, c *gin.Context) {
 		Name    string `json:"name"`
 		Type    string `json:"type"`
 		Brand   string `json:"brand"`
+		Pattern int    `json:"pattern"`
+		Count   int    `json:"count"`
 		Sn      string `json:"sn"`
 		Key     string `json:"key"`
 		Status  int    `json:"status"`
@@ -188,14 +190,14 @@ func (rest *Printer) Save(id int, c *gin.Context) {
 		// 添加打印机
 		snList := []*xpyunYunModel.AddPrinterRequestItem{
 			{
-				Sn: sn,
+				Sn:   sn,
 				Name: name,
 			},
 		}
 		xpRes := new(xpyunYun.Printer).Add(snList)
 
 		if xpRes.Content.Code != 0 {
-			rest.rc.Error(c,xpRes.Content.Msg, nil)
+			rest.rc.Error(c, xpRes.Content.Msg, nil)
 			fmt.Println(xpRes.Content)
 			return
 		}
@@ -205,11 +207,17 @@ func (rest *Printer) Save(id int, c *gin.Context) {
 		return
 	}
 
+	count := form.Count
+	if count == 0 {
+		count = 1
+	}
 	printer.Mid = mid.(int)
 	printer.StoreId = storeId
 	printer.Name = name
 	printer.Type = t
 	printer.Brand = brand
+	printer.Pattern = form.Pattern
+	printer.Count = count
 	printer.Sn = sn
 	printer.Key = key
 	printer.CreateAt = time.Now().Unix()
@@ -256,7 +264,7 @@ func (rest *Printer) Delete(c *gin.Context) {
 		}
 	}
 
-	tx := cmf.NewDb().Where("mid = ? AND id = ?",mid,id).Delete(&model.Printer{})
+	tx := cmf.NewDb().Where("mid = ? AND id = ?", mid, id).Delete(&model.Printer{})
 
 	if tx.Error != nil {
 		rest.rc.Error(c, tx.Error.Error(), nil)

@@ -240,10 +240,14 @@ func (rest Category) Edit(c *gin.Context) {
 
 	foodCategory, err := data.Show(query, queryArgs)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound)  {
-			rest.rc.Error(c,"该分类不存在！",nil)
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			rest.rc.Error(c, "该分类不存在！", nil)
 		}
-		rest.rc.Error(c,err.Error(),nil)
+		rest.rc.Error(c, err.Error(), nil)
+	}
+
+	if listOrderFloat == 0 {
+		listOrderFloat = foodCategory.ListOrder
 	}
 
 	txErr := cmf.NewDb().Transaction(func(tx *gorm.DB) error {
@@ -337,6 +341,9 @@ func (rest Category) Store(c *gin.Context) {
 		return
 	}
 
+	listOrder := c.PostForm("list_order")
+	listOrderFloat, _ := strconv.ParseFloat(listOrder, 64)
+
 	// 状态
 	status := c.DefaultPostForm("status", "1")
 
@@ -374,6 +381,7 @@ func (rest Category) Store(c *gin.Context) {
 				Scene:      sceneInt,
 				CreateAt:   time.Now().Unix(),
 				UpdateAt:   time.Now().Unix(),
+				ListOrder:  listOrderFloat,
 				Status:     statusInt,
 			},
 			Db: tx,
@@ -440,4 +448,30 @@ func (rest Category) Delete(c *gin.Context) {
 	}
 
 	rest.rc.Success(c, "删除成功！", nil)
+}
+
+func (rest *Category) ListOrder(c *gin.Context) {
+
+	type category struct {
+		Id        int     `json:"id"`
+		ListOrder float64 `json:"list_order"`
+	}
+
+	var form []category
+
+	err := c.ShouldBindJSON(&form)
+	if err != nil {
+		c.JSON(400, gin.H{"msg": err.Error()})
+		return
+	}
+
+	mid, _ := c.Get("mid")
+	storeId := c.Query("store_id")
+
+	for _, item := range form {
+		cmf.NewDb().Model(&model.FoodCategory{}).Where("id = ? AND mid = ? AND store_id = ?", item.Id, mid, storeId).Update("list_order", item.ListOrder)
+	}
+
+	rest.rc.Success(c, "操作成功！", nil)
+
 }

@@ -23,7 +23,12 @@ type Login struct {
 func (rest *Login) Login(c *gin.Context) {
 
 	mid, _ := c.Get("mid")
-	accessToken, _ := c.Get("accessToken")
+	accessToken, exist := c.Get("accessToken")
+
+	if !exist {
+		rest.rc.Error(c,"accessToken不存在！",nil)
+		return
+	}
 
 	appId, _ := c.Get("app_id")
 	code := c.Query("code")

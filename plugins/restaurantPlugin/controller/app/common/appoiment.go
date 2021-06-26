@@ -47,7 +47,7 @@ func (rest *Appointment) Show(c *gin.Context) {
 	opName := ""
 	if typ == "eatin" {
 		opName = "eatin"
-	}else if typ == "takeout" || typ == "pack" {
+	} else if typ == "takeout" || typ == "pack" {
 		opName = "takeout"
 	} else {
 		rest.rc.Error(c, "错误类型！", nil)
@@ -65,13 +65,14 @@ func (rest *Appointment) Show(c *gin.Context) {
 	enabledAppointment := false
 	day := 0
 
-	if typ == "eatin" {
+	if typ == "eatin" || typ == "pack" {
 		ei := model.EatIn{}
 		json.Unmarshal([]byte(op.OptionValue), &ei)
 		if ei.EnabledAppointment == 1 {
 			enabledAppointment = true
 		}
 		day = ei.Day
+
 	} else {
 		to := model.TakeOut{}
 		json.Unmarshal([]byte(op.OptionValue), &to)
@@ -81,8 +82,12 @@ func (rest *Appointment) Show(c *gin.Context) {
 		day = to.Day
 	}
 
+	if day == 0 {
+		day = 1
+	}
+
 	var sh []model.StoreHours
-	cmf.NewDb().Where("store_id = ?", storeId).Find(&sh)
+	cmf.NewDb().Where("store_id = ? AND  mid = ?", storeId, mid).Find(&sh)
 
 	t := time.Now()
 	wd := int(t.Weekday())
@@ -94,8 +99,10 @@ func (rest *Appointment) Show(c *gin.Context) {
 
 	for _, v := range sh {
 
-		startHours = v.StartTime
-		endHours = v.EndTime
+		if !(v.AllTime == 0 && v.StartTime == "00:00" && v.EndTime == "00:00") {
+			startHours = v.StartTime
+			endHours = v.EndTime
+		}
 
 		switch wd {
 		case v.Mon:
@@ -137,21 +144,54 @@ func (rest *Appointment) Show(c *gin.Context) {
 
 	}
 
+	fmt.Println(enabledAppointment)
+
 	var timeMap = make([]TimeMap, 0)
 	if enabledAppointment && startHours != "" && endHours != "" {
 
+		startSplit := strings.Split(startHours, ":")
+		startH := 0
+		startM := 0
+		if len(startSplit) > 1 {
+			startH, _ = strconv.Atoi(startSplit[0])
+			startM, _ = strconv.Atoi(startSplit[1])
+		}
+
+		endH := 0
+		endM := 0
+
 		endSplit := strings.Split(endHours, ":")
-		endH, _ := strconv.Atoi(endSplit[0])
+		if len(endSplit) > 1 {
+			endH, _ = strconv.Atoi(endSplit[0])
+			endM, _ = strconv.Atoi(endSplit[1])
+		}
+
 		if endH == 0 {
 			endH = 24
 		}
 
-		h := time.Now().Hour()
-		min := time.Now().Minute()
+		h := t.Hour()
+
+		min := t.Minute()
 
 		// 今天超时不允许下单 （提前半小时停止下单）
 		currentDay := true
-		if h == (endH-1) && min > 30 {
+
+		if h < startH {
+			currentDay = false
+		}
+
+		if h < endH {
+			if h == (endH-1) && (60-min)+endM < 30 {
+				currentDay = false
+			}
+		}
+
+		if h == endH && endM-min < 30 {
+			currentDay = false
+		}
+
+		if h > endH {
 			currentDay = false
 		}
 
@@ -164,7 +204,7 @@ func (rest *Appointment) Show(c *gin.Context) {
 				}
 			}
 
-			year, month, day := time.Now().Date()
+			year, month, day := t.Date()
 			temDay := day + i
 			temStr := fmt.Sprintf("%02d", temDay)
 
@@ -202,19 +242,12 @@ func (rest *Appointment) Show(c *gin.Context) {
 
 			// 获取小时（今天）
 			var hour = make([]TimeMap, 0)
-			if i == 0 {
-				hour = rest.getHours(true, h, endH)
-			} else {
-				timeSplit := strings.Split(startHours, ":")
-				h, _ := strconv.Atoi(timeSplit[0])
-				hour = rest.getHours(false, h, endH)
-			}
 
+			hour = rest.getHours(currentDay, startH, endH, startM, endM)
 
 			dayItem.Children = &hour
 
 			timeMap = append(timeMap, dayItem)
-
 
 		}
 
@@ -224,82 +257,104 @@ func (rest *Appointment) Show(c *gin.Context) {
 
 }
 
-func (rest *Appointment) getHours(current bool, start int, end int) []TimeMap {
+func (rest *Appointment) getHours(currentDay bool, start, end, startM, endM int) []TimeMap {
+
 	var hour = make([]TimeMap, 0)
-	hLen := end - start
 
-	if hLen > 0 {
-		for i := 0; i < hLen; i++ {
+	t := time.Now()
 
-			val := start + i
+	ch := start
 
-			valStr := fmt.Sprintf("%02d", val)
+	if currentDay {
+		ch = t.Hour() // 当前时间
+	}
 
-			minStart := 0
+	hLen := end - ch
 
-			if i == 0 {
-				minStart = 10
+	for i := 0; i <= hLen; i++ {
+
+		val := ch + i
+
+		valStr := fmt.Sprintf("%02d", val)
+
+		startMin := 0
+
+		currentMin := 20
+
+		if currentDay {
+			currentMin = t.Minute()
+		}
+
+		if i == 0 {
+			startMin = currentMin + 10
+		}
+
+		// 起送时间段
+		if start == val {
+
+			// 未到起送时间
+			if ch < val {
+				currentMin = 0
 			}
 
-			min := time.Now().Minute()
-
-			startRange := 20
-			if current && i == 0 {
-
-				minStart = min + startRange
-				hour := time.Now().Hour()
-				// 最后截止30分钟营业
-				if hour == end-1 && min > 30 {
-					continue
-				}
-
-				// 间隔10分钟
-				if min > 50 {
-					continue
-				}
+			if startMin > currentMin {
+				currentMin = startMin
 			}
 
-			if current && i == 1 {
-				if min > 50 {
-					minStart = startRange
-				}
+			if currentDay {
+				startMin = currentMin
 			}
+		}
 
-			hourItem := TimeMap{
-				Label: valStr,
-				Value: valStr,
-			}
+		hourItem := TimeMap{
+			Label: valStr,
+			Value: valStr,
+		}
 
-			minute := rest.getMinutes(minStart)
-			if len(minute) > 0 {
-				hourItem.Children = &minute
-				hour = append(hour, hourItem)
-			}
+		minute := rest.getMinutes(false, startMin, endM)
+		if i == hLen {
+			minute = rest.getMinutes(true, startMin, endM)
+		}
+
+		if len(minute) > 0 {
+			hourItem.Children = &minute
+			hour = append(hour, hourItem)
 		}
 	}
 	return hour
 }
 
-func (rest *Appointment) getMinutes(min int) []TimeMap {
+func (rest *Appointment) getMinutes(end bool, min int, endM int) []TimeMap {
 
 	var minutes = make([]TimeMap, 0)
 
 	minute := float64(min)
+
 	minute = math.Ceil(minute/10) * 10
+
 	minLen := (60 - int(minute)) / 10
+
+	if end {
+		minLen = (endM - int(minute)) / 10
+	}
 
 	for i := 0; i < minLen; i++ {
 
 		minTemp := i*10 + int(minute)
 
-		minValue := fmt.Sprintf("%02d", minTemp)
+		if minTemp < 60 {
 
-		minItem := TimeMap{
-			Label: minValue,
-			Value: minValue,
+			minValue := fmt.Sprintf("%02d", minTemp)
+
+			minItem := TimeMap{
+				Label: minValue,
+				Value: minValue,
+			}
+
+			minutes = append(minutes, minItem)
+
 		}
 
-		minutes = append(minutes, minItem)
 	}
 
 	return minutes
@@ -395,10 +450,10 @@ func (rest *Appointment) ShowBak(c *gin.Context) {
 		tmp, _ := time.ParseInLocation("15:04", startHours, time.Local)
 
 		// 循环时间段
-		timeStr := time.Now().Format("15:04")
+		timeStr := t.Format("15:04")
 
 		// 早于营业时间，设置为营业时间预约
-		if time.Now().Unix() < tmp.Unix() {
+		if t.Unix() < tmp.Unix() {
 			timeStr = startHours
 		}
 
@@ -416,8 +471,7 @@ func (rest *Appointment) ShowBak(c *gin.Context) {
 		}
 
 		for _, v := range date {
-			r := rest.GetDuration(v["startTime"].(string), v["endHours"].(int))
-			fmt.Println("r", r)
+			_ = rest.GetDuration(v["startTime"].(string), v["endHours"].(int))
 		}
 
 	}

@@ -31,7 +31,7 @@ func (rest *GetWay) GetWay(c *gin.Context) {
 	}
 
 	getParams = getParams[:len(getParams)-1]
-	cmfLog.Info(getParams)
+	cmfLog.Save(getParams, "getway.log")
 
 	inParam := make(map[string]string, 0)
 

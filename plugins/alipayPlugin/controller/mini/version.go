@@ -38,7 +38,8 @@ type Version struct {
  **/
 func (rest *Version) Detail(c *gin.Context) {
 
-	version, err := new(saasModel.MpThemeVersion).Show(nil, nil)
+	mid, _ := c.Get("mid")
+	version, err := new(saasModel.MpThemeVersion).Show([]string{"mid = ?", "type = ?"}, []interface{}{mid, "alipay"})
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)
 		return
@@ -66,7 +67,7 @@ func (rest *Version) Upload(c *gin.Context) {
 	midInt := mid.(int)
 
 	var count int64
-	cmf.NewDb().Where("mid = ? and is_audit = ? AND type = ?", mid, 1,"alipay").First(&saasModel.MpThemeVersion{}).Count(&count)
+	cmf.NewDb().Where("mid = ? and is_audit = ? AND type = ?", mid, 1, "alipay").First(&saasModel.MpThemeVersion{}).Count(&count)
 	if count > 0 {
 		rest.rc.Error(c, "请等待待审核的小程序完成审核状态在升级!", nil)
 		return
@@ -88,6 +89,7 @@ func (rest *Version) Upload(c *gin.Context) {
 	new(mini.Audit).AuditedCancel(bizContent)
 
 	app, _ := new(appModel.AlipayIsvApp).Show()
+
 	// 存入日志
 	versionModel := saasModel.MpThemeVersion{
 		Mid:             midInt,
@@ -101,8 +103,6 @@ func (rest *Version) Upload(c *gin.Context) {
 
 	appVersion := rest.NextVersion(&versionModel)
 	versionModel.Version = appVersion
-
-	fmt.Println("versionModel",versionModel)
 
 	result, appVersion := rest.UploadVersion(versionModel)
 
@@ -137,7 +137,7 @@ func (rest *Version) UploadVersion(version saasModel.MpThemeVersion) (mini.Versi
 	version.Version = appVersion
 	version.Id = 0
 
-	fmt.Println("bizContent",bizContent)
+	fmt.Println("bizContent", bizContent)
 
 	result := new(mini.Version).Upload(bizContent)
 	if result.Response.Code != "10000" {
@@ -146,6 +146,7 @@ func (rest *Version) UploadVersion(version saasModel.MpThemeVersion) (mini.Versi
 			appVersion = rest.NextVersion(&version)
 			version.Version = appVersion
 			version.Id = 0
+			version.CreateAt = time.Now().Unix()
 			cmf.NewDb().Create(&version)
 			// 递归
 			return rest.UploadVersion(version)
@@ -212,7 +213,8 @@ func (rest *Version) NextVersion(version *saasModel.MpThemeVersion) string {
 func (rest *Version) ExperienceCreate(c *gin.Context) {
 
 	// 获取当前版本
-	version, err := new(saasModel.MpThemeVersion).Show(nil, nil)
+	mid, _ := c.Get("mid")
+	version, err := new(saasModel.MpThemeVersion).Show([]string{"mid = ?", "type = ?"}, []interface{}{mid, "alipay"})
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)
 		return
@@ -238,11 +240,11 @@ func (rest *Version) ExperienceCreate(c *gin.Context) {
 }
 
 // 查询体验版状态
-
 func (rest *Version) ExperienceQuery(c *gin.Context) {
 
 	// 获取当前版本
-	version, err := new(saasModel.MpThemeVersion).Show([]string{"type = ?"}, []interface{}{"alipay"})
+	mid, _ := c.Get("mid")
+	version, err := new(saasModel.MpThemeVersion).Show([]string{"mid = ?", "type = ?"}, []interface{}{mid, "alipay"})
 	if err != nil {
 
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -332,7 +334,7 @@ func (rest *Version) DetailQuery(c *gin.Context) {
 		return
 	}
 
-	version, err := new(saasModel.MpThemeVersion).Show(nil, nil)
+	version, err := new(saasModel.MpThemeVersion).Show([]string{"mid = ?", "type = ?"}, []interface{}{mid, "alipay"})
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)
 		return
@@ -375,6 +377,7 @@ func (rest *Version) DetailQuery(c *gin.Context) {
 			return
 		}
 	}
+
 	rest.rc.Success(c, result.Response.Msg, result.Response)
 
 }
@@ -404,7 +407,7 @@ func (rest *Version) Audit(c *gin.Context) {
 		return
 	}
 
-	version, err := new(saasModel.MpThemeVersion).Show(nil, nil)
+	version, err := new(saasModel.MpThemeVersion).Show([]string{"mid = ?", "type = ?"}, []interface{}{mid, "alipay"})
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)
 		return
@@ -423,6 +426,11 @@ func (rest *Version) Audit(c *gin.Context) {
 
 	if bi.Mobile == "" {
 		rest.rc.Error(c, "请先填写系统设置联系人手机号", nil)
+		return
+	}
+
+	if bi.Email == "" {
+		rest.rc.Error(c, "请先填写系统设置客服邮箱", nil)
 		return
 	}
 
@@ -456,10 +464,22 @@ func (rest *Version) Audit(c *gin.Context) {
 		return
 	}*/
 
+	if version.Status == "reject" {
+		cancelBizContent := make(map[string]interface{}, 0)
+		cancelBizContent["app_version"] = version.Version
+		result := new(mini.Audit).AuditedCancel(cancelBizContent)
+
+		if result.Response.Code != "10000" {
+			rest.rc.Error(c, result.Response.SubMsg, result.Response)
+			return
+		}
+	}
+
 	bizContent := make(map[string]string, 0)
 	bizContent["app_version"] = appVersion
 	bizContent["mini_category_ids"] = bi.MiniCategoryIds
 	bizContent["service_phone"] = bi.Mobile
+	bizContent["service_email"] = bi.Email
 	bizContent["app_slogan"] = bi.AppSlogan
 	bizContent["app_desc"] = bi.AppDesc
 	bizContent["region_type"] = "CHINA"
@@ -485,7 +505,6 @@ func (rest *Version) Audit(c *gin.Context) {
 	}
 
 	result, _ := new(mini.Audit).Apply(bizContent, files)
-	fmt.Println("result", result)
 
 	if result.Response.Code != "10000" {
 		rest.rc.Error(c, result.Response.SubMsg, result.Response)
@@ -496,7 +515,7 @@ func (rest *Version) Audit(c *gin.Context) {
 
 	version.IsAudit = 1
 	version.Status = "wait"
-	tx = cmf.NewDb().Updates(&version)
+	tx = cmf.NewDb().Save(&version)
 
 	if tx.Error != nil {
 		rest.rc.Error(c, err.Error(), nil)

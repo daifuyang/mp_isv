@@ -8,7 +8,6 @@ package partner
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	saasModel "gincmf/plugins/saasPlugin/model"
 	"gincmf/plugins/wechatPlugin/model"
 	"github.com/fatih/structs"
@@ -126,8 +125,6 @@ func (rest *Applyment) Applyment(c *gin.Context, editId int) {
 	mediaListStr, _ := json.Marshal(form.MediaList)
 	mediaListJson := string(mediaListStr)
 
-	form.MediaList = model.MediaList{}
-
 	form.BusinessInfo.SalesInfo.MiniProgramInfo.MiniProgramAppid = "wx1da941c68db4f659"
 	form.SubjectInfo.IdentityInfo.Owner = true
 
@@ -144,8 +141,6 @@ func (rest *Applyment) Applyment(c *gin.Context, editId int) {
 	form.BusinessCode = "APPLYMENT_" + strconv.Itoa(int(time.Now().Unix()))
 	originForm := form
 	originFormStr, _ := json.Marshal(originForm)
-
-	fmt.Println("originFormStr", string(originFormStr))
 
 	// 敏感数据加密
 	/*contact_name*/
@@ -264,6 +259,22 @@ func (rest *Applyment) Applyment(c *gin.Context, editId int) {
 	form.BankAccountInfo.AccountNumber = accountNumber
 
 	bizContent := structs.Map(form)
+
+	applyment := model.Applyment{}
+
+	if editId > 0 {
+
+		tx := cmf.NewDb().Where("id = ?", editId).First(&applyment)
+		if tx.Error != nil {
+			if errors.Is(tx.Error, gorm.ErrRecordNotFound) {
+				rest.rc.Error(c, "该申请记录不存在", nil)
+				return
+			}
+		}
+
+		bizContent["business_code"] = applyment.BusinessCode
+	}
+
 	delete(bizContent, "media_list")
 
 	bizContentStr, _ := json.Marshal(bizContent)
@@ -276,40 +287,30 @@ func (rest *Applyment) Applyment(c *gin.Context, editId int) {
 	}
 
 	if data.ApplymentId > 0 {
-		applyment := model.Applyment{}
+
+		applyment.ApplymentId = data.ApplymentId
+		applyment.MediaList = mediaListJson
+		applyment.Form = string(bizContentStr)
+		applyment.OriginForm = string(originFormStr)
+		applyment.ApplymentState = "APPLYMENT_STATE_AUDITING"
+		applyment.AuditDetail = "{}"
 
 		var tx *gorm.DB
 		if editId > 0 {
-
-			tx = cmf.NewDb().Where("id = ?", editId).First(&applyment)
-			if tx.Error != nil {
-				if errors.Is(tx.Error, gorm.ErrRecordNotFound) {
-					rest.rc.Error(c, "该申请记录不存在", nil)
-					return
-				}
-			}
 
 			auditDetail := "{}"
 			if applyment.AuditDetail != "" {
 				auditDetail = applyment.AuditDetail
 			}
 
-			applyment = model.Applyment{
-				Id:             editId,
-				BusinessCode:   form.BusinessCode,
-				ApplymentId:    data.ApplymentId,
-				MediaList:      mediaListJson,
-				Form:           string(bizContentStr),
-				OriginForm:     string(originFormStr),
-				CreateAt:       time.Now().Unix(),
-				UpdateAt:       time.Now().Unix(),
-				ApplymentState: "APPLYMENT_STATE_AUDITING",
-				AuditDetail:    auditDetail,
-			}
-
+			applyment.Id = editId
+			applyment.UpdateAt = time.Now().Unix()
+			applyment.AuditDetail = auditDetail
 			tx = cmf.NewDb().Save(&applyment)
 
 		} else {
+			applyment.BusinessCode = strconv.FormatInt(time.Now().Unix(), 10)
+			applyment.CreateAt = time.Now().Unix()
 			tx = cmf.NewDb().Create(&applyment)
 		}
 
@@ -355,6 +356,8 @@ func (rest *Applyment) State(c *gin.Context) {
 
 	auditDetail, _ := json.Marshal(applyResult.AuditDetail)
 
+	applyment.SubMchid = applyResult.SubMchid
+	applyment.SignUrl = applyResult.SignUrl
 	applyment.UpdateAt = time.Now().Unix()
 	applyment.ApplymentState = applyResult.ApplymentState
 	applyment.AuditDetail = string(auditDetail)
@@ -383,30 +386,30 @@ func (rest *Applyment) BindSubMchid(c *gin.Context) {
 	subMcchid := c.PostForm("sub_mchid")
 
 	if subMcchid == "" {
-		rest.rc.Error(c,"支付商户号不能为空！",nil)
+		rest.rc.Error(c, "支付商户号不能为空！", nil)
 		return
 	}
 
-	mid,_ := c.Get("mid")
+	mid, _ := c.Get("mid")
 
 	// 获取当前主题小程序
 	theme := saasModel.MpTheme{}
 	tx := cmf.NewDb().Where("mid = ?", mid).First(&theme)
 	if tx.Error != nil {
-		if errors.Is(tx.Error,gorm.ErrRecordNotFound) {
-			rest.rc.Error(c,"小程序不存在！",nil)
+		if errors.Is(tx.Error, gorm.ErrRecordNotFound) {
+			rest.rc.Error(c, "小程序不存在！", nil)
 			return
 		}
-		rest.rc.Error(c,tx.Error.Error(),nil)
+		rest.rc.Error(c, tx.Error.Error(), nil)
 		return
 	}
 
 	theme.SubMchid = subMcchid
-	tx = cmf.NewDb().Where("mid = ?",mid).Updates(&theme)
+	tx = cmf.NewDb().Where("mid = ?", mid).Updates(&theme)
 	if tx.Error != nil {
-		rest.rc.Error(c,tx.Error.Error(),nil)
+		rest.rc.Error(c, tx.Error.Error(), nil)
 		return
 	}
 
-	rest.rc.Success(c,"设置成功！",nil)
+	rest.rc.Success(c, "设置成功！", nil)
 }

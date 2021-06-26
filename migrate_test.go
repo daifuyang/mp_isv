@@ -6,18 +6,27 @@
 package main
 
 import (
-	appMigrate "gincmf/app/migrate"
+	"fmt"
 	"gincmf/app/model"
-	saasMigrate "gincmf/plugins/saasPlugin/migrate"
 	cmf "github.com/gincmf/cmf/bootstrap"
 	"testing"
+	"time"
 )
 
 func Test_Migrate(t *testing.T) {
 	cmf.Initialize("./data/conf/config.json")
-	appMigrate.StartMigrate()
-	cmf.ManualDb("tenant_562847651")
-	saasMigrate.AutoMigrate()
+
+	redisDb, err := cmf.RedisDb("52.130.144.34", "codecloud2020")
+	if err == nil {
+		redisDb.Set("componentVerifyTicket", "ticket@@@JPI_QKD8CnY0fqhATzSZrQwIybDnJgM8lAupQ6hKhVvMqUix5JB8jCrCbdGgBNhPmM360ZrEIGKELrpOavw2fw", time.Hour*12)
+	}
+
+	fmt.Println(redisDb.Get("componentVerifyTicket"))
+
+	// appMigrate.StartMigrate()
+	// cmf.ManualDb("tenant_562847651")
+	// cmf.NewDb().Debug().AutoMigrate(&wechatModel.Applyment{})
+	// saasMigrate.AutoMigrate()
 	//new(saasModel.Role).Init(123456)
 	// 创建当前租户的七牛云空间
 

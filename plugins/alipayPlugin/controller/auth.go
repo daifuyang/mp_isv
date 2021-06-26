@@ -148,7 +148,7 @@ func (rest *Auth) Redirect(c *gin.Context) {
 
 	db := "tenant_" + strconv.Itoa(tenant.TenantId)
 	mp := saasModel.MpTheme{}
-	tx =cmf.TempDb(db).Where("mid = ?", stateMap.Mid).First(&mp)
+	tx = cmf.TempDb(db).Where("mid = ?", stateMap.Mid).First(&mp)
 	if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, tx.Error.Error(), nil)
 		return
@@ -185,8 +185,8 @@ func (rest *Auth) Redirect(c *gin.Context) {
 		mpId := stateMap.Mid
 		t := stateMap.Type
 
-		query := []string{"user_id = ?", "mp_id = ?","type = ?"}
-		queryArgs := []interface{}{userId, mpId,"alipay"}
+		query := []string{"user_id = ?", "mp_id = ?", "type = ?"}
+		queryArgs := []interface{}{userId, mpId, "alipay"}
 		queryStr := strings.Join(query, " AND ")
 		tx := cmf.Db().Where(queryStr, queryArgs...).Order("id desc").First(&auth)
 		if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
@@ -203,6 +203,7 @@ func (rest *Auth) Redirect(c *gin.Context) {
 		auth.ReExpiresIn = reExpiresIn
 
 		if auth.Id == 0 {
+			auth.AuthAppId = authAppId
 			auth.CreateAt = time.Now().Unix()
 			cmf.Db().Create(&auth)
 		} else {
@@ -244,8 +245,7 @@ func (rest *Auth) Token(c *gin.Context) {
 		return
 	}
 
-
-	data := new( base.Oauth ).GetSystemToken(code)
+	data := new(base.Oauth).GetSystemToken(code)
 
 	if data.Response.UserId == "" {
 		rest.rc.Error(c, "获取失败！"+data.ErrorResponse.SubMsg, data.ErrorResponse)

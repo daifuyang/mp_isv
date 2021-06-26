@@ -207,8 +207,8 @@ func (model *Store) IndexWithFoodCount(c *gin.Context, query []string, queryArgs
 		v.CreateTime = time.Unix(v.CreateAt, 0).Format("2006-01-02 15:04:05")
 		v.UpdateTime = time.Unix(v.UpdateAt, 0).Format("2006-01-02 15:04:05")
 
-		cmf.NewDb().Model(&Food{}).Where("store_id = ?", v.Id).Count(&count)
-		cmf.NewDb().Model(&Food{}).Where("store_id = ? AND status = 1", v.Id).Count(&salesCount)
+		cmf.NewDb().Model(&Food{}).Where("store_id = ? AND  delete_at = 0", v.Id).Count(&count)
+		cmf.NewDb().Model(&Food{}).Where("store_id = ? AND status = 1 AND  delete_at = 0", v.Id).Count(&salesCount)
 		tempStruct = append(tempStruct, tempResult{
 			Store:      v,
 			Count:      count,
@@ -320,12 +320,31 @@ func (model *Store) ListByDistance(query []string, queryArgs []interface{}) ([]S
 
 				for _, v := range hours {
 
+					startDur := strings.Split(v.StartTime, ":")
+					sh := 00
+					sm := 00
+					if len(startDur) == 2 {
+						sh, _ = strconv.Atoi(startDur[0])
+						sm, _ = strconv.Atoi(startDur[1])
+					} else {
+						store[k].IsClosure = 1
+					}
+
+					start := time.Date(year, month, day, sh, sm, 00, 00, time.Local)
+
+					// 更新最早时间
+					if start.Sub(now) > 0 {
+						store[k].IsClosure = 1
+					}
+
 					t := strings.Split(v.EndTime, ":")
 					hour := 00
 					min := 00
 					if len(t) == 2 {
 						hour, _ = strconv.Atoi(t[0])
 						min, _ = strconv.Atoi(t[1])
+					} else {
+						store[k].IsClosure = 1
 					}
 
 					end := time.Date(year, month, day, hour, min, 00, 00, time.Local)
@@ -370,7 +389,7 @@ func (model *Store) hoursInStore(mid int, storeId int, storeHours []StoreHours) 
 		if mid == v.Mid && storeId == v.StoreId {
 
 			t := time.Now()
-			hourItem := sHours{}
+			var hourItem = sHours{}
 
 			switch int(t.Weekday()) {
 			case 0:
@@ -431,7 +450,9 @@ func (model *Store) hoursInStore(mid int, storeId int, storeHours []StoreHours) 
 				}
 			}
 
-			sh = append(sh, hourItem)
+			if hourItem.StartTime != "" && hourItem.EndTime != "" {
+				sh = append(sh, hourItem)
+			}
 
 		}
 	}
@@ -514,12 +535,31 @@ func (model Store) AppShow(query []string, queryArgs []interface{}) (Store, erro
 
 		for _, v := range hours {
 
+			startDur := strings.Split(v.StartTime, ":")
+			sh := 00
+			sm := 00
+			if len(startDur) == 2 {
+				sh, _ = strconv.Atoi(startDur[0])
+				sm, _ = strconv.Atoi(startDur[1])
+			} else {
+				store.IsClosure = 1
+			}
+
+			start := time.Date(year, month, day, sh, sm, 00, 00, time.Local)
+
+			// 更新最早时间
+			if start.Sub(now) > 0 {
+				store.IsClosure = 1
+			}
+
 			t := strings.Split(v.EndTime, ":")
 			hour := 00
 			min := 00
 			if len(t) == 2 {
 				hour, _ = strconv.Atoi(t[0])
 				min, _ = strconv.Atoi(t[1])
+			} else {
+				store.IsClosure = 1
 			}
 
 			end := time.Date(year, month, day, hour, min, 00, 00, time.Local)
@@ -663,9 +703,17 @@ func (model *StoreHours) AddHours(hours []StoreHours) ([]StoreHours, error) {
 
 	storeId := model.StoreId
 	mid := model.Mid
-	for k := range hours {
-		hours[k].Mid = mid
-		hours[k].StoreId = storeId
+
+	var addHours = make([]StoreHours, 0)
+
+	for _, v := range hours {
+
+		if !(v.StartTime == "00:00" && v.EndTime == "00:00" && v.AllTime == 0) {
+			v.Mid = mid
+			v.StoreId = storeId
+			addHours = append(addHours, v)
+		}
+
 	}
 
 	var sh []StoreHours
@@ -677,7 +725,7 @@ func (model *StoreHours) AddHours(hours []StoreHours) ([]StoreHours, error) {
 	}
 
 	// 新增营业时间
-	result = cmf.NewDb().Create(&hours)
+	result = cmf.NewDb().Create(&addHours)
 	if result.Error != nil {
 		return []StoreHours{}, nil
 	}

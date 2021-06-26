@@ -1,9 +1,10 @@
 {
   "app": {
+    "evn": "dev",
     "port": "4002",
     "appName": "",
     "appDebug": true,
-    "domain": "https://console.mashangdian.cn"
+    "domain": "http://localhost:4002"
   },
   "template": {
     "theme": "default",
@@ -27,8 +28,8 @@
     "redis": {
       "enabled": true,
       "type": "redis",
-      "host": "127.0.0.1",
-      "password": "",
+      "host": "106.14.241.124",
+      "password": "codecloud2020",
       "port": "6379",
       "database": 0
     }

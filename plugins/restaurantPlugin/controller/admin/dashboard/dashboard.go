@@ -86,8 +86,6 @@ func (rest *Dashboard) DashboardCard(c *gin.Context) {
 
 		year, month, day := time.Now().Date()
 
-		fmt.Println(year, month, day)
-
 		startTime := time.Date(year, month, day, 0, 0, 0, 0, time.Local)
 		endTime := time.Date(year, month, day, 23, 59, 59, 0, time.Local)
 
@@ -130,7 +128,7 @@ func (rest *Dashboard) DashboardCard(c *gin.Context) {
 			订单营业额(堂食+外卖) + 会员订单 + 充值订单
 		*/
 		queryStr = strings.Join(salesQuery, " AND ")
-		tx = cmf.NewDb().Model(&resModel.FoodOrder{}).Select("sum(fee) as food_order_amount").Where(queryStr, salesQueryArgs...).Scan(&dashboard)
+		tx = cmf.NewDb().Debug().Model(&resModel.FoodOrder{}).Select("sum(fee) as food_order_amount").Where(queryStr, salesQueryArgs...).Scan(&dashboard)
 		if tx.Error != nil {
 			rest.rc.Error(c, tx.Error.Error(), nil)
 			return
@@ -226,18 +224,16 @@ func (rest *Dashboard) DashboardCard(c *gin.Context) {
 	} else {
 		daySalesGrowth, _ = decimal.NewFromFloat(dashboardResult.Today.SalesAmount - dashboardResult.Yesterday.SalesAmount).Div(decimal.NewFromFloat(dashboardResult.Yesterday.SalesAmount)).Mul(decimal.NewFromInt(100)).Round(2).Float64()
 	}
-
 	dashboardResult.DaySalesGrowth = daySalesGrowth
 
 	/*--------------------------------------------------*/
 
 	var dayOrderCountGrowth float64
-	if dashboardResult.Yesterday.OrderCount == 0 {
+	if dashboardResult.Yesterday.FoodOrderCount == 0 {
 		dayOrderCountGrowth = 0
 	} else {
-		dayOrderCountGrowth, _ = decimal.NewFromInt(dashboardResult.Today.OrderCount - dashboardResult.Yesterday.OrderCount).Div(decimal.NewFromInt(dashboardResult.Yesterday.OrderCount)).Mul(decimal.NewFromInt(100)).Round(2).Float64()
+		dayOrderCountGrowth, _ = decimal.NewFromInt(dashboardResult.Today.FoodOrderCount - dashboardResult.Yesterday.FoodOrderCount).Div(decimal.NewFromInt(dashboardResult.Yesterday.FoodOrderCount)).Mul(decimal.NewFromInt(100)).Round(2).Float64()
 	}
-
 	dashboardResult.DayOrderCountGrowth = dayOrderCountGrowth
 
 	/*--------------------------------------------------*/

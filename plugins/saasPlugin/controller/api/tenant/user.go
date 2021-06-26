@@ -29,7 +29,7 @@ type User struct {
 
 /**
  * @Author return <1140444693@qq.com>
- * @Description 待用户快速注册后台
+ * @Description 代用户快速注册后台
  * @Date 2021/5/8 13:24:8
  * @Param
  * @return

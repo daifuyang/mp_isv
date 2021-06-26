@@ -97,7 +97,7 @@ func (rest *MpTheme) Get(c *gin.Context) {
 		updateTime := time.Unix(v.UpdateAt, 0).Format("2006-01-02 15:04:05")
 		v.UpdateTime = updateTime
 
-		v.AppLogoPrev = util.GetFileUrl(v.AppLogo)
+		v.AppLogoPrev = util.GetFileUrl(v.AppLogo, "clipper")
 
 		mpThemeFile := model.MpThemePage{}
 		result := cmf.NewDb().Where("theme_id = ? and home = 1", v.Id).First(&mpThemeFile)
@@ -149,7 +149,14 @@ func (rest *MpTheme) Show(c *gin.Context) {
 	}
 
 	mp := model.MpTheme{}
-	cmf.NewDb().Where("id = ?", rewrite.Id).First(&mp)
+	tx := cmf.NewDb().Where("id = ?", rewrite.Id).First(&mp)
+
+	if tx.Error != nil {
+		rest.rc.Error(c,tx.Error.Error(),nil)
+		return
+	}
+
+	mp.AppLogoPrev = util.GetFileUrl(mp.AppLogo,"clipper")
 
 	rest.rc.Success(c, "获取成功！", mp)
 
@@ -160,7 +167,14 @@ func (rest *MpTheme) ShowByMid(c *gin.Context) {
 	mid, _ := c.Get("mid")
 
 	mp := model.MpTheme{}
+
+	var style model.Style
+
 	cmf.NewDb().Where("mid = ?", mid).First(&mp)
+
+	json.Unmarshal([]byte(mp.Style), &style)
+
+	mp.StyleJson = style
 
 	rest.rc.Success(c, "获取成功！", mp)
 
@@ -279,6 +293,7 @@ func (rest *MpTheme) Store(c *gin.Context) {
 		ThemeId:   themeId,
 		TenantId:  tenantId,
 		AppLogo:   appLogo,
+		Style:     "{}",
 		CreateAt:  time.Now().Unix(),
 	}
 
@@ -297,25 +312,35 @@ func (rest *MpTheme) Store(c *gin.Context) {
 				Title:    "首页",
 				File:     "home",
 				Home:     1,
+				Style:    "{}",
+				ConfigStyle: "{}",
+				More: "{}",
 				CreateAt: time.Now().Unix(),
 			})
 		} else {
 			var pages []appModel.MpThemePage
 			prefix := cmf.Conf().Database.Prefix
-			cmf.Db().Debug().Table(prefix+"mp_theme t").Select("p.*").
+			cmf.Db().Table(prefix+"mp_theme t").Select("p.*").
 				Joins("INNER JOIN  "+prefix+"mp_theme_page p ON t.id = p.theme_id").
 				Where("t.id = ?", themeId).Scan(&pages)
 
 			mpThemePage = make([]saasModel.MpThemePage, 0)
 			for _, v := range pages {
+
+				style := v.Style
+
+				if style == "" {
+					style = "{}"
+				}
+
 				spItem := saasModel.MpThemePage{
 					ThemeId:     saasTheme.Id,
 					Mid:         mid,
 					Title:       v.Title,
 					Home:        v.Home,
 					File:        v.File,
-					Style:       v.Style,
-					ConfigStyle: v.Style,
+					Style:       style,
+					ConfigStyle: style,
 					More:        v.More,
 					ConfigMore:  v.More,
 					CreateAt:    time.Now().Unix(),
@@ -427,6 +452,40 @@ func (rest *MpTheme) UnOauth(c *gin.Context) {
 	if tx.RowsAffected == 0 {
 		rest.rc.Error(c, "授权信息不存在或已删除", nil)
 		return
+	}
+
+	// 删除版本信息
+	tx = cmf.NewDb().Where("mid = ? AND  type = ?", oauth.MpId, oauth.Type).Delete(&saasModel.MpThemeVersion{})
+	if tx.Error != nil {
+		rest.rc.Error(c, tx.Error.Error(), nil)
+		return
+	}
+
+	if oauth.Type == "alipay" {
+		// 删除小程序的加密aesKey
+		tx = cmf.NewDb().Model(&saasModel.MpTheme{}).Where("mid = ?", oauth.MpId).Updates(map[string]string{
+			"encrypt_key":            "",
+			"alipay_exp_qr_code_url": "",
+		})
+		if tx.Error != nil {
+			rest.rc.Error(c, tx.Error.Error(), nil)
+			return
+		}
+	}
+
+	if oauth.Type == "wechat" {
+
+		// 删除微信相关信息
+		tx = cmf.NewDb().Model(&saasModel.MpTheme{}).Where("mid = ?", oauth.MpId).Updates(map[string]string{
+			"wechat_exp_qr_code_url": "",
+			"sub_mchid":              "",
+			"wechat_qr_code_url":     "",
+		})
+		if tx.Error != nil {
+			rest.rc.Error(c, tx.Error.Error(), nil)
+			return
+		}
+
 	}
 
 	tx = cmf.Db().Where("tenant_id = ? AND mp_id = ? AND  id = ?", tenant.TenantId, mid, rewrite.Id).Delete(&oauth)

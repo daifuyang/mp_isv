@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-type Printer struct{
+type Printer struct {
 	Type string `json:"type"`
 }
 
@@ -29,7 +29,10 @@ func (model Printer) FormatPrinter(order []map[string]string, mm string) string 
 	FLen := 10 // 8个字符 （4个字符）
 
 	if mm == "80mm" {
-		
+		// 定义标题的长度
+		tLen = 24 // 24个字符 （8个字符）
+		cLen = 12 // 16个字符 （4个字符）
+		FLen = 20 // 16个字符 （4个字符）
 	}
 
 	for _, v := range order {
@@ -71,7 +74,7 @@ func (model Printer) FormatPrinter(order []map[string]string, mm string) string 
 
 			}
 
-			content += "<BOLD>" + title + "</BOLD><BR>"
+			content += "<L><BOLD>" + title + "</BOLD></L><BR>"
 		}
 
 	}

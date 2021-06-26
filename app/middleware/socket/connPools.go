@@ -45,9 +45,15 @@ func ConnPools(c *gin.Context) {
 		json.Unmarshal(data, &inParams)
 
 		token := inParams.Token
+		mid := inParams.Mid
 
 		if token == "" {
 			conn.Error("用户登录状态已失效！", nil)
+			goto Exit
+		}
+
+		if mid == 0 {
+			conn.Error("mid错误！", nil)
 			goto Exit
 		}
 
@@ -74,8 +80,6 @@ func ConnPools(c *gin.Context) {
 		userId := userArr[0]
 		userType := userArr[1]
 		tenantId := userArr[2]
-
-		mid := inParams.Mid
 
 		userIdInt, _ := strconv.Atoi(userId)
 		tenantIdInt, _ := strconv.Atoi(tenantId)

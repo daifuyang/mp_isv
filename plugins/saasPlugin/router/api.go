@@ -99,6 +99,7 @@ func ApiListenRouter() {
 	{
 		appGroup.Post("/user/edit", new(app.User).Edit, middleware.ValidationBindMobile)
 		appGroup.Post("/theme_file", new(tenant.MpThemePage).Detail)
+		appGroup.Get("/mp/theme", new(tenant.MpTheme).ShowByMid)
 	}
 
 	cmf.Socket("api/v1/admin/notice", new(tenant.Notice).SocketGet, socket.ConnPools)

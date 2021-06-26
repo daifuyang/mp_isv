@@ -18,6 +18,7 @@ type RechargeOrder struct {
 	Fee         float64 `gorm:"type:decimal(7,2);comment:支付金额;default:0;not null" json:"fee"`
 	ActualFee   float64 `gorm:"type:decimal(7,2);comment:实际金额;default:0;not null" json:"actual_fee"`
 	SendFee     float64 `gorm:"type:decimal(7,2);comment:赠送金额;default:0;not null" json:"send_fee"`
+	RefundFee   float64 `gorm:"type:decimal(7,2);comment:剩余可退金额;default:0;not null" json:"refund_fee"`
 	CreateAt    int64   `gorm:"type:bigint(20)" json:"create_at"`
 	FinishedAt  int64   `gorm:"type:int(11)" json:"finished_at"`
 	OrderStatus string  `gorm:"type:varchar(20);comment:订单状态（WAIT_BUYER_PAY => 待支付，TRADE_FINISHED=> 已完成，TRADE_CLOSED => 已关闭，TRADE_REFUND=>已退款）;default:WAIT_BUYER_PAY;not null" json:"order_status"`

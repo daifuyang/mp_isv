@@ -20,7 +20,7 @@ func AccessToken(c *gin.Context) {
 	// 获取accessToken
 	options := wechatEasySdk.OpenOptions()
 
-	fmt.Println("options.ComponentVerifyTicket",options.ComponentVerifyTicket)
+	fmt.Println(" options.ComponentVerifyTicket", options.ComponentVerifyTicket)
 
 	if options.ComponentVerifyTicket != "" {
 
@@ -34,8 +34,12 @@ func AccessToken(c *gin.Context) {
 
 		accessToken, err := redis.Get("accessToken").Result()
 
-		if err != nil {
+		fmt.Println("accessToken",accessToken)
+
+		if accessToken == "" || err != nil {
 			token := new(open.Component).Token(bizContent)
+
+			fmt.Println("token token", token)
 
 			if token.Errcode == 0 {
 				accessToken = strings.TrimSpace(token.AccessToken)
@@ -48,7 +52,6 @@ func AccessToken(c *gin.Context) {
 		if accessToken != "" {
 			c.Set("accessToken", accessToken)
 		}
-
 	}
 
 	c.Next()

@@ -7,6 +7,7 @@ package model
 
 import (
 	"errors"
+	"gincmf/plugins/wechatPlugin/model"
 	"github.com/gincmf/alipayEasySdk/mini"
 	"github.com/gincmf/wechatEasySdk/open"
 	"strconv"
@@ -22,6 +23,7 @@ type Subscribe struct {
 	CreateTime  string `json:"create_time"`
 	Remark      string `json:"remark"`
 	Id          int    `json:"id"`
+	Mid         int    `json:"mid"`
 }
 
 // 下单成功
@@ -29,38 +31,46 @@ func (rest *Subscribe) TradeSuccess() error {
 
 	if rest.Type == "wechat" {
 
-		ak := rest.AccessToken
-
-		keywords := map[string]interface{}{
-			"name1": map[string]string{
-				"value": rest.StoreName,
-			},
-			"character_string4": map[string]string{
-				"value": rest.OrderId,
-			},
-			"amount3": map[string]string{
-				"value": rest.Fee + "元",
-			},
-			"date2": map[string]string{
-				"value": rest.CreateTime,
-			},
-			"thing5": map[string]string{
-				"value": rest.Remark,
-			},
+		sub, err := new(model.Subscribe).Show(rest.Mid)
+		if err != nil {
+			return err
 		}
 
-		bizContent := map[string]interface{}{
-			"touser":            rest.OpenId,
-			"template_id":       "6rhlDbE3jLNQSqZQ-vKRx2vzuTZj8-W4-vnMPV0hs4s",
-			"page":              "pages/order/detail?id=" + strconv.Itoa(rest.Id),
-			"miniprogram_state": "developer",
-			"data":              keywords,
-		}
+		if sub.PayTmpId != "" {
 
-		response := new(open.Subscribe).Send(ak, bizContent)
+			ak := rest.AccessToken
 
-		if response.Errcode != 0 {
-			return errors.New(response.Errmsg)
+			keywords := map[string]interface{}{
+				"thing45": map[string]string{
+					"value": rest.StoreName,
+				},
+				"character_string37": map[string]string{
+					"value": rest.OrderId,
+				},
+				"amount12": map[string]string{
+					"value": rest.Fee + "元",
+				},
+				"date4": map[string]string{
+					"value": rest.CreateTime,
+				},
+				"thing26": map[string]string{
+					"value": rest.Remark,
+				},
+			}
+
+			bizContent := map[string]interface{}{
+				"touser":            rest.OpenId,
+				"template_id":       sub.PayTmpId,
+				"page":              "pages/order/detail?id=" + strconv.Itoa(rest.Id),
+				"miniprogram_state": "formal",
+				"data":              keywords,
+			}
+
+			response := new(open.Subscribe).Send(ak, bizContent)
+
+			if response.Errcode != 0 {
+				return errors.New(response.Errmsg)
+			}
 		}
 
 		return nil
@@ -114,37 +124,44 @@ func (rest *Subscribe) TradeRefund() error {
 
 	if rest.Type == "wechat" {
 
-		ak := rest.AccessToken
-
-		keywords := map[string]interface{}{
-			"thing12": map[string]string{
-				"value": rest.StoreName,
-			},
-			"amount1": map[string]string{
-				"value": rest.Fee + "元",
-			},
-			"character_string3": map[string]string{
-				"value": rest.OrderId,
-			},
-			"thing6": map[string]string{
-				"value": rest.Remark,
-			},
+		sub, err := new(model.Subscribe).Show(rest.Mid)
+		if err != nil {
+			return err
 		}
 
-		bizContent := map[string]interface{}{
-			"touser":            rest.OpenId,
-			"template_id":       "88hff1XEBlptsP2U-uHV0td6xj2heHhx_oB6tlfE4LU",
-			"page":              "pages/order/detail?id=" + strconv.Itoa(rest.Id),
-			"miniprogram_state": "developer",
-			"data":              keywords,
+		if sub.RefundTmpId != "" {
+
+			ak := rest.AccessToken
+
+			keywords := map[string]interface{}{
+				"thing8": map[string]string{
+					"value": rest.StoreName,
+				},
+				"amount5": map[string]string{
+					"value": rest.Fee + "元",
+				},
+				"character_string7": map[string]string{
+					"value": rest.OrderId,
+				},
+				"thing9": map[string]string{
+					"value": rest.Remark,
+				},
+			}
+
+			bizContent := map[string]interface{}{
+				"touser":            rest.OpenId,
+				"template_id":       sub.RefundTmpId,
+				"page":              "pages/order/detail?id=" + strconv.Itoa(rest.Id),
+				"miniprogram_state": "formal",
+				"data":              keywords,
+			}
+
+			response := new(open.Subscribe).Send(ak, bizContent)
+
+			if response.Errcode != 0 {
+				return errors.New(response.Errmsg)
+			}
 		}
-
-		response := new(open.Subscribe).Send(ak, bizContent)
-
-		if response.Errcode != 0 {
-			return errors.New(response.Errmsg)
-		}
-
 		return nil
 
 	}

@@ -7,11 +7,14 @@ package open
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	appModel "gincmf/app/model"
 	"gincmf/app/util"
+	resModel "gincmf/plugins/restaurantPlugin/model"
 	saasModel "gincmf/plugins/saasPlugin/model"
+	"gincmf/plugins/wechatPlugin/model"
 	"github.com/gin-gonic/gin"
 	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
@@ -71,7 +74,7 @@ func (rest *Version) Detail(c *gin.Context) {
 	}
 
 	result.Base = data
-	result.QrCodeUrl = util.GetFileUrl(mpTheme.WechatQrCodeUrl, false)
+	result.QrCodeUrl = util.GetFileUrl(mpTheme.WechatQrCodeUrl,)
 
 	rest.rc.Success(c, "获取成功！", result)
 
@@ -98,7 +101,7 @@ func (rest *Version) Upload(c *gin.Context) {
 	}
 
 	var count int64
-	cmf.NewDb().Where("mid = ? and is_audit = ? AND type = ?", mid, 1,"wechat").First(&saasModel.MpThemeVersion{}).Count(&count)
+	cmf.NewDb().Where("mid = ? and is_audit = ? AND type = ?", mid, 1, "wechat").First(&saasModel.MpThemeVersion{}).Count(&count)
 	if count > 0 {
 		rest.rc.Error(c, "请等待待审核的小程序完成审核状态在升级!", nil)
 		return
@@ -116,7 +119,53 @@ func (rest *Version) Upload(c *gin.Context) {
 		appVersions = version.Version
 	}
 
-	fmt.Println("appVersions", appVersions)
+	// 首次构建
+	if appVersions == "0.0.0" {
+
+		bizContent := map[string]interface{}{
+			"action": "add",
+			"requestdomain": []string{
+				"https://console.mashangdian.cn",
+			},
+			"wsrequestdomain": []string{
+				"wss://console.mashangdian.cn",
+			},
+			"uploaddomain": []string{
+				"https://console.mashangdian.cn",
+			},
+			"downloaddomain": []string{
+				"https://console.mashangdian.cn",
+			},
+		}
+		data := new(open.Wxa).ModifyDomain(accessToken.(string), bizContent)
+
+		if data.Errcode > 0 {
+			rest.rc.Error(c, data.Errmsg, data)
+			return
+		}
+
+		bizContent = map[string]interface{}{
+			"action": "add",
+			"webviewdomain": []string{
+				"https://console.mashangdian.cn",
+			},
+		}
+
+		webData := new(open.Wxa).SetWebViewDomain(accessToken.(string), bizContent)
+
+		if webData.Errcode > 0 {
+			rest.rc.Error(c, webData.Errmsg, webData)
+			return
+		}
+
+		// 进行模板生成和绑定
+		_, err := new(model.Subscribe).Edit(accessToken.(string), midInt)
+
+		if err != nil {
+			rest.rc.Error(c, err.Error(), nil)
+		}
+
+	}
 
 	// 取消在审核的小程序
 
@@ -165,14 +214,20 @@ func (rest *Version) Upload(c *gin.Context) {
 		// 创建一个文件用于保存
 		path := "tenant/" + midStr + "/wechat-exp.jpg"
 
-		_, err = os.Stat("uploads/tenant/" + midStr)
+		_, err = os.Stat("public/uploads/tenant/" + midStr)
+
 		if err != nil {
-			os.MkdirAll("uploads/tenant/"+midStr, os.ModePerm)
+			err = os.MkdirAll("public/uploads/tenant/"+midStr, os.ModePerm)
+			if err != nil {
+				rest.rc.Error(c, err.Error(), nil)
+				return
+			}
 		}
 
 		out, err := os.Create("public/uploads/" + path)
 		if err != nil {
-			panic(err)
+			rest.rc.Error(c, err.Error(), nil)
+			return
 		}
 		defer out.Close()
 
@@ -337,7 +392,7 @@ func (rest *Version) Audit(c *gin.Context) {
 		return
 	}
 
-	version, err := new(saasModel.MpThemeVersion).Show(nil, nil)
+	version, err := new(saasModel.MpThemeVersion).Show([]string{"mid = ?", "type = ?"}, []interface{}{mid, "wechat"})
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)
 		return
@@ -348,8 +403,19 @@ func (rest *Version) Audit(c *gin.Context) {
 		return
 	}
 
-	bizContent := make(map[string]interface{}, 0)
+	businessJson := saasModel.Options("business_info", mid.(int))
 
+	bi := resModel.BusinessInfo{}
+
+	json.Unmarshal([]byte(businessJson), &bi)
+
+	if bi.BrandName == "" || bi.BrandLogo == "" || bi.Mobile == "" {
+		rest.rc.Error(c, "请先完善基本信息！", nil)
+		return
+	}
+
+	bizContent := make(map[string]interface{}, 0)
+	bizContent["version_desc"] = bi.AppDesc
 	auditResponse := new(open.Wxa).SubmitAudit(accessToken.(string), bizContent)
 
 	if auditResponse.Errcode != 0 {
@@ -361,7 +427,7 @@ func (rest *Version) Audit(c *gin.Context) {
 
 	version.IsAudit = 1
 	version.Status = "wait"
-	tx = cmf.NewDb().Updates(&version)
+	tx = cmf.NewDb().Save(&version)
 
 	if tx.Error != nil {
 		rest.rc.Error(c, err.Error(), nil)
@@ -404,7 +470,7 @@ func (rest *Version) LatestAuditStatus(c *gin.Context) {
 		return
 	}
 
-	version, err := new(saasModel.MpThemeVersion).Show(nil, nil)
+	version, err := new(saasModel.MpThemeVersion).Show([]string{"mid = ?", "type = ?"}, []interface{}{mid, "wechat"})
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)
 		return
@@ -431,12 +497,14 @@ func (rest *Version) LatestAuditStatus(c *gin.Context) {
 
 	if auditResponse.Status == 0 {
 		releaseResponse := new(open.Wxa).Release(accessToken.(string))
-		if releaseResponse.Errcode == 0 {
+		if releaseResponse.Errcode == 0 || releaseResponse.Errcode == 85052 {
+			version.IsAudit = 0
 			version.Status = "online"
 		}
 	}
 
-	tx = cmf.NewDb().Updates(&version)
+	version.UpdateAt = time.Now().Unix()
+	tx = cmf.NewDb().Save(&version)
 
 	if tx.Error != nil {
 		rest.rc.Error(c, err.Error(), nil)

@@ -31,6 +31,10 @@ func (rest Page) Options(c *gin.Context) {
 
 	if t == "func" {
 		options = []map[string]string{{
+			"label":  "堂食就餐",
+			"value":  "pages/store/index?scene=eatin",
+			"method": "switchTab",
+		}, {
 			"label":  "到店取餐",
 			"value":  "pages/store/index?scene=pack",
 			"method": "switchTab",

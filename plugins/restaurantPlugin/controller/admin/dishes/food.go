@@ -9,14 +9,19 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"gincmf/app/util"
 	"gincmf/plugins/restaurantPlugin/model"
+	saasModel "gincmf/plugins/saasPlugin/model"
+	"github.com/360EntSecGroup-Skylar/excelize/v2"
 	"github.com/gin-gonic/gin"
+	"github.com/gincmf/alipayEasySdk/merchant"
 	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
 	cmfLog "github.com/gincmf/cmf/log"
 	"gorm.io/gorm"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -53,6 +58,11 @@ type foodCate struct {
 	Name       string       `json:"name"`
 	IsRequired int          `json:"is_required"`
 	Food       []model.Food `json:"food"`
+}
+
+type Tasty struct {
+	AttrKey string   `json:"attr_key"`
+	AttrVal []string `json:"attr_val"`
 }
 
 /**
@@ -302,6 +312,8 @@ func (rest Food) Edit(c *gin.Context) {
 	mid, _ := c.Get("mid")
 	midInt := mid.(int)
 
+	alipay, alipayExist := c.Get("alipay")
+
 	// 获取菜品名称
 	name := c.PostForm("name")
 	if name == "" {
@@ -350,6 +362,13 @@ func (rest Food) Edit(c *gin.Context) {
 		rest.rc.Error(c, "菜品做法不能为空！", nil)
 		return
 	}*/
+
+	listOrder := c.PostForm("list_order")
+	if listOrder == "" {
+		rest.rc.Error(c, "排序不能为空！", nil)
+		return
+	}
+	listOrderFloat, _ := strconv.ParseFloat(listOrder, 64)
 
 	unit := c.PostForm("unit")
 	if unit == "" {
@@ -551,7 +570,35 @@ func (rest Food) Edit(c *gin.Context) {
 
 	// 添加菜品
 	nowAt := time.Now().Unix()
-	food := model.Food{
+
+	food := model.Food{}
+	tx := cmf.NewDb().Where("id = ?", rewrite.Id).First(&food)
+	if tx.Error != nil {
+		if errors.Is(tx.Error, gorm.ErrRecordNotFound) {
+			rest.rc.Error(c, "该菜品不存在！", nil)
+			return
+		}
+		rest.rc.Error(c, tx.Error.Error(), nil)
+		return
+	}
+
+	alipayMaterialId := ""
+	if thumbnail != "" && (food.Thumbnail != thumbnail || food.AlipayMaterialId == "") {
+
+		if alipayExist && alipay.(bool) {
+			// 上传缩略图到阿里支付宝
+			file := util.GetAbsPath(thumbnail)
+			bizContent := make(map[string]string, 0)
+			fileResult, err := new(merchant.File).Upload(bizContent, file)
+			if err != nil {
+				rest.rc.Error(c, err.Error(), nil)
+				return
+			}
+			alipayMaterialId = fileResult.Response.MaterialId
+		}
+	}
+
+	food = model.Food{
 		StoreId: storeIdInt,
 		FoodStoreHouse: model.FoodStoreHouse{
 			Id:               rewrite.Id,
@@ -583,15 +630,21 @@ func (rest Food) Edit(c *gin.Context) {
 			CreateAt:         nowAt,
 			UpdateAt:         nowAt,
 			Status:           statusInt,
+			AlipayMaterialId: alipayMaterialId,
 		},
 	}
 
-	tx := cmf.NewDb().Begin()
+	if listOrder != "" {
+		food.ListOrder = listOrderFloat
+	}
+
+	tx = cmf.NewDb().Begin()
 	tx.SavePoint("sp1")
 	defer func() {
 		if r := recover(); r != nil {
 			tx.RollbackTo("sp1")
 		}
+		tx.Commit()
 	}()
 
 	food.Db = tx
@@ -610,9 +663,12 @@ func (rest Food) Edit(c *gin.Context) {
 
 	fcp := model.FoodCategoryPost{
 		FoodId: food.Id,
+		Db:     tx,
 	}
 	_, err = fcp.Save(midInt, categoryIntArr)
 	if err != nil {
+		tx.RollbackTo("sp1")
+		fmt.Println("fcp.Save", err)
 		rest.rc.Error(c, err.Error(), nil)
 		return
 	}
@@ -650,6 +706,8 @@ func (rest Food) Edit(c *gin.Context) {
 	foodInventory := inventoryInt
 
 	if useSkuInt == 1 {
+
+		foodInventory = 0
 
 		var attrQuery []string
 		var attrQueryArgs []interface{}
@@ -719,6 +777,7 @@ func (rest Food) Edit(c *gin.Context) {
 				FoodId:           food.Id,
 				AttrValue:        v.AttrValue,
 				Code:             v.Code,
+				Weight:           v.Weight,
 				Inventory:        v.Inventory,
 				DefaultInventory: v.Inventory,
 				MemberPrice:      v.MemberPrice,
@@ -730,12 +789,16 @@ func (rest Food) Edit(c *gin.Context) {
 				Db:               tx,
 			}
 
-			if v.Inventory > 0 {
-				foodInventory += v.Inventory
-			}
+			foodInventory += v.Inventory
 
 			skus = append(skus, sku)
 		}
+
+		if foodInventory < -1 {
+			foodInventory = -1
+		}
+
+		fmt.Println("foodInventory", foodInventory)
 
 		food.Inventory = foodInventory
 		food.DefaultInventory = foodInventory
@@ -768,14 +831,6 @@ func (rest Food) Edit(c *gin.Context) {
 		rest.rc.Error(c, err.Error(), nil)
 		return
 	}
-
-	defer func() {
-		if tx.Error != nil {
-			tx.RollbackTo("sp1")
-			return
-		}
-		tx.Commit()
-	}()
 
 	rest.rc.Success(c, "更新成功！", food)
 }
@@ -837,6 +892,8 @@ func (rest Food) Store(c *gin.Context) {
 	mid, _ := c.Get("mid")
 	midInt := mid.(int)
 
+	alipay, alipayExist := c.Get("alipay")
+
 	// 获取菜品名称
 	name := c.PostForm("name")
 	if name == "" {
@@ -887,6 +944,13 @@ func (rest Food) Store(c *gin.Context) {
 		rest.rc.Error(c, "菜品做法不能为空！", nil)
 		return
 	}*/
+
+	listOrder := c.PostForm("list_order")
+	if listOrder == "" {
+		rest.rc.Error(c, "排序不能为空！", nil)
+		return
+	}
+	listOrderFloat, _ := strconv.ParseFloat(listOrder, 64)
 
 	unit := c.PostForm("unit")
 	if unit == "" {
@@ -1096,6 +1160,23 @@ func (rest Food) Store(c *gin.Context) {
 	// 菜品详情
 	content := c.PostForm("content")
 
+	alipayMaterialId := ""
+	if thumbnail != "" {
+
+		if alipayExist && alipay.(bool) {
+			// 上传缩略图到阿里支付宝
+			file := util.GetAbsPath(thumbnail)
+			bizContent := make(map[string]string, 0)
+			fileResult, err := new(merchant.File).Upload(bizContent, file)
+
+			if err != nil {
+				rest.rc.Error(c, err.Error(), nil)
+				return
+			}
+			alipayMaterialId = fileResult.Response.MaterialId
+		}
+	}
+
 	// 添加菜品
 	nowAt := time.Now().Unix()
 	food := model.Food{
@@ -1129,16 +1210,16 @@ func (rest Food) Store(c *gin.Context) {
 			CreateAt:         nowAt,
 			UpdateAt:         nowAt,
 			Status:           statusInt,
+			AlipayMaterialId: alipayMaterialId,
 		},
+	}
+
+	if listOrder != "" {
+		food.ListOrder = listOrderFloat
 	}
 
 	tx := cmf.NewDb().Begin()
 	tx.SavePoint("sp1")
-	defer func() {
-		if r := recover(); r != nil {
-			tx.RollbackTo("sp1")
-		}
-	}()
 
 	food.Db = tx
 	food, err = food.Save()
@@ -1147,8 +1228,6 @@ func (rest Food) Store(c *gin.Context) {
 		rest.rc.Error(c, err.Error(), nil)
 		return
 	}
-
-	fmt.Println("food", food.Id)
 
 	// 更新所在分类
 	categoryArr := strings.Split(category, ",")
@@ -1164,9 +1243,11 @@ func (rest Food) Store(c *gin.Context) {
 
 	fcp := model.FoodCategoryPost{
 		FoodId: food.Id,
+		Db:     tx,
 	}
 	_, err = fcp.Save(midInt, categoryIntArr)
 	if err != nil {
+		tx.RollbackTo("sp1")
 		rest.rc.Error(c, err.Error(), nil)
 		return
 	}
@@ -1245,8 +1326,6 @@ func (rest Food) Store(c *gin.Context) {
 				return
 			}
 
-			fmt.Println("attrPost", attrPost)
-
 			// 获取规格唯一对应的键值id,多个用|分隔
 			attrPostId := strconv.Itoa(attrPost.AttrPostId)
 
@@ -1292,7 +1371,9 @@ func (rest Food) Store(c *gin.Context) {
 		}
 	}
 
-	tx.Commit()
+	if foodInventory < -1 {
+		foodInventory = -1
+	}
 
 	// 更新库存
 	food.Inventory = foodInventory
@@ -1304,6 +1385,14 @@ func (rest Food) Store(c *gin.Context) {
 		rest.rc.Error(c, err.Error(), nil)
 		return
 	}
+
+	defer func() {
+		if tx.Error != nil {
+			tx.RollbackTo("sp1")
+			return
+		}
+		tx.Commit()
+	}()
 
 	rest.rc.Success(c, "添加成功！", food)
 }
@@ -1485,14 +1574,14 @@ func (rest *Food) SetStatus(c *gin.Context) {
 	}
 
 	food := model.Food{}
-	tx := cmf.NewDb().Where("id = ?",rewrite.Id).First(&food)
+	tx := cmf.NewDb().Where("id = ?", rewrite.Id).First(&food)
 
 	if tx.Error != nil {
-		if errors.Is(tx.Error,gorm.ErrRecordNotFound) {
-			rest.rc.Error(c,"该菜品不存在！",nil)
+		if errors.Is(tx.Error, gorm.ErrRecordNotFound) {
+			rest.rc.Error(c, "该菜品不存在！", nil)
 			return
 		}
-		rest.rc.Error(c,tx.Error.Error(),nil)
+		rest.rc.Error(c, tx.Error.Error(), nil)
 		return
 	}
 
@@ -1500,15 +1589,434 @@ func (rest *Food) SetStatus(c *gin.Context) {
 	status := c.PostForm("status")
 
 	if !(status == "0" || status == "1") {
-		rest.rc.Error(c,"状态错误!",nil)
+		rest.rc.Error(c, "状态错误!", nil)
 	}
 
-	tx = cmf.NewDb().Model(&Food{}).Where("id = ? AND mid = ? AND store_id = ?",rewrite.Id,mid,storeId).Update("status",status)
+	tx = cmf.NewDb().Model(&Food{}).Where("id = ? AND mid = ? AND store_id = ?", rewrite.Id, mid, storeId).Update("status", status)
 	if tx.Error != nil {
-		rest.rc.Error(c,tx.Error.Error(),nil)
+		rest.rc.Error(c, tx.Error.Error(), nil)
 		return
 	}
 
-	rest.rc.Success(c,"操作成功！",nil)
+	rest.rc.Success(c, "操作成功！", nil)
+
+}
+
+/**
+ * @Author return <1140444693@qq.com>
+ * @Description 批量导入菜品
+ * @Date 2021/5/28 21:4:9
+ * @Param
+ * @return
+ **/
+func (rest *Food) ImportMenus(c *gin.Context) {
+
+	iMid, _ := c.Get("mid")
+	mid := iMid.(int)
+
+	file, _ := c.FormFile("file")
+
+	storeId := c.PostForm("store_id")
+
+	if storeId == "" {
+		rest.rc.Error(c, "门店id不能为空！", nil)
+		return
+	}
+
+	storeIdInt, err := strconv.Atoi(storeId)
+
+	if err != nil {
+		rest.rc.Error(c, "门店id参数非法！", nil)
+		return
+	}
+
+	suffixArr := strings.Split(file.Filename, ".")
+	suffix := suffixArr[len(suffixArr)-1]
+
+	if !(suffix == "xls" || suffix == "xlsx") {
+		rest.rc.Error(c, "不是合法的文档！", nil)
+		return
+	}
+
+	fp, _ := file.Open()
+	f, err := excelize.OpenReader(fp)
+	if err != nil {
+		rest.rc.Error(c, "打开失败，不存的表格！", nil)
+		return
+	}
+
+	alipay, alipayExist := c.Get("alipay")
+
+	categories, err := f.GetRows("菜品分类")
+
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+
+	go func() {
+		for k, v := range categories {
+			if k > 1 {
+				category := model.FoodCategory{}
+				tx := cmf.NewDb().Where("mid = ? AND name = ?", mid, v[0]).First(&category)
+				category.Name = v[0]
+				category.Mid = mid
+				category.StoreId = storeIdInt
+				if tx.RowsAffected == 0 {
+					category.CreateAt = time.Now().Unix()
+					category.UpdateAt = time.Now().Unix()
+					cmf.NewDb().Create(&category)
+				} else {
+					category.UpdateAt = time.Now().Unix()
+					cmf.NewDb().Save(&category)
+				}
+
+			}
+		}
+		wg.Done()
+	}()
+
+	wg.Wait()
+
+	// Get all the rows in the Sheet1.
+	rows, err := f.GetRows("菜品列表")
+
+	if len(rows) == 0 {
+		fmt.Println("err", "表内容为空！")
+	}
+
+	name := ""
+
+	foodInventory := -1
+
+	wg.Add(1)
+	go func() {
+		for k, v := range rows {
+
+			if k > 1 {
+				food := model.Food{}
+				tx := cmf.NewDb().Where("name = ? AND mid = ?", v[0], mid).First(&food)
+				food.StoreId = storeIdInt
+				food.Name = strings.TrimSpace(v[0])
+				food.Excerpt = strings.TrimSpace(v[2])
+				food.Mid = mid
+
+				food.Unit = v[3]
+
+				status := 1
+				if v[4] == "下架" {
+					status = 0
+				}
+
+				scene := 0
+
+				if v[5] == "堂食" {
+					scene = 1
+				}
+
+				if v[5] == "外卖" {
+					scene = 2
+				}
+
+				food.Status = status
+				food.Scene = scene
+
+				isRecommend := 0
+
+				if v[6] == "推荐" {
+					isRecommend = 1
+				}
+
+				food.IsRecommend = isRecommend
+
+				startSale := 1
+
+				// 起售
+				if v[8] != "" {
+					startSaleInt, err := strconv.Atoi(v[8])
+					if err != nil {
+						startSale = 1
+					} else {
+						startSale = startSaleInt
+					}
+				}
+				food.StartSale = startSale
+
+				// 餐盒费
+				var boxFee float64 = 0
+				bf, err := strconv.ParseFloat(v[9], 64)
+				if err != nil {
+					boxFee = 0
+				} else {
+					boxFee = bf
+				}
+
+				food.BoxFee = boxFee
+
+				food.FoodCode = v[13]
+
+				// 重量
+				var weight float64 = 0
+				w, err := strconv.ParseFloat(v[14], 64)
+				if err != nil {
+					weight = 0
+				} else {
+					weight = w
+				}
+				food.Weight = weight
+
+				// 售价
+				var price float64 = 0
+				priceFloat, err := strconv.ParseFloat(v[15], 64)
+				if err != nil {
+					price = 0
+				} else {
+					price = priceFloat
+				}
+
+				if food.Price >= price {
+					food.Price = price
+				}
+
+				// 原价
+				var originalPrice float64 = 0
+				originalPriceFloat, err := strconv.ParseFloat(v[16], 64)
+				if err != nil {
+					originalPrice = 0
+				} else {
+					originalPrice = originalPriceFloat
+				}
+				food.OriginalPrice = originalPrice
+
+				// 会员价
+				var memberPrice float64 = 0
+				memberPriceFloat, err := strconv.ParseFloat(v[17], 64)
+				if err != nil {
+					memberPrice = 0
+				} else {
+					memberPrice = memberPriceFloat
+				}
+				food.MemberPrice = memberPrice
+
+				// 库存
+				var inventory = -1
+				inventoryInt, err := strconv.Atoi(v[18])
+				if err != nil {
+					inventory = -1
+				} else {
+					inventory = inventoryInt
+				}
+
+				// 设置规格库存
+				if name == v[1] && v[10] == "启用" {
+					inventory = foodInventory
+				} else {
+					name = v[1]
+					foodInventory = inventory
+				}
+
+				food.Inventory = inventory
+				food.DefaultInventory = inventory
+
+				// 销量
+				var volume = 0
+
+				volumeInt, err := strconv.Atoi(v[19])
+				if err != nil {
+					volume = 0
+				} else {
+					volume = volumeInt
+				}
+
+				food.Volume = volume
+
+				// 口味
+
+				var tastyJson []Tasty
+
+				var tasty = ""
+				if len(v) >= 20 {
+					tasty = v[20]
+				}
+
+				strings.ReplaceAll(tasty, "；", ";")
+
+				tastyArr := strings.Split(tasty, ";")
+
+				for _, tastyItem := range tastyArr {
+
+					if strings.TrimSpace(tastyItem) != "" {
+
+						tastyItemArr := strings.Split(tastyItem, ":")
+
+						if len(tastyArr) > 1 {
+							tastyKey := tastyItemArr[0]
+							tastyValue := tastyItemArr[1]
+
+							tastyJson = append(tastyJson, Tasty{
+								AttrKey: tastyKey,
+								AttrVal: strings.Split(tastyValue, ","),
+							})
+
+						}
+					}
+				}
+
+				tastyStr, _ := json.Marshal(tastyJson)
+
+				if len(tastyJson) > 0 {
+					food.UseTasty = 1
+					food.Tasty = string(tastyStr)
+				}
+
+				// 缩略图不存在
+				if food.Thumbnail == "" {
+
+					filePath, err := new(saasModel.Asset).SyncUpload(mid, v[1])
+
+					if err == nil {
+						food.Thumbnail = filePath
+						alipayMaterialId := ""
+						if food.Thumbnail != filePath || food.AlipayMaterialId == "" {
+
+							if alipayExist && alipay.(bool) {
+								// 上传缩略图到阿里支付宝
+								file := util.GetAbsPath(filePath)
+								bizContent := make(map[string]string, 0)
+								fileResult, err := new(merchant.File).Upload(bizContent, file)
+								if err != nil {
+									rest.rc.Error(c, err.Error(), nil)
+									return
+								}
+								alipayMaterialId = fileResult.Response.MaterialId
+								food.AlipayMaterialId = alipayMaterialId
+							}
+						}
+					}
+
+				}
+
+				if v[10] == "启用" {
+					food.UseSku = 1
+				}
+
+				if tx.RowsAffected == 0 {
+					food.CreateAt = time.Now().Unix()
+					food.UpdateAt = time.Now().Unix()
+					cmf.NewDb().Create(&food)
+				} else {
+					food.UpdateAt = time.Now().Unix()
+					cmf.NewDb().Save(&food)
+				}
+
+				// 分类
+				if v[7] != "" {
+					categoryName := strings.TrimSpace(v[7])
+					category := model.FoodCategory{}
+					tx := cmf.NewDb().Where("name = ? AND mid = ?", categoryName, mid).First(&category)
+
+					if tx.RowsAffected > 0 {
+						categoryPost := model.FoodCategoryPost{}
+						tx := cmf.NewDb().Where("food_id = ? AND  food_category_id = ?", food.Id, category.Id).First(&categoryPost)
+
+						if tx.RowsAffected == 0 {
+							cmf.NewDb().Create(&model.FoodCategoryPost{
+								FoodId:         food.Id,
+								FoodCategoryId: category.Id,
+								CreateAt:       time.Now().Unix(),
+								UpdateAt:       time.Now().Unix(),
+							})
+						}
+
+					}
+
+				}
+
+				// 规格更新
+
+				if v[10] == "启用" {
+
+					name := strings.TrimSpace(v[11])
+					// 获取当前键是否存在
+					attrKey := model.FoodAttrKey{
+						Name: name,
+					}
+
+					result := cmf.NewDb().Where("name = ?", name).First(&attrKey)
+					if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
+						fmt.Println("result.Error", result.Error.Error())
+					}
+
+					if result.RowsAffected == 0 {
+						cmf.NewDb().Create(&attrKey)
+					}
+
+					// 获取规格key
+					attrVal := strings.TrimSpace(v[12])
+
+					attrValue := model.FoodAttrValue{
+						AttrId:    attrKey.AttrId,
+						AttrValue: attrVal,
+					}
+
+					// 获取规格值id
+					attrValue, err = attrValue.AddAttrValue()
+					if err != nil {
+						fmt.Println("AddAttrValue", attrValue)
+					}
+
+					// 获取键值和商品的关联信息
+					attrPost := model.FoodAttrPost{
+						FoodId:      food.Id,
+						AttrValueId: attrValue.AttrValueId,
+					}
+
+					attrPost, err = attrPost.AddAttrPost()
+					if err != nil {
+						fmt.Println("AddAttrPost err:", err.Error())
+					}
+
+					// 获取规格唯一对应的键值id,多个用|分隔
+					attrPostId := strconv.Itoa(attrPost.AttrPostId)
+
+					code := strings.TrimSpace(v[13])
+
+					sku := model.FoodSku{
+						AttrPost:         attrPostId,
+						FoodId:           food.Id,
+						AttrValue:        attrVal,
+						Code:             code,
+						Weight:           weight,
+						Inventory:        inventory,
+						DefaultInventory: inventory,
+						MemberPrice:      memberPrice,
+						UseMember:        0,
+						OriginalPrice:    originalPrice,
+						Price:            price,
+						Volume:           volume,
+						Remark:           attrValue.AttrValue,
+					}
+
+					foodInventory += inventory
+
+					if foodInventory < -1 {
+						foodInventory = -1
+					}
+
+					_, err := sku.FirstOrSave()
+					if err != nil {
+						fmt.Println("FirstOrSave err", err.Error())
+					}
+
+				}
+
+			}
+
+		}
+		wg.Done()
+	}()
+
+	wg.Wait()
+
+	rest.rc.Success(c, "执行完成！", nil)
 
 }

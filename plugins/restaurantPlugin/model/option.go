@@ -45,22 +45,30 @@ type EatIn struct {
 	Day                int `json:"day"`
 }
 
+type deliveryTimes struct {
+	StartTime string `json:"start_time"`
+	EndTime   string `json:"end_time"`
+}
+
 type TakeOut struct {
-	Status             int     `json:"status"`
-	FirstClass         string  `json:"first_class"`
-	SecondClass        string  `json:"second_class"`
-	ImmediateDelivery  int     `json:"immediate_delivery"`  // 立即配送
-	EnabledAppointment int     `json:"enabled_appointment"` // 启用预约
-	Day                int     `json:"day"`                 //可预约天数
-	EnabledSellClear   int     `json:"enabled_sell_clear"`  // 启用自动沽清
-	SellClear          string  `json:"sell_clear"`
-	AutomaticOrder     int     `json:"automatic_order"`   // 自动接单
-	DeliveryDistance   float64 `json:"delivery_distance"` // 配送距离
-	StopBeforeMin      int     `json:"stop_before_min"`   //停止营业前停止接单
-	StartKm            float64 `json:"start_km"`          // 起步km
-	StartFee           float64 `json:"start_fee"`         // 起步价格
-	StepKm             float64 `json:"step_km"`           // 阶梯距离
-	StepFee            float64 `json:"step_fee"`          // 阶梯价格
+	Status             int             `json:"status"`
+	FirstClass         string          `json:"first_class"`
+	SecondClass        string          `json:"second_class"`
+	MinPrice           float64         `json:"min_price"`           // 起送价格
+	ImmediateDelivery  int             `json:"immediate_delivery"`  // 立即配送
+	EnabledAppointment int             `json:"enabled_appointment"` // 启用预约
+	Day                int             `json:"day"`                 //可预约天数
+	EnabledSellClear   int             `json:"enabled_sell_clear"`  // 启用自动沽清
+	SellClear          string          `json:"sell_clear"`
+	AutomaticOrder     int             `json:"automatic_order"`   // 自动接单
+	DeliveryDistance   float64         `json:"delivery_distance"` // 配送距离
+	StopBeforeMin      int             `json:"stop_before_min"`   //停止营业前停止接单
+	StartKm            float64         `json:"start_km"`          // 起步km
+	StartFee           float64         `json:"start_fee"`         // 起步价格
+	StepKm             float64         `json:"step_km"`           // 阶梯距离
+	StepFee            float64         `json:"step_fee"`          // 阶梯价格
+	DeliveryPercent    float64         `json:"delivery_percent"`  // 最大承受运费比例
+	DeliveryTimes      []deliveryTimes `json:"delivery_times"`    // 自动配送时间段
 }
 
 type Recharge struct {

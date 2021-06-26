@@ -47,6 +47,7 @@ func ValidationBearerToken(c *gin.Context) {
 		userType := userArr[1]
 		tenantId := userArr[2]
 		tenantIdInt, _ := strconv.Atoi(tenantId)
+
 		c.Set("account_type", userType)
 		c.Set("tenant_id", tenantIdInt)
 	}

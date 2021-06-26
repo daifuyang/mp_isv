@@ -6,6 +6,7 @@
 package wechatPlugin
 
 import (
+	"fmt"
 	"gincmf/plugins/wechatPlugin/router"
 	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/wechatEasySdk"
@@ -15,10 +16,13 @@ func Init() {
 	router.ApiListenRouter()
 
 	redis := cmf.NewRedisDb()
-
-	// redis.Set("componentVerifyTicket", "ticket@@@Ycmd4wwDdpb_Ke6iHWaRJJkZA_joSVGaMWh9fBdjIhGITx0EKmD572n3qxFNdKpeEF-QuXnt9r3BRjgPWZq56A", 0)
+	if cmf.Conf().App.Evn != "release" {
+		redis, _ = cmf.RedisDb("52.130.144.34", "codecloud2020")
+	}
 
 	ticket, err := redis.Get("componentVerifyTicket").Result()
+
+	fmt.Println("ticket",ticket)
 
 	host := cmf.Conf().App.Domain
 

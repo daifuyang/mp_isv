@@ -10,6 +10,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"gincmf/app/model"
+	resModel "gincmf/plugins/restaurantPlugin/model"
 	saasModel "gincmf/plugins/saasPlugin/model"
 	wechatMiddle "gincmf/plugins/wechatPlugin/middleware"
 	"github.com/gin-gonic/gin"
@@ -73,22 +74,36 @@ func (rest *ReceiveNotify) Notify(c *gin.Context) {
 
 	result = result[20:end]
 
-	var tickets struct {
+	var requestForm struct {
 		AppId                 string
 		CreateTime            int64
 		InfoType              string
 		ComponentVerifyTicket string
 	}
 
-	xml.Unmarshal(result, &tickets)
+	xml.Unmarshal(result, &requestForm)
 
-	if tickets.ComponentVerifyTicket != "" {
-		fmt.Println("tickets.ComponentVerifyTicket", tickets.ComponentVerifyTicket)
-		cmfLog.Save(tickets.ComponentVerifyTicket, "tickets.log")
-		wechatEasySdk.SetOpenOption("ComponentVerifyTicket", tickets.ComponentVerifyTicket)
+	switch requestForm.InfoType {
+	case "component_verify_ticket":
+		if requestForm.ComponentVerifyTicket != "" {
+			fmt.Println("tickets.ComponentVerifyTicket", requestForm.ComponentVerifyTicket)
+			cmfLog.Save(requestForm.ComponentVerifyTicket, "tickets.log")
+			wechatEasySdk.SetOpenOption("ComponentVerifyTicket", requestForm.ComponentVerifyTicket)
+			redis := cmf.NewRedisDb()
+			redis.Set("componentVerifyTicket", requestForm.ComponentVerifyTicket, time.Hour*12)
 
-		redis := cmf.NewRedisDb()
-		redis.Set("componentVerifyTicket", tickets.ComponentVerifyTicket, time.Hour*12)
+			if cmf.Conf().App.Evn == "release" {
+				redisDb, err := cmf.RedisDb("52.130.144.34", "codecloud2020")
+				if err == nil {
+					redisDb.Set("componentVerifyTicket", requestForm.ComponentVerifyTicket, time.Hour*12)
+				}
+			}
+
+		}
+	case "notify_third_fasteregister":
+
+	default:
+		c.String(http.StatusBadRequest, "not implements")
 	}
 
 	c.String(http.StatusOK, "success")
@@ -127,17 +142,21 @@ func (rest *ReceiveNotify) AppIdNotify(c *gin.Context) {
 	appId := strings.TrimSpace(form.AppId)
 	encrypt := strings.TrimSpace(form.Encrypt)
 
+	fmt.Println("appId", appId)
+	fmt.Println("encrypt", encrypt)
+
+	authAppId := rewrite.AppId
+
 	mpAuth := model.MpIsvAuth{}
-	tx := cmf.Db().Where("auth_app_id = ?", appId).Order("id desc").First(&mpAuth)
+	tx := cmf.Db().Where("auth_app_id = ?", authAppId).Order("id desc").First(&mpAuth)
 
 	if tx.RowsAffected == 0 {
-		fmt.Println("ValidationMp,小程序app_id不正确")
-		cmfLog.Error("小程序app_id不正确，appId：" + appId)
-		controller.Rest{}.Error(c, "小程序auth_app_id不正确！", nil)
-		c.Abort()
+		fmt.Println("ValidationMp-小程序app_id不正确", appId)
+		rest.rc.Error(c, "小程序auth_app_id不正确！", nil)
 		return
 	}
 
+	c.Set("tenant_id", mpAuth.TenantId)
 	// 设置访问数据库
 	db := "tenant_" + strconv.Itoa(mpAuth.TenantId)
 	cmf.ManualDb(db)
@@ -151,9 +170,9 @@ func (rest *ReceiveNotify) AppIdNotify(c *gin.Context) {
 	wechatMiddle.AccessToken(c)
 	wechatMiddle.AuthorizerAccessToken(c)
 
-	accessToken, _ := c.Get("authorizerAccessToken")
-	if accessToken == "" {
-		rest.rc.Error(c, "授权失败！", nil)
+	accessToken, exist := c.Get("authorizerAccessToken")
+
+	if !exist {
 		return
 	}
 
@@ -178,34 +197,50 @@ func (rest *ReceiveNotify) AppIdNotify(c *gin.Context) {
 
 	result = result[20:end]
 
-	var auditEvent struct {
+	type agent struct {
+		Name      string `xml:"name"`
+		Phone     string `xml:"phone"`
+		ReachTime string `xml:"reach_time"`
+	}
+
+	var messageRequest struct {
 		ToUserName   string `xml:"ToUserName"`
 		FromUserName string `xml:"FromUserName"`
 		CreateTime   int    `xml:"CreateTime"`
 		MsgType      string `xml:"MsgType"`
 		Event        string `xml:"Event"`
+		Shopid       string `xml:"shopid"`
+		ShopOrderId  string `xml:"shop_order_id"`
+		WaybillId    string `xml:"waybill_id"`
+		ActionTime   int    `xml:"action_time"`
+		OrderStatus  int    `xml:"order_status"`
+		ActionMsg    string `xml:"action_msg"`
+		ShopNo       string `xml:"shop_no"`
 		SuccTime     int    `xml:"SuccTime"`
 		FailTime     int    `xml:"FailTime"`
 		DelayTime    int    `xml:"DelayTime"`
-		Reason       string `json:"reason"`
-		ScreenShot   string `json:"screen_shot"`
+		Reason       string `xml:"reason"`
+		ScreenShot   string `xml:"screen_shot"`
+		Agent        agent  `xml:"agent"`
 	}
 
-	xml.Unmarshal(result, &auditEvent)
+	xml.Unmarshal(result, &messageRequest)
 
-	version, err := new(saasModel.MpThemeVersion).Show(nil, nil)
+	version, err := new(saasModel.MpThemeVersion).Show([]string{"mid = ?", "type = ?"}, []interface{}{mid, "wechat"})
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)
 		return
 	}
 
-	if auditEvent.Event == "weapp_audit_fail" {
+	fmt.Println("result", string(result))
+
+	if messageRequest.Event == "weapp_audit_fail" {
 
 		version.Status = "reject"
-		version.RejectReason = auditEvent.Reason
+		version.RejectReason = messageRequest.Reason
 		version.IsAudit = 0
 
-		tx := cmf.NewDb().Updates(&version)
+		tx := cmf.NewDb().Save(&version)
 
 		if tx.Error != nil {
 			rest.rc.Error(c, err.Error(), nil)
@@ -213,24 +248,50 @@ func (rest *ReceiveNotify) AppIdNotify(c *gin.Context) {
 		}
 	}
 
-	if auditEvent.Event == "weapp_audit_success" {
+	if messageRequest.Event == "weapp_audit_success" {
 
-		version.Status = "audit"
-		version.RejectReason = auditEvent.Reason
-		version.IsAudit = 0
+		version.Status = "wait"
+		version.RejectReason = messageRequest.Reason
+		version.IsAudit = 1
 
 		releaseResponse := new(open.Wxa).Release(accessToken.(string))
 		if releaseResponse.Errcode == 0 {
 			version.Status = "online"
+			version.IsAudit = 0
 		}
 
-		tx := cmf.NewDb().Updates(&version)
+		tx := cmf.NewDb().Save(&version)
 
 		if tx.Error != nil {
 			rest.rc.Error(c, err.Error(), nil)
 			return
 		}
 
+	}
+
+	if messageRequest.Event == "update_waybill_status" {
+		var result struct {
+			resModel.FoodOrder
+			IdoId int `json:"ido_id"`
+		}
+
+		// 更新配送状态
+		prefix := cmf.Conf().Database.Prefix
+		tx := cmf.NewDb().Debug().Table(prefix+"immediate_delivery_order ido").Select("fo.*,ido.id as ido_id").
+			Joins("INNER JOIN  "+prefix+"food_order fo ON ido.order_id = fo.order_id").
+			Where("ido.shop_order_id = ?", messageRequest.ShopOrderId).
+			Scan(&result)
+
+		if tx.Error != nil {
+			rest.rc.Error(c, tx.Error.Error(), nil)
+			return
+		}
+
+		// 更新状态
+		ido := resModel.ImmediateDeliveryOrder{
+			OrderStatus: messageRequest.OrderStatus,
+		}
+		cmf.NewDb().Where("id = ?", result.IdoId).Updates(&ido)
 	}
 
 	c.String(http.StatusOK, "success")
