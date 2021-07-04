@@ -103,7 +103,7 @@ func (rest *Notice) ReadAll(c *gin.Context) {
  * @Param
  * @return
  **/
-func (rest *Notice) IsPlay (c *gin.Context) {
+func (rest *Notice) IsPlay(c *gin.Context) {
 
 	var rewrite struct {
 		Id int `uri:"id"`
@@ -175,7 +175,7 @@ func (rest Notice) SocketGet(c *gin.Context) {
 		latestNotice, _ := cmf.NewRedisDb().Get(eatInKey).Result()
 		latestNoticeInt, _ := strconv.Atoi(latestNotice)
 
-		if latestNoticeInt < notice.Id || first	 {
+		if latestNoticeInt < notice.Id || first {
 
 			if latestNotice == "" || latestNoticeInt < notice.Id {
 				cmf.NewRedisDb().Set(eatInKey, notice.Id, 0)
@@ -184,7 +184,7 @@ func (rest Notice) SocketGet(c *gin.Context) {
 			var noticeMap []saasModel.AdminNotice
 			tx := cmf.NewDb().Where("mid = ?", mid).Order("id desc").Limit(10).Find(&noticeMap)
 			if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
-				conn.Error(err.Error(), nil)
+				conn.Error(tx.Error.Error(), nil)
 				return
 			}
 

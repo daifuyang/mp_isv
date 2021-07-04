@@ -19,8 +19,8 @@ func Test_redis(t *testing.T) {
 
 }
 
-func Test_encode(t *testing.T)  {
+func Test_encode(t *testing.T) {
 	s := "scene=eatin&store_number=1019753356&desk_number=745883686"
 	query := url.QueryEscape(s)
-	fmt.Println("query",query)
+	fmt.Println("query", query)
 }

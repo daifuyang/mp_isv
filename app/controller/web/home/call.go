@@ -16,7 +16,7 @@ type Call struct {
 }
 
 // 拨打电话
-func (v *Call) Mobile (c *gin.Context) {
+func (v *Call) Mobile(c *gin.Context) {
 
 	iTemplate, _ := c.Get("template")
 	v.Template = iTemplate.(view.Template)
@@ -31,6 +31,6 @@ func (v *Call) Mobile (c *gin.Context) {
 		return
 	}
 
-	c.Redirect(301,"tel:"+strconv.Itoa(rewrite.Mobile))
+	c.Redirect(301, "tel:"+strconv.Itoa(rewrite.Mobile))
 
 }

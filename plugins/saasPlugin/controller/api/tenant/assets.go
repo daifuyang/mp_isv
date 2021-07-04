@@ -419,7 +419,7 @@ func handleUpload(c *gin.Context, file *multipart.FileHeader, fileType string) (
 
 	tempMap["fileName"] = fileNameSuffix
 	tempMap["filePath"] = filePath
-	tempMap["prevPath"] = util.GetFileUrl(filePath,"clipper")
+	tempMap["prevPath"] = util.GetFileUrl(filePath, "clipper")
 
 	return tempMap, nil
 }

@@ -128,7 +128,7 @@ func (rest *Dashboard) DashboardCard(c *gin.Context) {
 			订单营业额(堂食+外卖) + 会员订单 + 充值订单
 		*/
 		queryStr = strings.Join(salesQuery, " AND ")
-		tx = cmf.NewDb().Debug().Model(&resModel.FoodOrder{}).Select("sum(fee) as food_order_amount").Where(queryStr, salesQueryArgs...).Scan(&dashboard)
+		tx = cmf.NewDb().Model(&resModel.FoodOrder{}).Select("sum(fee) as food_order_amount").Where(queryStr, salesQueryArgs...).Scan(&dashboard)
 		if tx.Error != nil {
 			rest.rc.Error(c, tx.Error.Error(), nil)
 			return
@@ -313,6 +313,8 @@ func (rest *Dashboard) DashboardSales(c *gin.Context) {
 	startTimeStamp := time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 00, 00, 00, 0, time.Local)
 	endTimeStamp := time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 23, 59, 59, 0, time.Local)
 
+	storeEndTimeStamp := time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day()-1, 23, 59, 59, 0, time.Local)
+
 	// 7天内
 	beforeStartStamp := startTimeStamp.AddDate(0, 0, -7)
 	beforeEndStamp := endTimeStamp.AddDate(0, 0, -7)
@@ -336,7 +338,10 @@ func (rest *Dashboard) DashboardSales(c *gin.Context) {
 		beforeEndStamp = endTimeStamp.AddDate(-1, 0, 0)
 	}
 
-	salesQuery = append(salesQuery, "finished_at between ? AND ?")
+	storeSalesQuery := append(salesQuery, "create_at between ? AND ?")
+	storeSalesQueryArgs := append(salesQueryArgs, beforeStartStamp.Unix(), storeEndTimeStamp.Unix())
+
+	salesQuery = append(salesQuery, "create_at between ? AND ?")
 	salesQueryArgs = append(salesQueryArgs, beforeStartStamp.Unix(), endTimeStamp.Unix())
 
 	/*
@@ -441,21 +446,21 @@ func (rest *Dashboard) DashboardSales(c *gin.Context) {
 
 		// 菜品订单
 		for _, v := range fo {
-			if v.FinishedAt >= startUnix && v.FinishedAt <= endUnix {
+			if v.CreateAt >= startUnix && v.CreateAt <= endUnix {
 				salesAmount += v.Fee
 			}
 		}
 
 		// 会员订单
 		for _, v := range mco {
-			if v.FinishedAt >= startUnix && v.FinishedAt <= endUnix {
+			if v.CreateAt >= startUnix && v.CreateAt <= endUnix {
 				salesAmount += v.Fee
 			}
 		}
 
 		// 储值订单
 		for _, v := range ro {
-			if v.FinishedAt >= startUnix && v.FinishedAt <= endUnix {
+			if v.CreateAt >= startUnix && v.CreateAt <= endUnix {
 				salesAmount += v.Fee
 			}
 		}
@@ -482,12 +487,12 @@ func (rest *Dashboard) DashboardSales(c *gin.Context) {
 
 		var salesAmount float64
 
-		salesQuery = append(salesQuery, "store_id = ?")
-		salesQueryArgs = append(salesQueryArgs, v.Id)
+		temSalesQuery := append(storeSalesQuery, "store_id = ?")
+		temSalesQueryArgs := append(storeSalesQueryArgs, v.Id)
 
-		queryStr := strings.Join(salesQuery, " AND ")
+		queryStr := strings.Join(temSalesQuery, " AND ")
 
-		row := cmf.NewDb().Model(&resModel.FoodOrder{}).Select("sum(fee) as salesAmount").Where(queryStr, salesQueryArgs...).Row()
+		row := cmf.NewDb().Model(&resModel.FoodOrder{}).Select("sum(fee) as salesAmount").Where(queryStr, temSalesQueryArgs...).Row()
 
 		tx := row.Scan(&salesAmount)
 		if tx != nil {
@@ -511,7 +516,7 @@ func (rest *Dashboard) recursionStoreRanking(sr []storeSalesRanking, start float
 
 	var tem []storeSalesRanking
 	var key *int
-	var storeName string = ""
+	var storeName = ""
 
 	for k, v := range sr {
 		if k == 0 || v.SalesAmount <= start {

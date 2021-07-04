@@ -22,7 +22,7 @@ func Init() {
 
 	ticket, err := redis.Get("componentVerifyTicket").Result()
 
-	fmt.Println("ticket",ticket)
+	fmt.Println("ticket", ticket)
 
 	host := cmf.Conf().App.Domain
 

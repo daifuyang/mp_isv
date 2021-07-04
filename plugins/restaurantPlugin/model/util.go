@@ -35,7 +35,7 @@ type geoCodes struct {
 
 func QueueNo(appId string, appointmentAt int64) string {
 
-	appUnix := time.Unix(appointmentAt,0)
+	appUnix := time.Unix(appointmentAt, 0)
 
 	year := appUnix.Year()
 	month := appUnix.Month()

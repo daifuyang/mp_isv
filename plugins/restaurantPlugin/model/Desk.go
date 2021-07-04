@@ -100,7 +100,7 @@ func (model *Desk) List(query []string, queryArgs []interface{}) (desk []resultD
 	queryStr := strings.Join(query, " AND ")
 
 	prefix := cmf.Conf().Database.Prefix
-	desk = make([]resultDesk,0)
+	desk = make([]resultDesk, 0)
 
 	result := cmf.NewDb().Table(prefix+"desk d").Select("d.*,s.store_name,dc.least_seats,dc.maximum_seats").
 		Joins("INNER JOIN "+prefix+"desk_category dc ON d.category_id = dc.id").
@@ -114,7 +114,6 @@ func (model *Desk) List(query []string, queryArgs []interface{}) (desk []resultD
 	return desk, nil
 
 }
-
 
 /**
  * @Author return <1140444693@qq.com>
@@ -223,6 +222,9 @@ func (model Desk) Update() (Desk, error) {
 		return desk, errors.New("该分类不存在！")
 	}
 
+	model.DeskNumber = desk.DeskNumber
+	model.Status = desk.Status
+	model.ListOrder = desk.ListOrder
 	model.CategoryName = cateData.CategoryName
 	result := cmf.NewDb().Save(&model)
 	if result.Error != nil {

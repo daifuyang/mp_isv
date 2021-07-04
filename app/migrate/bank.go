@@ -53,4 +53,3 @@ func (migrate Bank) AutoMigrate() {
 		}()
 	}
 }
-

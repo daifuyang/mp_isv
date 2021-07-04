@@ -7,12 +7,20 @@ package action
 
 import (
 	"gincmf/plugins/portalPlugin/model"
+	resModel "gincmf/plugins/restaurantPlugin/model"
 	"github.com/gin-gonic/gin"
 	"github.com/gincmf/cmf/controller"
 )
 
 type Page struct {
 	rc controller.Rest
+}
+
+type option struct {
+	Label  string      `json:"label"`
+	Value  string      `json:"value"`
+	Method string      `json:"method"`
+	Extra  interface{} `json:"extra"`
 }
 
 func (rest Page) Options(c *gin.Context) {
@@ -27,62 +35,83 @@ func (rest Page) Options(c *gin.Context) {
 		return
 	}
 
-	var options []map[string]string
+	var options []option
+
+	scan := resModel.Scan{}
+	data, err := scan.Show(midInt)
+
+	var couponExtra struct {
+		AppId string `json:"app_id"`
+		Path  string `json:"path"`
+	}
+
+	couponExtra.AppId = data.AppId
+	couponExtra.Path = data.Path
+
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
 
 	if t == "func" {
-		options = []map[string]string{{
-			"label":  "堂食就餐",
-			"value":  "pages/store/index?scene=eatin",
-			"method": "switchTab",
+		options = []option{{
+			Label:  "堂食就餐",
+			Value:  "pages/store/index?scene=eatin",
+			Method: "switchTab",
 		}, {
-			"label":  "到店取餐",
-			"value":  "pages/store/index?scene=pack",
-			"method": "switchTab",
+			Label:  "到店取餐",
+			Value:  "pages/store/index?scene=pack",
+			Method: "switchTab",
 		}, {
-			"label":  "外卖送餐",
-			"value":  "pages/store/index?scene=takeout",
-			"method": "switchTab",
+			Label:  "外卖送餐",
+			Value:  "pages/store/index?scene=takeout",
+			Method: "switchTab",
 		}, {
-			"label":  "扫码点餐",
-			"value":  "func/scan",
-			"method": "func/scan",
+			Label:  "扫码点餐",
+			Value:  "func/scan",
+			Method: "func/scan",
 		}, {
-			"label":  "我的",
-			"value":  "pages/mine/index",
-			"method": "switchTab",
+			Label:  "领券中心",
+			Value:  "pages/coupon/coupon",
+			Method: "miniProgram",
+			Extra:  couponExtra,
 		}, {
-			"label": "开通会员",
-			"value": "pages/order/vip/index",
+			Label:  "我的",
+			Value:  "pages/mine/index",
+			Method: "switchTab",
 		}, {
-			"label": "积分",
-			"value": "pages/mine/score/index",
+			Label: "开通会员",
+			Value: "pages/order/vip/index",
 		}, {
-			"label": "优惠券",
-			"value": "pages/mine/coupon/index",
+			Label: "积分",
+			Value: "pages/mine/score/index",
 		}, {
-			"label": "余额储值",
-			"value": "pages/mine/money/index",
+			Label: "优惠券",
+			Value: "pages/mine/coupon/index",
 		}, {
-			"label":  "堂食/外卖订单",
-			"value":  "pages/order/index",
-			"method": "switchTab",
+			Label: "余额储值",
+			Value: "pages/mine/money/index",
 		}, {
-			"label": "会员开卡订单",
-			"value": "pages/order/vip/index",
+			Label:  "堂食/外卖订单",
+			Value:  "pages/order/index",
+			Method: "switchTab",
 		}, {
-			"label": "余额储值订单",
-			"value": "pages/order/recharge/index",
+			Label: "会员开卡订单",
+			Value: "pages/order/vip/index",
 		}, {
-			"label": "地址管理",
-			"value": "pages/mine/address/index",
+			Label: "余额储值订单",
+			Value: "pages/order/recharge/index",
+		}, {
+			Label: "地址管理",
+			Value: "pages/mine/address/index",
 		}}
 	}
 
 	if t == "page" {
-		options = []map[string]string{{
-			"label":  "首页",
-			"value":  "page/index/index",
-			"method": "switchTab",
+		options = []option{{
+			Label:  "首页",
+			Value:  "page/index/index",
+			Method: "switchTab",
 		}}
 	}
 

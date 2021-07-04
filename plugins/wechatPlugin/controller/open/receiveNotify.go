@@ -219,8 +219,8 @@ func (rest *ReceiveNotify) AppIdNotify(c *gin.Context) {
 		SuccTime     int    `xml:"SuccTime"`
 		FailTime     int    `xml:"FailTime"`
 		DelayTime    int    `xml:"DelayTime"`
-		Reason       string `xml:"reason"`
-		ScreenShot   string `xml:"screen_shot"`
+		Reason       string `xml:"Reason"`
+		ScreenShot   string `xml:"ScreenShot"`
 		Agent        agent  `xml:"agent"`
 	}
 
@@ -232,15 +232,13 @@ func (rest *ReceiveNotify) AppIdNotify(c *gin.Context) {
 		return
 	}
 
-	fmt.Println("result", string(result))
-
 	if messageRequest.Event == "weapp_audit_fail" {
 
 		version.Status = "reject"
 		version.RejectReason = messageRequest.Reason
 		version.IsAudit = 0
 
-		tx := cmf.NewDb().Save(&version)
+		tx := cmf.NewDb().Debug().Save(&version)
 
 		if tx.Error != nil {
 			rest.rc.Error(c, err.Error(), nil)

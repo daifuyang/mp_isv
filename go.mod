@@ -19,11 +19,13 @@ require (
 	github.com/go-playground/validator/v10 v10.4.1 // indirect
 	github.com/go-redis/redis v6.15.9+incompatible
 	github.com/golang/protobuf v1.4.3 // indirect
+	github.com/golang/snappy v0.0.3 // indirect
 	github.com/gorilla/sessions v1.2.1 // indirect
 	github.com/gorilla/websocket v1.4.2
 	github.com/json-iterator/go v1.1.10 // indirect
 	github.com/makiuchi-d/gozxing v0.0.0-20210324052758-57132e828831
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
+	github.com/nsqio/go-nsq v1.0.8
 	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d
 	github.com/pjebs/optimus-go v1.0.0
 	github.com/shopspring/decimal v1.2.0
@@ -34,7 +36,7 @@ require (
 	golang.org/x/crypto v0.0.0-20201016220609-9e8e0b390897 // indirect
 	golang.org/x/net v0.0.0-20201216054612-986b41b23924 // indirect
 	golang.org/x/oauth2 v0.0.0-20200902213428-5d25da1a8d43
-	golang.org/x/tools v0.0.0-20201215192005-fa10ef0b8743 // indirect
+	golang.org/x/tools v0.0.0-20201215192005-fa10ef0b8743
 	google.golang.org/appengine v1.6.7 // indirect
 	gopkg.in/oauth2.v3 v3.12.0
 	gorm.io/driver/mysql v1.0.3 // indirect

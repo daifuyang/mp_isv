@@ -74,7 +74,7 @@ func (rest *Version) Detail(c *gin.Context) {
 	}
 
 	result.Base = data
-	result.QrCodeUrl = util.GetFileUrl(mpTheme.WechatQrCodeUrl,)
+	result.QrCodeUrl = util.GetFileUrl(mpTheme.WechatQrCodeUrl)
 
 	rest.rc.Success(c, "获取成功！", result)
 

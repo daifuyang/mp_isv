@@ -34,7 +34,7 @@ func AccessToken(c *gin.Context) {
 
 		accessToken, err := redis.Get("accessToken").Result()
 
-		fmt.Println("accessToken",accessToken)
+		fmt.Println("accessToken", accessToken)
 
 		if accessToken == "" || err != nil {
 			token := new(open.Component).Token(bizContent)

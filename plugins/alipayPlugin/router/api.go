@@ -22,7 +22,7 @@ func ApiListenRouter() {
 	cmf.Get("api/v1/getway", middleware.UseMp, new(controller.GetWay).GetWay)
 	cmf.Post("api/v1/getway", middleware.UseMp, new(controller.GetWay).GetWay)
 
-	adminGroup := cmf.Group("api/v1/admin", middleware.ValidationBearerToken, middleware.TenantDb,middleware.Rbac)
+	adminGroup := cmf.Group("api/v1/admin", middleware.ValidationBearerToken, middleware.TenantDb, middleware.Rbac)
 	{
 		adminGroup.Get("/alipay/auth/:id", new(admin.MpIsvAuth).Show, middleware.ValidationMerchant, aliMidd.ValidationAlipay, aliMidd.AppAuthToken)
 

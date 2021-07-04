@@ -26,7 +26,7 @@ type WxCategory struct {
 func (rest *WxCategory) Get(c *gin.Context) {
 	typ := c.Query("type")
 	if typ == "" {
-		 rest.rc.Error(c,"类型不能为空！",nil)
+		rest.rc.Error(c, "类型不能为空！", nil)
 		return
 	}
 

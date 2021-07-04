@@ -160,7 +160,7 @@ func (rest MpIsvAuth) GetAuth(mid interface{}, tenantId int) (AlipayAuthResult, 
 						status = "reject"
 						isAudit = 0
 						reason = queryResult.Response.RejectReason
-						fmt.Println("reason",reason)
+						fmt.Println("reason", reason)
 					}
 					if queryResult.Response.Status == "INIT" {
 						status = "init"

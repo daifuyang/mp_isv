@@ -4,7 +4,10 @@
     "port": "4002",
     "appName": "",
     "appDebug": true,
-    "domain": "http://localhost:4002"
+    "domain": "http://localhost:4002",
+    "nsqIp": "192.168.1.200",
+    "nsqaPort": "4161",
+    "nsqdPort": "4150"
   },
   "template": {
     "theme": "default",

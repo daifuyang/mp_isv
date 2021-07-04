@@ -26,13 +26,6 @@ func main() {
 	//初始化配置设置
 	cmf.Initialize("./data/conf/config.json")
 
-	// 关闭连接池
-	db, _ := cmf.Db().DB()
-	defer db.Close()
-
-	tenantDb, _ := cmf.NewDb().DB()
-	defer tenantDb.Close()
-
 	//初始化路由设置
 	router.ApiListenRouter()
 	router.WebListenRouter()

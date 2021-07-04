@@ -1641,6 +1641,7 @@ func (rest *Food) ImportMenus(c *gin.Context) {
 	fp, _ := file.Open()
 	f, err := excelize.OpenReader(fp)
 	if err != nil {
+		fmt.Println("err", err)
 		rest.rc.Error(c, "打开失败，不存的表格！", nil)
 		return
 	}
@@ -1654,13 +1655,15 @@ func (rest *Food) ImportMenus(c *gin.Context) {
 	wg.Add(1)
 
 	go func() {
+		allLen := len(categories)
 		for k, v := range categories {
-			if k > 1 {
+			if k > 0 {
 				category := model.FoodCategory{}
 				tx := cmf.NewDb().Where("mid = ? AND name = ?", mid, v[0]).First(&category)
 				category.Name = v[0]
 				category.Mid = mid
 				category.StoreId = storeIdInt
+				category.ListOrder = float64(allLen) - float64(k)
 				if tx.RowsAffected == 0 {
 					category.CreateAt = time.Now().Unix()
 					category.UpdateAt = time.Now().Unix()
@@ -1690,6 +1693,9 @@ func (rest *Food) ImportMenus(c *gin.Context) {
 
 	wg.Add(1)
 	go func() {
+
+		allLen := len(rows)
+
 		for k, v := range rows {
 
 			if k > 1 {
@@ -1699,6 +1705,8 @@ func (rest *Food) ImportMenus(c *gin.Context) {
 				food.Name = strings.TrimSpace(v[0])
 				food.Excerpt = strings.TrimSpace(v[2])
 				food.Mid = mid
+
+				food.ListOrder = float64(allLen) - float64(k)
 
 				food.Unit = v[3]
 
@@ -1773,37 +1781,41 @@ func (rest *Food) ImportMenus(c *gin.Context) {
 					price = priceFloat
 				}
 
-				if food.Price >= price {
+				if price >= food.Price {
 					food.Price = price
 				}
 
-				// 原价
 				var originalPrice float64 = 0
-				originalPriceFloat, err := strconv.ParseFloat(v[16], 64)
-				if err != nil {
-					originalPrice = 0
-				} else {
-					originalPrice = originalPriceFloat
+				if len(v) > 16 {
+					// 原价
+					originalPriceFloat, err := strconv.ParseFloat(v[16], 64)
+					if err != nil {
+						originalPrice = 0
+					} else {
+						originalPrice = originalPriceFloat
+					}
+					food.OriginalPrice = originalPrice
 				}
-				food.OriginalPrice = originalPrice
 
 				// 会员价
-				var memberPrice float64 = 0
-				memberPriceFloat, err := strconv.ParseFloat(v[17], 64)
-				if err != nil {
-					memberPrice = 0
-				} else {
-					memberPrice = memberPriceFloat
-				}
-				food.MemberPrice = memberPrice
-
 				// 库存
 				var inventory = -1
-				inventoryInt, err := strconv.Atoi(v[18])
-				if err != nil {
-					inventory = -1
-				} else {
-					inventory = inventoryInt
+				var memberPrice float64 = 0
+				if len(v) > 17 {
+					memberPriceFloat, err := strconv.ParseFloat(v[17], 64)
+					if err != nil {
+						memberPrice = 0
+					} else {
+						memberPrice = memberPriceFloat
+					}
+					food.MemberPrice = memberPrice
+
+					inventoryInt, err := strconv.Atoi(v[18])
+					if err != nil {
+						inventory = -1
+					} else {
+						inventory = inventoryInt
+					}
 				}
 
 				// 设置规格库存
@@ -1820,35 +1832,36 @@ func (rest *Food) ImportMenus(c *gin.Context) {
 				// 销量
 				var volume = 0
 
-				volumeInt, err := strconv.Atoi(v[19])
-				if err != nil {
-					volume = 0
-				} else {
-					volume = volumeInt
+				if len(v) > 19 {
+					volumeInt, err := strconv.Atoi(v[19])
+					if err != nil {
+						volume = 0
+					} else {
+						volume = volumeInt
+					}
+					food.Volume = volume
 				}
-
-				food.Volume = volume
 
 				// 口味
 
 				var tastyJson []Tasty
 
 				var tasty = ""
-				if len(v) >= 20 {
+				if len(v) > 20 {
 					tasty = v[20]
 				}
 
 				strings.ReplaceAll(tasty, "；", ";")
+				strings.ReplaceAll(tasty, "，", ",")
 
 				tastyArr := strings.Split(tasty, ";")
 
 				for _, tastyItem := range tastyArr {
 
 					if strings.TrimSpace(tastyItem) != "" {
-
 						tastyItemArr := strings.Split(tastyItem, ":")
 
-						if len(tastyArr) > 1 {
+						if len(tastyItemArr) > 0 {
 							tastyKey := tastyItemArr[0]
 							tastyValue := tastyItemArr[1]
 
@@ -1862,7 +1875,6 @@ func (rest *Food) ImportMenus(c *gin.Context) {
 				}
 
 				tastyStr, _ := json.Marshal(tastyJson)
-
 				if len(tastyJson) > 0 {
 					food.UseTasty = 1
 					food.Tasty = string(tastyStr)
@@ -1994,6 +2006,10 @@ func (rest *Food) ImportMenus(c *gin.Context) {
 						Price:            price,
 						Volume:           volume,
 						Remark:           attrValue.AttrValue,
+					}
+
+					if food.Price > sku.Price {
+						food.Price = sku.Price
 					}
 
 					foodInventory += inventory

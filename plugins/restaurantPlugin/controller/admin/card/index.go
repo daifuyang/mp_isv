@@ -43,7 +43,7 @@ func (rest *Index) Show(c *gin.Context) {
 	var tbiArr []marketing.TemplateBenefitInfo
 	json.Unmarshal([]byte(benefitInfo), &tbiArr)
 
-	card.CardBackgroundPrev = util.GetFileUrl(card.CardBackground,"clipper")
+	card.CardBackgroundPrev = util.GetFileUrl(card.CardBackground, "clipper")
 	card.CreateTime = time.Unix(card.CreateAt, 0).Format(data.TimeLayout)
 	card.UpdateTime = time.Unix(card.CreateAt, 0).Format(data.TimeLayout)
 
@@ -58,7 +58,7 @@ func (rest *Index) Show(c *gin.Context) {
 		card.CardBackground = "images/vip-card.png"
 	}
 
-	card.CardBackgroundPrev = util.GetFileUrl(card.CardBackground,"clipper")
+	card.CardBackgroundPrev = util.GetFileUrl(card.CardBackground, "clipper")
 
 	rest.rc.Success(c, "获取成功！", card)
 
@@ -154,7 +154,7 @@ func (rest *Index) Edit(c *gin.Context) {
 			return
 		}
 
-		absPath := util.GetFileUrl(cardBackground,"clipper")
+		absPath := util.GetFileUrl(cardBackground, "clipper")
 
 		b, err := util.ExistPath(absPath)
 		if err != nil {

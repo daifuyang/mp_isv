@@ -234,6 +234,14 @@
         "list_order": 10000
       },
       {
+        "unique_name": "app/marketing/wechat",
+        "name": "微信营销",
+        "path": "/app/:mid/marketing/wechat",
+        "icon": "",
+        "hide_in_menu": 0,
+        "list_order": 10000
+      },
+      {
         "unique_name": "app/marketing/recharge",
         "name": "储值管理",
         "path": "/app/:mid/marketing/recharge",

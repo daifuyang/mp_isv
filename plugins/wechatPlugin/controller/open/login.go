@@ -26,7 +26,7 @@ func (rest *Login) Login(c *gin.Context) {
 	accessToken, exist := c.Get("accessToken")
 
 	if !exist {
-		rest.rc.Error(c,"accessToken不存在！",nil)
+		rest.rc.Error(c, "accessToken不存在！", nil)
 		return
 	}
 

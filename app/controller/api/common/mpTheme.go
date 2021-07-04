@@ -20,10 +20,10 @@ func (rest *MpTheme) Get(c *gin.Context) {
 	var query = []string{"status = ?"}
 	var queryArgs = []interface{}{"1"}
 
-	data,err := new(model.MpTheme).Index(c,query,queryArgs)
+	data, err := new(model.MpTheme).Index(c, query, queryArgs)
 	if err != nil {
-		rest.rc.Error(c,err.Error(),nil)
+		rest.rc.Error(c, err.Error(), nil)
 		return
 	}
-	rest.rc.Success(c,"获取成功！",data)
+	rest.rc.Success(c, "获取成功！", data)
 }

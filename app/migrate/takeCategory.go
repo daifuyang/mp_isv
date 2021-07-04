@@ -47,4 +47,3 @@ func (migrate takeCategory) AutoMigrate() {
 		}()
 	}
 }
-

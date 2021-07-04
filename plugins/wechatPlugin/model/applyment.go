@@ -273,11 +273,11 @@ func (model *Applyment) Show(query []string, queryArgs []interface{}) (applyment
 	json.Unmarshal([]byte(applyment.AuditDetail), &applyment.AuditDetailObj)
 
 	for k, v := range mlObj.MiniProgram {
-		mlObj.MiniProgram[k].PrevPath = util.GetFileUrl(v.FilePath,"clipper")
+		mlObj.MiniProgram[k].PrevPath = util.GetFileUrl(v.FilePath, "clipper")
 	}
 
 	for k, v := range mlObj.BusinessAddition {
-		mlObj.BusinessAddition[k].PrevPath = util.GetFileUrl(v.FilePath,"clipper")
+		mlObj.BusinessAddition[k].PrevPath = util.GetFileUrl(v.FilePath, "clipper")
 	}
 
 	applyment.OriginFormObj = form

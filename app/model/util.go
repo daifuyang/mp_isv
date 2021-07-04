@@ -141,7 +141,7 @@ func SuperRole(c *gin.Context, userId int) bool {
 	}
 
 	if userId == 0 {
-		 userId = iUserId.(int)
+		userId = iUserId.(int)
 	}
 
 	prefix := cmf.Conf().Database.Prefix

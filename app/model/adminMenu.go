@@ -132,11 +132,11 @@ func recursionAddMenu(menus []confAdminMenu, parentId int) {
 		if title == "" {
 			title = v.Name
 		}
-		inRule(v.UniqueName, v.Title,v.RuleApi)
+		inRule(v.UniqueName, v.Title, v.RuleApi)
 	}
 }
 
-func inRule(name string, title string, ruleApi []ruleApi)  {
+func inRule(name string, title string, ruleApi []ruleApi) {
 
 	authRule := AuthRule{
 		Name:  name,
@@ -149,13 +149,13 @@ func inRule(name string, title string, ruleApi []ruleApi)  {
 		return
 	}
 
-	var rApi = make([]AuthRuleApi,0)
+	var rApi = make([]AuthRuleApi, 0)
 
-	for _,v := range ruleApi{
-		rApi = append(rApi,AuthRuleApi{
+	for _, v := range ruleApi {
+		rApi = append(rApi, AuthRuleApi{
 			AuthRuleName: authRule.Name,
-			Url:v.Url,
-			Param: v.Param,
+			Url:          v.Url,
+			Param:        v.Param,
 		})
 	}
 

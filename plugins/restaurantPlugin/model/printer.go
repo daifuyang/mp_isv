@@ -6,12 +6,16 @@
 package model
 
 import (
+	"encoding/json"
 	"errors"
+	"gincmf/app/util"
+	"gincmf/plugins/nsqPlugin/Producer"
 	"github.com/gin-gonic/gin"
 	cmf "github.com/gincmf/cmf/bootstrap"
-	"github.com/gincmf/cmf/data"
+	cmfData "github.com/gincmf/cmf/data"
 	cmfModel "github.com/gincmf/cmf/model"
 	"gorm.io/gorm"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -58,8 +62,8 @@ func (model *Printer) Index(c *gin.Context, query []string, queryArgs []interfac
 	tx := cmf.NewDb().Where(queryStr, queryArgs...).Limit(pageSize).Offset((current - 1) * pageSize).Order("id desc").Find(&printer)
 
 	for k, v := range printer {
-		printer[k].CreateTime = time.Unix(v.CreateAt, 0).Format(data.TimeLayout)
-		printer[k].UpdateTime = time.Unix(v.UpdateAt, 0).Format(data.TimeLayout)
+		printer[k].CreateTime = time.Unix(v.CreateAt, 0).Format(cmfData.TimeLayout)
+		printer[k].UpdateTime = time.Unix(v.UpdateAt, 0).Format(cmfData.TimeLayout)
 	}
 
 	if tx.Error != nil {
@@ -86,8 +90,8 @@ func (model *Printer) Show(query []string, queryArgs []interface{}) (Printer, er
 		return Printer{}, tx.Error
 	}
 
-	printer.CreateTime = time.Unix(printer.CreateAt, 0).Format(data.TimeLayout)
-	printer.UpdateTime = time.Unix(printer.UpdateAt, 0).Format(data.TimeLayout)
+	printer.CreateTime = time.Unix(printer.CreateAt, 0).Format(cmfData.TimeLayout)
+	printer.UpdateTime = time.Unix(printer.UpdateAt, 0).Format(cmfData.TimeLayout)
 
 	return printer, nil
 }
@@ -138,4 +142,76 @@ func (model *Printer) Save() (Printer, error) {
 
 	return printer, nil
 
+}
+
+func (model *Printer) Send(mid int, foId int) error {
+
+	var query = []string{"fo.mid = ?", " fo.id = ? "}
+	var queryArgs = []interface{}{mid, foId, "TRADE_SUCCESS"}
+
+	data, err := new(FoodOrder).ShowByStore(query, queryArgs)
+
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return err
+	}
+
+	if data.Id == 0 {
+		return errors.New("订单不存在")
+	}
+
+	var fod []FoodOrderDetail
+	tx := cmf.NewDb().Debug().Where("order_id = ?", data.OrderId).Find(&fod)
+	if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
+		return tx.Error
+	}
+
+	var printOrder = make([]map[string]string, 0)
+
+	for _, v := range fod {
+
+		// 打印订单详情信息
+		var printOrderItem = make(map[string]string, 0)
+
+		title := v.FoodName
+		if v.SkuDetail != "" {
+			title += "-" + v.SkuDetail
+		}
+
+		printOrderItem["title"] = title
+		printOrderItem["count"] = strconv.Itoa(v.Count)
+		printOrderItem["food_id"] = strconv.Itoa(v.FoodId)
+		printOrderItem["total"] = strconv.FormatFloat(v.Total, 'f', -1, 64)
+		printOrder = append(printOrder, printOrderItem)
+
+	}
+
+	// 打印机打印订单
+	appointmentTime := time.Unix(data.AppointmentAt, 0).Format(cmfData.TimeLayout)
+
+	// 获取门店打印机状态
+	_, err = new(FoodOrder).SendPrinter(data, printOrder, data.StoreName, appointmentTime, true)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (model *Printer) NsqProducer(mid int, targetId int) {
+	p, err := new(Producer.Producer).NewProducer()
+	if err == nil {
+		database, err := util.Database()
+		if err == nil {
+			messageJson := Producer.MessageJson{
+				Database: database,
+				Type:     "printer",
+				TargetId: targetId,
+				Mid:      mid,
+			}
+
+			body, _ := json.Marshal(&messageJson)
+
+			p.Publish("mpIsv", body)
+		}
+	}
 }

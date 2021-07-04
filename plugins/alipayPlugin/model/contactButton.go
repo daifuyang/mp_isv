@@ -17,14 +17,14 @@ import (
 
 type ContactButton struct {
 	TntInstId string `json:"tnt_inst_id"`
-	Scene string `json:"scene"`
-	Size int `json:"size"`
-	Color string `json:"color"`
-	Icon string `json:"icon"`
-	IconPrev string `json:"icon_prev"`
+	Scene     string `json:"scene"`
+	Size      int    `json:"size"`
+	Color     string `json:"color"`
+	Icon      string `json:"icon"`
+	IconPrev  string `json:"icon_prev"`
 }
 
-func (model *ContactButton) Show(mid int) (ContactButton,error) {
+func (model *ContactButton) Show(mid int) (ContactButton, error) {
 
 	op := resModel.Option{}
 
@@ -37,10 +37,9 @@ func (model *ContactButton) Show(mid int) (ContactButton,error) {
 
 	val := op.OptionValue
 
-
 	_ = json.Unmarshal([]byte(val), &cb)
 
-	cb.IconPrev = util.GetFileUrl(cb.Icon,"clipper")
+	cb.IconPrev = util.GetFileUrl(cb.Icon, "clipper")
 
 	return cb, nil
 

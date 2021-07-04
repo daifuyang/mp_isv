@@ -19,6 +19,7 @@ import (
 	"gincmf/plugins/restaurantPlugin/controller/admin/printer"
 	"gincmf/plugins/restaurantPlugin/controller/admin/qrocde"
 	"gincmf/plugins/restaurantPlugin/controller/admin/settings"
+	"gincmf/plugins/restaurantPlugin/controller/admin/settings/wechat"
 	"gincmf/plugins/restaurantPlugin/controller/admin/store"
 	"gincmf/plugins/restaurantPlugin/controller/admin/voucher"
 	"gincmf/plugins/restaurantPlugin/controller/app/address"
@@ -159,6 +160,14 @@ func ApiListenRouter() {
 		adminGroup.Rest("/qrcode", new(qrocde.Qrcode), AliMiddle.ValidationAlipay)
 
 		adminGroup.Rest("/immediate_delivery", new(delivery.ImmediateDelivery), wechatMiddle.AccessToken, wechatMiddle.AuthorizerAccessToken)
+
+		adminGroup.Get("/settings/scan", new(wechat.Scan).Get, middleware.ValidationMerchant)
+		adminGroup.Post("/settings/scan", new(wechat.Scan).Edit, middleware.ValidationMerchant)
+
+		adminGroup.Get("/settings/group", new(wechat.Group).Get, middleware.ValidationMerchant)
+		adminGroup.Post("/settings/group", new(wechat.Group).Edit, middleware.ValidationMerchant)
+
+
 	}
 
 	// 小程序路由注册
@@ -191,6 +200,9 @@ func ApiListenRouter() {
 		// 获取订单列表
 		appGroup.Get("/order/list", new(rtOrder.Order).Get, middleware.ValidationBindMobile)
 		appGroup.Get("/order/detail/:id", new(rtOrder.Order).Show, middleware.ValidationBindMobile)
+
+		// 校验订单库存
+		appGroup.Get("/order/check/:id", new(rtOrder.Order).CheckOrder, middleware.ValidationBindMobile)
 
 		// 	取消订单
 		appGroup.Get("/order/cancel/:id", new(rtOrder.Order).Cancel, middleware.ValidationBindMobile)
@@ -243,6 +255,13 @@ func ApiListenRouter() {
 		appGroup.Get("/contact/alipay", new(contact.Contact).Get)
 
 		appGroup.Get("/settings/common", new(settings.Common).MobileShow)
+
+
+		appGroup.Get("/settings/scan", new(wechat.Scan).Get)
+		appGroup.Get("/settings/group", new(wechat.Group).Get)
+
+		/*appGroup.Get("/test1", new(test.Index).Test1)
+		appGroup.Get("/test2", new(test.Index).Test2)*/
 
 	}
 

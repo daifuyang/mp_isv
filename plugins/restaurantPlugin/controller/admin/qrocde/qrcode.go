@@ -230,10 +230,14 @@ func (rest *Qrcode) Store(c *gin.Context) {
 
 	// 获取绑定桌号
 	deskId := c.PostForm("desk_id")
+
+	deskIdInt, _ := strconv.Atoi(deskId)
 	desk := model.Desk{}
 
+	fmt.Println("deskIdInt", deskIdInt)
+
 	deskName := "桌号"
-	if desk.Id > 0 {
+	if deskIdInt > 0 {
 		tx = cmf.NewDb().Debug().Where("mid = ? AND id = ?", mid, deskId).First(&desk)
 		if tx.Error != nil {
 			if errors.Is(tx.Error, gorm.ErrRecordNotFound) {
@@ -268,7 +272,9 @@ func (rest *Qrcode) Store(c *gin.Context) {
 	vals := url.Values{}
 	vals.Add("scene", "eatin")
 	vals.Add("store_number", strconv.Itoa(s.StoreNumber))
+
 	if desk.Id > 0 {
+		fmt.Println("DeskNumber", desk.DeskNumber)
 		vals.Add("desk_number", strconv.Itoa(desk.DeskNumber))
 	}
 
@@ -382,6 +388,6 @@ func (rest *Qrcode) Delete(c *gin.Context) {
 		return
 	}
 
-	rest.rc.Success(c, "绑定成功！", nil)
+	rest.rc.Success(c, "删除成功！", nil)
 
 }

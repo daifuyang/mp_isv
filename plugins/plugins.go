@@ -7,6 +7,7 @@ package plugins
 
 import (
 	"gincmf/plugins/alipayPlugin"
+	"gincmf/plugins/nsqPlugin"
 	"gincmf/plugins/portalPlugin"
 	"gincmf/plugins/printerPlugin"
 	"gincmf/plugins/qiniuPlugin"
@@ -26,4 +27,5 @@ func AutoRegister() {
 	portalPlugin.Init()
 	qiniuPlugin.Init()
 	wechatPlugin.Init()
+	nsqPlugin.Init()
 }

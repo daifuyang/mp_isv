@@ -237,7 +237,7 @@ func Test_Decode(test *testing.T) {
 
 			inParamMap := strings.Split(param, "&")
 
-			fmt.Println("inParamMap",inParamMap)
+			fmt.Println("inParamMap", inParamMap)
 
 			paramMap := make(map[string]string, 0)
 
@@ -250,20 +250,19 @@ func Test_Decode(test *testing.T) {
 				}
 			}
 
-
 			code := ""
 
-			fmt.Println("url",url)
+			fmt.Println("url", url)
 
 			patter = "/qrcode/\\d+"
 			r := regexp.MustCompile(patter)
-			matches := r.FindAllString(url,-1)
+			matches := r.FindAllString(url, -1)
 
-			fmt.Println("matches",matches)
+			fmt.Println("matches", matches)
 
 			if len(matches) > 0 {
-				code = strings.ReplaceAll(matches[0],"/qrcode/","")
-				fmt.Println("code",code)
+				code = strings.ReplaceAll(matches[0], "/qrcode/", "")
+				fmt.Println("code", code)
 			}
 
 			if code == "" {
@@ -280,7 +279,7 @@ func Test_Decode(test *testing.T) {
 
 			q.Aqrfid = aqrfid
 
-			cmf.NewDb().Where("code = ? AND  status != ?",code,2).Updates(&q)
+			cmf.NewDb().Where("code = ? AND  status != ?", code, 2).Updates(&q)
 		}
 
 		rFile.Close()

@@ -60,7 +60,6 @@ func ValidationMp(c *gin.Context) {
 	result := cmf.Db().Where("auth_app_id = ?", appId).Order("id desc").First(&mpAuth)
 
 	if result.RowsAffected == 0 {
-		fmt.Println("ValidationMp,小程序app_id不正确")
 		cmfLog.Error("小程序app_id不正确，appId：" + appId)
 		controller.Rest{}.Error(c, "小程序auth_app_id不正确！", nil)
 		c.Abort()
@@ -69,7 +68,8 @@ func ValidationMp(c *gin.Context) {
 
 	// 设置访问数据库
 	db := "tenant_" + strconv.Itoa(mpAuth.TenantId)
-	cmf.ManualDb(db)
+	newDb := cmf.ManualDb(db)
+	c.Set("DB", newDb)
 
 	alipayJson, _ := json.Marshal(&mpAuth)
 

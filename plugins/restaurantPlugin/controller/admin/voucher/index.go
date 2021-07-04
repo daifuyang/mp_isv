@@ -469,7 +469,7 @@ func (rest *Index) Store(c *gin.Context) {
 	descJson, _ := json.Marshal(form.VoucherDescription)
 
 	publishStartTime, _ := time.ParseInLocation(data.TimeLayout, form.PublishStartTime, time.Local)
-	publishEndTime ,_ := time.ParseInLocation(data.TimeLayout, form.PublishEndTime, time.Local)
+	publishEndTime, _ := time.ParseInLocation(data.TimeLayout, form.PublishEndTime, time.Local)
 
 	voucher := model.Voucher{
 		Mid:                  mid.(int),

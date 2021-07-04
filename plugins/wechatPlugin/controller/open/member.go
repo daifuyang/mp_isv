@@ -17,7 +17,7 @@ type Member struct {
 
 func (rest *Member) Members(c *gin.Context) {
 
-	accessToken,_ := c.Get("authorizerAccessToken")
+	accessToken, _ := c.Get("authorizerAccessToken")
 	if accessToken == "" {
 		rest.rc.Error(c, "授权失败！", nil)
 		return
@@ -26,10 +26,10 @@ func (rest *Member) Members(c *gin.Context) {
 	data := new(open.Wxa).MemberAuth(accessToken.(string))
 
 	if data.Errcode != 0 {
-		rest.rc.Error(c,data.Errmsg,nil)
+		rest.rc.Error(c, data.Errmsg, nil)
 		return
 	}
 
-	rest.rc.Success(c,"获取成功！",data)
+	rest.rc.Success(c, "获取成功！", data)
 
 }

@@ -172,7 +172,7 @@ func (model PortalPost) IndexByCategory(c *gin.Context, query []string, queryArg
 		updateTime := time.Unix(v.UpdateAt, 0).Format("2006-01-02 15:04:05")
 		tempArr[k].UpdateTime = updateTime
 
-		tempArr[k].ThumbnailPrev = util.GetFileUrl(v.Thumbnail,"clipper")
+		tempArr[k].ThumbnailPrev = util.GetFileUrl(v.Thumbnail, "clipper")
 
 		m := More{}
 		json.Unmarshal([]byte(v.More), &m)
@@ -219,7 +219,7 @@ func (model PortalPost) Show(query []string, queryArgs []interface{}) (post Port
 	updateTime := time.Unix(post.UpdateAt, 0).Format("2006-01-02 15:04:05")
 	post.UpdateTime = updateTime
 
-	post.ThumbnailPrev = util.GetFileUrl(post.Thumbnail,"clipper")
+	post.ThumbnailPrev = util.GetFileUrl(post.Thumbnail, "clipper")
 
 	m := More{}
 

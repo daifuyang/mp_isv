@@ -27,7 +27,7 @@ type PriTmpl struct {
 }
 
 type Subscribe struct {
-	Mid     int     `json:"mid"`
+	Mid int `json:"mid"`
 }
 
 func (model *Subscribe) Show(mid int) (priTmpl PriTmpl, err error) {

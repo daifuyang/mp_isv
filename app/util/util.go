@@ -443,6 +443,18 @@ func ZipCreate(inFiles []string, targetName string) (result []string, err error)
 
 }
 
+func Database() (database string, err error) {
+
+	tx := cmf.NewDb().Debug().Raw("select database();").Scan(&database)
+
+	if tx.Error != nil {
+		return "", tx.Error
+	}
+
+	return database, nil
+
+}
+
 /*func GetUploadFileName(mid int) string {
 
 	t := time.Now()

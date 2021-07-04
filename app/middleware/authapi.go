@@ -57,7 +57,6 @@ func ValidationBearerToken(c *gin.Context) {
 	c.Set("scope", scope)
 	c.Set("user_id", userIdInt)
 
-
 	c.Next()
 }
 
@@ -72,14 +71,14 @@ func ValidationAdmin(c *gin.Context) {
 		}
 	} else {
 		cmf.ManualDb(cmf.Conf().Database.Name)
-		currentUser ,err := new(model.User).CurrentUser(c)
+		currentUser, err := new(model.User).CurrentUser(c)
 		if err != nil {
 			new(controller.Rest).Error(c, "该用户不存在！", nil)
 			c.Abort()
 			return
 		}
 		userType = currentUser.UserType
-		fmt.Println("currentUser",currentUser)
+		fmt.Println("currentUser", currentUser)
 	}
 
 	c.Set("userType", userType)

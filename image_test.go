@@ -7,6 +7,7 @@ package main
 
 import (
 	"fmt"
+	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/nfnt/resize"
 	"github.com/shopspring/decimal"
 	"image"
@@ -41,7 +42,19 @@ func Test_Image(t *testing.T) {
 
 }
 
-func Test_123(t *testing.T)  {
+func Test_123(t *testing.T) {
 	refund := decimal.NewFromFloat(100.21).Round(2).Mul(decimal.NewFromInt(100)).IntPart()
-	fmt.Println("refund",refund)
+	fmt.Println("refund", refund)
+}
+
+var a *int
+
+func Test_666(t *testing.T) {
+	cmf.Initialize("./data/conf/config.json")
+}
+
+func aa(int2 *int) {
+	if a == nil {
+		a = int2
+	}
 }

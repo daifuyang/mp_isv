@@ -11,15 +11,15 @@ func BaseController(c *gin.Context) {
 
 }
 
-func InitDomain(c *gin.Context)  {
+func InitDomain(c *gin.Context) {
 
 	scheme := "http://"
 	if c.Request.Header.Get("Scheme") == "https" {
-		scheme ="https://"
+		scheme = "https://"
 	}
 
-	domain := scheme+c.Request.Host
-	cmf.SetConf("domain",domain)
+	domain := scheme + c.Request.Host
+	cmf.SetConf("domain", domain)
 
 }
 
@@ -28,10 +28,10 @@ func HomeBaseController(c *gin.Context) {
 		Context: c,
 	}
 
-	tmpl :=  "/"+cmf.TemplateMap.ThemePath+"/"+cmf.TemplateMap.Theme
-	fmt.Println("tmpl",tmpl)
-	template := t.Assign("tmpl",tmpl) //静态资源路径
-	c.Set("template",template)
+	tmpl := "/" + cmf.TemplateMap.ThemePath + "/" + cmf.TemplateMap.Theme
+	fmt.Println("tmpl", tmpl)
+	template := t.Assign("tmpl", tmpl) //静态资源路径
+	c.Set("template", template)
 	c.Next()
 }
 

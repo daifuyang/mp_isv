@@ -70,7 +70,7 @@ func (model *MpTheme) Index(c *gin.Context, query []string, queryArgs []interfac
 	}
 
 	for k, v := range mpTheme {
-		prev := util.GetFileUrl(v.Thumbnail,"clipper")
+		prev := util.GetFileUrl(v.Thumbnail, "clipper")
 		mpTheme[k].ThumbnailPrev = prev
 		mpTheme[k].CreateTime = time.Unix(v.CreateAt, 0).Format(data.TimeLayout)
 		mpTheme[k].UpdateTime = time.Unix(v.UpdateAt, 0).Format(data.TimeLayout)

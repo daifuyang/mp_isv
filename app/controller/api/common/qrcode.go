@@ -32,10 +32,10 @@ func (rest *Qrcode) Get(c *gin.Context) {
 	qrcode := model.Qrcode{}
 	tx := cmf.Db().Where("code = ? AND  status = 1", rewrite.Id).First(&qrcode)
 	if tx.Error != nil {
-		rest.rc.Error(c,"该二维码不存在或已停用！",nil)
+		rest.rc.Error(c, "该二维码不存在或已停用！", nil)
 		return
 	}
 
-	rest.rc.Success(c,"获取成功！","?"+qrcode.Query)
+	rest.rc.Success(c, "获取成功！", "?"+qrcode.Query)
 
 }

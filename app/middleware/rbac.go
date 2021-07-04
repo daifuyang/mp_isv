@@ -22,7 +22,7 @@ import (
 func Rbac(c *gin.Context) {
 
 	if !saasModel.SuperRole(c) {
-		mid,exist := c.Get("mid")
+		mid, exist := c.Get("mid")
 
 		url := c.Request.URL
 		urlPath := url.Path
@@ -35,14 +35,14 @@ func Rbac(c *gin.Context) {
 
 		tx := cmf.NewDb().Table(prefix+"auth_rule_api as api").
 			Joins("INNER JOIN "+prefix+"auth_rule r ON api.auth_rule_name = r.name").
-			Where("url = ?",  urlPath).Scan(&ruleApi)
+			Where("url = ?", urlPath).Scan(&ruleApi)
 
 		// 存在规则，进行验证
 
 		ruleName := ""
 		param := ""
 		if tx.RowsAffected > 0 {
-			for _,ruleItem := range ruleApi{
+			for _, ruleItem := range ruleApi {
 
 				ruleName = ruleItem.AuthRuleName
 
@@ -55,11 +55,9 @@ func Rbac(c *gin.Context) {
 						return
 					}
 					param = ruleItem.Param
-					fmt.Println("param",param)
+					fmt.Println("param", param)
 				}
 			}
-
-
 
 			// 查询当前用户角色
 			user := new(saasModel.AdminUser).CurrentUser(c)
@@ -81,11 +79,11 @@ func Rbac(c *gin.Context) {
 				queryArgs = append(queryArgs, roleIdsStr)
 			}
 
-			query = append(query,"rule_name = ?")
+			query = append(query, "rule_name = ?")
 			queryArgs = append(queryArgs, ruleName)
 
 			if exist {
-				query = append(query,"mid = ?")
+				query = append(query, "mid = ?")
 				queryArgs = append(queryArgs, mid)
 			}
 
@@ -99,7 +97,7 @@ func Rbac(c *gin.Context) {
 				Joins("INNER JOIN "+prefix+"auth_rule r ON access.rule_name = r.name").Where(queryStr, queryArgs...).Scan(&authAccessRule)
 
 			if tx.Error != nil {
-				new(controller.Rest).Error(c,  tx.Error.Error(), nil)
+				new(controller.Rest).Error(c, tx.Error.Error(), nil)
 				c.Abort()
 				return
 			}

@@ -61,7 +61,7 @@ func (model *Asset) Get(c *gin.Context, query []string, queryArgs []interface{})
 	var tempAssets []TempAsset
 
 	for _, v := range assets {
-		prevPath := util.GetFileUrl(v.FilePath,"clipper")
+		prevPath := util.GetFileUrl(v.FilePath, "clipper")
 		tempAssets = append(tempAssets, TempAsset{Asset: v, PrevPath: prevPath})
 	}
 

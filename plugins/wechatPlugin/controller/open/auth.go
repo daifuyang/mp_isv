@@ -78,7 +78,7 @@ func (rest *Auth) PreAuthCode(c *gin.Context) {
 	accessToken, exist := c.Get("accessToken")
 
 	if !exist {
-		rest.rc.Error(c,"accessToken以失效",nil)
+		rest.rc.Error(c, "accessToken以失效", nil)
 		return
 	}
 

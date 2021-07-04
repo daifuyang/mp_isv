@@ -152,11 +152,11 @@ func (rest *MpTheme) Show(c *gin.Context) {
 	tx := cmf.NewDb().Where("id = ?", rewrite.Id).First(&mp)
 
 	if tx.Error != nil {
-		rest.rc.Error(c,tx.Error.Error(),nil)
+		rest.rc.Error(c, tx.Error.Error(), nil)
 		return
 	}
 
-	mp.AppLogoPrev = util.GetFileUrl(mp.AppLogo,"clipper")
+	mp.AppLogoPrev = util.GetFileUrl(mp.AppLogo, "clipper")
 
 	rest.rc.Success(c, "获取成功！", mp)
 
@@ -307,15 +307,15 @@ func (rest *MpTheme) Store(c *gin.Context) {
 
 		if themeId == 0 {
 			mpThemePage = append(mpThemePage, model.MpThemePage{
-				ThemeId:  saasTheme.Id,
-				Mid:      mid,
-				Title:    "首页",
-				File:     "home",
-				Home:     1,
-				Style:    "{}",
+				ThemeId:     saasTheme.Id,
+				Mid:         mid,
+				Title:       "首页",
+				File:        "home",
+				Home:        1,
+				Style:       "{}",
 				ConfigStyle: "{}",
-				More: "{}",
-				CreateAt: time.Now().Unix(),
+				More:        "{}",
+				CreateAt:    time.Now().Unix(),
 			})
 		} else {
 			var pages []appModel.MpThemePage

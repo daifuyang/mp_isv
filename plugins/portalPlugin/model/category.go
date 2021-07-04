@@ -56,8 +56,8 @@ type categoryOptions struct {
 func (model *PortalCategory) Init(mid int) {
 
 	pc := PortalCategory{
-		Id: 1,
-		Mid: mid,
+		Id:   1,
+		Mid:  mid,
 		Name: "新鲜事",
 	}
 	cmf.NewDb().FirstOrCreate(&pc)
@@ -255,7 +255,7 @@ func (model *PortalCategory) Show() (tempPortalCategory, error) {
 	}
 
 	tpc.PortalCategory = category
-	tpc.PrevPath = util.GetFileUrl(tpc.Thumbnail,"clipper")
+	tpc.PrevPath = util.GetFileUrl(tpc.Thumbnail, "clipper")
 
 	return tpc, nil
 }

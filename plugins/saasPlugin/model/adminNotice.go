@@ -33,12 +33,12 @@ func (model *AdminNotice) Index(c *gin.Context) (cmfModel.Paginate, error) {
 	var total int64 = 0
 
 	var noticeMap []AdminNotice
-	tx := cmf.NewDb().Where("mid = ?",model.Mid).Order("id desc").Find(&noticeMap).Count(&total)
+	tx := cmf.NewDb().Where("mid = ?", model.Mid).Order("id desc").Find(&noticeMap).Count(&total)
 	if tx.Error != nil {
 		return cmfModel.Paginate{}, tx.Error
 	}
 
-	tx = cmf.NewDb().Where("mid = ?",model.Mid).Order("id desc").Limit(pageSize).Offset((current - 1) * pageSize).Find(&noticeMap)
+	tx = cmf.NewDb().Where("mid = ?", model.Mid).Order("id desc").Limit(pageSize).Offset((current - 1) * pageSize).Find(&noticeMap)
 	if tx.Error != nil {
 		return cmfModel.Paginate{}, tx.Error
 	}
@@ -56,11 +56,11 @@ func (model *AdminNotice) Index(c *gin.Context) (cmfModel.Paginate, error) {
 
 }
 
-func (model *AdminNotice) Save(mid int,title string, desc string, id int, t int, audio string) (AdminNotice, error) {
+func (model *AdminNotice) Save(mid int, title string, desc string, id int, t int, audio string) (AdminNotice, error) {
 
 	notice := AdminNotice{
 		Mid: mid,
-		AdminNotice:appModel.AdminNotice{
+		AdminNotice: appModel.AdminNotice{
 			Title:    title,
 			Desc:     desc,
 			TargetId: id,
@@ -80,4 +80,3 @@ func (model *AdminNotice) Save(mid int,title string, desc string, id int, t int,
 	return notice, nil
 
 }
-

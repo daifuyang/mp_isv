@@ -62,9 +62,9 @@ func (rest *Recharge) Show(c *gin.Context) {
 
 	user := appModel.CurrentMpUser(c)
 
-	tx := cmf.NewDb().Where("id = ?",user.Id).First(&user)
+	tx := cmf.NewDb().Where("id = ?", user.Id).First(&user)
 	if tx.Error != nil {
-		rest.rc.Error(c,tx.Error.Error(),nil)
+		rest.rc.Error(c, tx.Error.Error(), nil)
 		return
 	}
 
@@ -108,7 +108,7 @@ func (rest *Recharge) Pay(c *gin.Context) {
 	ro := model.RechargeOrder{}
 
 	var payType = ""
-	fmt.Println("mpType",mpType)
+	fmt.Println("mpType", mpType)
 	if mpType == "alipay" {
 		payType = "alipay"
 	} else if mpType == "wechat" {
@@ -118,7 +118,7 @@ func (rest *Recharge) Pay(c *gin.Context) {
 	}
 
 	if payType == "" {
-		rest.rc.Error(c,"支付方式错误！",nil)
+		rest.rc.Error(c, "支付方式错误！", nil)
 		return
 	}
 

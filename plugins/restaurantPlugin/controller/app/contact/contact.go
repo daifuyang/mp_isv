@@ -16,14 +16,14 @@ type Contact struct {
 }
 
 func (rest *Contact) Get(c *gin.Context) {
-	mid,_ := c.Get("mid")
+	mid, _ := c.Get("mid")
 	cb := model.ContactButton{}
-	data,err :=  cb.Show(mid.(int))
+	data, err := cb.Show(mid.(int))
 
 	if err != nil {
-		rest.rc.Error(c,err.Error(),nil)
+		rest.rc.Error(c, err.Error(), nil)
 		return
 	}
 
-	rest.rc.Success(c,"获取成功！",data)
+	rest.rc.Success(c, "获取成功！", data)
 }

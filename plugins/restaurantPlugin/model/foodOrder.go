@@ -289,6 +289,148 @@ func (model FoodOrder) IndexByStore(c *gin.Context, query []string, queryArgs []
 
 }
 
+func (model FoodOrder) AppIndexByStore(c *gin.Context, query []string, queryArgs []interface{}) (cmfModel.Paginate, error) {
+
+	// 获取默认的系统分页
+	current, pageSize, err := model.paginate.Default(c)
+
+	if err != nil {
+		return cmfModel.Paginate{}, err
+	}
+
+	queryStr := strings.Join(query, " AND ")
+	var fo []FoodOrder
+
+	prefix := cmf.Conf().Database.Prefix
+	var total int64 = 0
+
+	cmf.NewDb().Table(prefix+"food_order fo").
+		Joins("INNER JOIN "+prefix+"store s ON s.id = fo.store_id").
+		Joins("LEFT JOIN "+prefix+"pay_log l ON l.order_id = fo.order_id").
+		Where(queryStr, queryArgs...).Order("fo.id desc").Count(&total)
+
+	result := cmf.NewDb().Table(prefix+"food_order fo").Select("fo.*,s.store_name,l.total_amount,buyer_pay_amount").
+		Joins("INNER JOIN "+prefix+"store s ON s.id = fo.store_id").
+		Joins("LEFT JOIN "+prefix+"pay_log l ON l.order_id = fo.order_id").
+		Where(queryStr, queryArgs...).Limit(pageSize).Offset((current - 1) * pageSize).
+		Order("case WHEN fo.order_status = 'WAIT_BUYER_PAY' then 1 WHEN fo.order_status = 'WAIT_BUYER_PAY' then 1 else 99 end asc, appointment_at desc, fo.id desc").Scan(&fo)
+
+	if result.Error != nil {
+		return cmfModel.Paginate{}, result.Error
+	}
+
+	domain := cmf.Conf().App.Domain
+
+	appId, exist := c.Get("app_id")
+
+	for k, v := range fo {
+		if exist {
+			appIdStr := appId.(string)
+			if v.PayType == "wxpay" {
+				fo[k].RequestPayment.AppId = appIdStr
+				fo[k].RequestPayment.TimeStamp = strconv.FormatInt(time.Now().Unix(), 10)
+				fo[k].RequestPayment.NonceStr = cmfUtil.GetMd5(strconv.FormatInt(time.Now().Unix(), 10))
+				fo[k].RequestPayment.Package = "prepay_id=" + v.TradeNo
+				fo[k].RequestPayment.SignType = "RSA"
+			}
+
+			encryptData := []string{
+				fo[k].RequestPayment.AppId,
+				fo[k].RequestPayment.TimeStamp,
+				fo[k].RequestPayment.NonceStr,
+				fo[k].RequestPayment.Package,
+			}
+
+			signature := wechatUtil.Sign(encryptData)
+			fo[k].RequestPayment.PaySign = signature
+		}
+
+		fo[k].Call = domain + "/call/" + v.Mobile
+
+		count := 0
+		fo[k].CreateTime = time.Unix(v.CreateAt, 0).Format(data.TimeLayout)
+		fo[k].AppointmentTime = time.Unix(v.AppointmentAt, 0).Format(data.TimeLayout)
+		fo[k].FinishedTime = time.Unix(v.FinishedAt, 0).Format(data.TimeLayout)
+
+		var fod []FoodOrderDetail
+		tx := cmf.NewDb().Where("order_id = ?", v.OrderId).Find(&fod)
+		if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
+			return cmfModel.Paginate{}, result.Error
+		}
+
+		for dk, dv := range fod {
+
+			if dv.FoodThumbnail == "" {
+				dv.FoodThumbnail = "template/food.png"
+			}
+
+			fcp := FoodCategoryPost{}
+			cmf.NewDb().Where("food_id = ?", dv.FoodId).First(&fcp)
+			categoryId := fcp.FoodCategoryId
+
+			food := Food{}
+			cmf.NewDb().Where("food_id = ?", dv.FoodId).First(&food)
+
+			fod[dk].CategoryId = categoryId
+			fod[dk].Food = food
+
+			fod[dk].FoodThumbnailPrev = util.GetFileUrl(dv.FoodThumbnail, "thumbnail500x500")
+			count = count + dv.Count
+
+			var material []material
+			json.Unmarshal([]byte(dv.Material), &material)
+
+			// 增加加料描述
+			materialRemark := ""
+			for _, item := range material {
+				materialRemark += item.MaterialName + "|"
+			}
+
+			var tasty []tasty
+			json.Unmarshal([]byte(dv.Tasty), &tasty)
+
+			tastyRemark := ""
+
+			for _, item := range tasty {
+				tastyRemark += item.AttrValue + "|"
+			}
+
+			title := dv.FoodName
+
+			if dv.SkuDetail != "" {
+				title += "-" + dv.SkuDetail
+			}
+
+			remark := materialRemark + tastyRemark
+
+			remarkRune := []rune(remark)
+
+			if len(remarkRune) > 1 {
+				remark = string(remarkRune[0 : len(remarkRune)-1])
+			}
+
+			if remark != "" {
+				title += "-" + remark
+			}
+
+			fod[dk].FoodName = title
+
+		}
+
+		fo[k].FoodDetail = fod
+		fo[k].FoodCount = len(fod)
+		fo[k].TotalCount = count
+	}
+
+	paginate := cmfModel.Paginate{Data: fo, Current: current, PageSize: pageSize, Total: total}
+	if len(fo) == 0 {
+		paginate.Data = make([]FoodOrder, 0)
+	}
+
+	return paginate, nil
+
+}
+
 func (model FoodOrder) ShowByStore(query []string, queryArgs []interface{}) (FoodOrder, error) {
 
 	queryStr := strings.Join(query, " AND ")
@@ -1478,9 +1620,14 @@ type Content struct {
 func (model *FoodOrder) SendPrinter(fo FoodOrder, printOrder []map[string]string, storeName string, appointmentTime string, canPrinter bool) (content []Content, err error) {
 	// 获取门店打印机状态
 	var printers []Printer
+
 	tx := cmf.NewDb().Where("store_id = ? AND mid = ?", fo.StoreId, fo.Mid).Find(&printers)
 	if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 		return content, tx.Error
+	}
+
+	if tx.RowsAffected == 0 {
+		return content, errors.New("请先绑定至少一台打印机！")
 	}
 
 	content = make([]Content, 0)
@@ -1536,11 +1683,21 @@ func (model *FoodOrder) SendPrinter(fo FoodOrder, printOrder []map[string]string
 				if p.Brand == "feie" {
 					myResult := new(base.Printer).Printer(p.Sn, pItemContent, p.Count)
 					fmt.Println("myResult", myResult)
+
+					if myResult.Ret > 0 {
+						new(Printer).NsqProducer(fo.Mid, fo.Id)
+					}
+
 				}
 
 				if p.Brand == "xprinter" {
 					myResult := new(xpyunYun.Printer).Printer(p.Sn, pItemContent, p.Count)
 					fmt.Println("myResult", myResult.Content)
+
+					if myResult.Content.Code > 0 {
+						new(Printer).NsqProducer(fo.Mid, fo.Id)
+					}
+
 				}
 			}
 		}
@@ -1574,11 +1731,21 @@ func (model *FoodOrder) SendPrinter(fo FoodOrder, printOrder []map[string]string
 					if p.Brand == "feie" {
 						myResult := new(base.Printer).Printer(p.Sn, pItemContent, p.Count)
 						fmt.Println("myResult", myResult)
+
+						if myResult.Ret > 0 {
+							new(Printer).NsqProducer(fo.Mid, fo.Id)
+						}
+
 					}
 
 					if p.Brand == "xprinter" {
 						myResult := new(xpyunYun.Printer).Printer(p.Sn, pItemContent, p.Count)
 						fmt.Println("myResult", myResult.Content)
+						if myResult.Content.Code > 0 {
+							new(Printer).NsqProducer(fo.Mid, fo.Id)
+						} else {
+							fmt.Println("nsq err", err)
+						}
 					}
 				}
 

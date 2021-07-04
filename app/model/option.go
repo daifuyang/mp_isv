@@ -144,7 +144,7 @@ func (app WechatIsvApp) Edit(ak string) (WechatIsvApp, error) {
 		return isvApp, errors.New(listResult.Errmsg)
 	}
 
-	isvApp.SourceMiniprogramAppid =  listResult.TemplateList[0].SourceMiniprogramAppid
+	isvApp.SourceMiniprogramAppid = listResult.TemplateList[0].SourceMiniprogramAppid
 	isvApp.TemplateId = listResult.TemplateList[0].TemplateId
 	isvApp.UserVersion = listResult.TemplateList[0].UserVersion
 

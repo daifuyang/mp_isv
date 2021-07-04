@@ -16,7 +16,8 @@ import (
 
 // 设置主db
 func MainDb(c *gin.Context) {
-	cmf.ManualDb(cmf.Conf().Database.Name)
+	db := cmf.ManualDb(cmf.Conf().Database.Name)
+	c.Set("DB", db)
 	c.Next()
 }
 
@@ -31,13 +32,15 @@ func TenantDb(c *gin.Context) {
 
 	c.Set("aliasName", aliasName)
 	if err != nil {
-		cmfLog.Error("err："+err.Error())
+		cmfLog.Error("err：" + err.Error())
 		new(controller.Rest).Error(c, "该租户不存在！", nil)
 		c.Abort()
 		return
 	}
 	db := "tenant_" + strconv.Itoa(currentTenant.TenantId)
-	cmf.ManualDb(db)
+	newDb := cmf.ManualDb(db)
+
+	c.Set("DB", newDb)
 	c.Next()
 }
 

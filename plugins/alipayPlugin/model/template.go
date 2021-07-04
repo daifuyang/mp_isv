@@ -6,4 +6,3 @@
 package model
 
 const PaySuccessTemplateId = "PMd3f7b846fc2a440a82e1ca7677fa7239"
-

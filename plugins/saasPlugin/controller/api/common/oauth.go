@@ -162,7 +162,7 @@ func RegisterTenantRouter(handlers ...gin.HandlerFunc) {
 
 		nameArr := strings.Split(username, "@")
 		mobile := nameArr[0]
-		mobileInt,_ := strconv.Atoi(mobile)
+		mobileInt, _ := strconv.Atoi(mobile)
 
 		if typ == "account" && password == "" {
 			rc.Error(c, "密码不能为空！", nil)

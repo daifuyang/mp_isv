@@ -50,10 +50,10 @@ func (rest *Common) Show(c *gin.Context) {
 	}
 
 	res.BusinessInfo = bi
-	res.BrandLogoPrev = util.GetFileUrl(bi.BrandLogo,"clipper")
-	res.BusinessPhotoPrev = util.GetFileUrl(bi.BusinessPhoto,"clipper")
-	res.OutDoorPicPrev = util.GetFileUrl(bi.OutDoorPic,"clipper")
-	res.FoodLicensePicPrev = util.GetFileUrl(bi.FoodLicensePic,"clipper")
+	res.BrandLogoPrev = util.GetFileUrl(bi.BrandLogo, "clipper")
+	res.BusinessPhotoPrev = util.GetFileUrl(bi.BusinessPhoto, "clipper")
+	res.OutDoorPicPrev = util.GetFileUrl(bi.OutDoorPic, "clipper")
+	res.FoodLicensePicPrev = util.GetFileUrl(bi.FoodLicensePic, "clipper")
 
 	rest.rc.Success(c, "获取成功！", res)
 
@@ -80,10 +80,10 @@ func (rest *Common) MobileShow(c *gin.Context) {
 	}
 
 	res.BusinessInfo = bi
-	res.BrandLogoPrev = util.GetFileUrl(bi.BrandLogo,"clipper")
-	res.BusinessPhotoPrev = util.GetFileUrl(bi.BusinessPhoto,"clipper")
-	res.OutDoorPicPrev = util.GetFileUrl(bi.OutDoorPic,"clipper")
-	res.FoodLicensePicPrev = util.GetFileUrl(bi.FoodLicensePic,"clipper")
+	res.BrandLogoPrev = util.GetFileUrl(bi.BrandLogo, "clipper")
+	res.BusinessPhotoPrev = util.GetFileUrl(bi.BusinessPhoto, "clipper")
+	res.OutDoorPicPrev = util.GetFileUrl(bi.OutDoorPic, "clipper")
+	res.FoodLicensePicPrev = util.GetFileUrl(bi.FoodLicensePic, "clipper")
 
 	rest.rc.Success(c, "获取成功！", res.Mobile)
 

@@ -272,7 +272,7 @@ func (rest *User) Delete(c *gin.Context) {
 
 func (rest *User) CurrentUser(c *gin.Context) {
 	// 获取当前用户
-	currentUser,err := new(model.User).CurrentUser(c)
+	currentUser, err := new(model.User).CurrentUser(c)
 	if err != nil {
 		new(controller.Rest).Error(c, "该用户不存在！", nil)
 		return

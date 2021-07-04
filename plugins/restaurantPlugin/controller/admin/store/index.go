@@ -211,7 +211,7 @@ func (rest Index) Show(c *gin.Context) {
 
 	tempData := temp{}
 	tempData.Store = storeData
-	tempData.PrevPath = util.GetFileUrl(tempData.StoreThumbnail,"clipper")
+	tempData.PrevPath = util.GetFileUrl(tempData.StoreThumbnail, "clipper")
 
 	var returnData struct {
 		Store temp               `json:"store"`

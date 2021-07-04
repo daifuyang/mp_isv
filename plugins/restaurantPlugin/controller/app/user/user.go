@@ -151,9 +151,12 @@ func (rest *User) Save(c *gin.Context) {
 
 	// 新用户
 	if tx.RowsAffected == 0 {
+		u.CreateAt = time.Now().Unix()
+		u.UpdateAt = time.Now().Unix()
 		tx = cmf.NewDb().Create(&u)
 	} else {
 		// 更新
+		u.UpdateAt = time.Now().Unix()
 		tx = cmf.NewDb().Save(&u)
 	}
 
@@ -279,11 +282,14 @@ func (rest *User) SaveMobile(c *gin.Context) {
 	}
 	// 保存
 	if mUser.Id == 0 {
+		u.CreateAt = time.Now().Unix()
+		u.UpdateAt = time.Now().Unix()
 		tx = cmf.NewDb().Create(&u)
 	} else {
 		if u.Id == 0 {
 			u.Id = mUser.Id
 		}
+		u.UpdateAt = time.Now().Unix()
 		tx = cmf.NewDb().Updates(&u)
 	}
 

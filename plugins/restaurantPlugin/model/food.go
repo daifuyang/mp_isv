@@ -194,7 +194,7 @@ func (model Food) Index(c *gin.Context, query []string, queryArgs []interface{})
 		Where(queryStr, queryArgs...).Limit(pageSize).Offset((current - 1) * pageSize).Order("list_order desc, id desc").Scan(&food)
 
 	for k, v := range food {
-		food[k].PrevPath = util.GetFileUrl(v.Thumbnail,"thumbnail500x500")
+		food[k].PrevPath = util.GetFileUrl(v.Thumbnail, "thumbnail500x500")
 		food[k].CreateTime = time.Unix(v.CreateAt, 0).Format("2006-01-02 15:04:05")
 		food[k].UpdateTime = time.Unix(v.UpdateAt, 0).Format("2006-01-02 15:04:05")
 	}
@@ -290,7 +290,7 @@ func (model Food) ListByCategory(query []string, queryArgs []interface{}) ([]Foo
 			foodCate[k].OriginalPrice = 0
 		}
 
-		foodCate[k].PrevPath = util.GetFileUrl(v.Thumbnail,"thumbnail500x500")
+		foodCate[k].PrevPath = util.GetFileUrl(v.Thumbnail, "thumbnail500x500")
 		foodCate[k].CreateTime = time.Unix(v.CreateAt, 0).Format("2006-01-02 15:04:05")
 		foodCate[k].UpdateTime = time.Unix(v.UpdateAt, 0).Format("2006-01-02 15:04:05")
 	}
@@ -390,7 +390,7 @@ func (model Food) Detail(query []string, queryArgs []interface{}) (Food, error) 
 
 	}
 
-	food.PrevPath = util.GetFileUrl(food.Thumbnail,"thumbnail500x500")
+	food.PrevPath = util.GetFileUrl(food.Thumbnail, "thumbnail500x500")
 
 	// 启用口味
 	if food.UseTasty == 1 {
@@ -453,7 +453,7 @@ func (model Food) Show(query []string, queryArgs []interface{}) (Food, error) {
 	queryStr := strings.Join(query, " AND ")
 	food := Food{}
 	result := db.Where(queryStr, queryArgs...).First(&food)
-	food.PrevPath = util.GetFileUrl(food.Thumbnail,"thumbnail500x500")
+	food.PrevPath = util.GetFileUrl(food.Thumbnail, "thumbnail500x500")
 	if result.Error != nil {
 		return food, result.Error
 	}
@@ -744,5 +744,3 @@ func (model *FoodMaterialPost) inFoodMaterialPost(foodId int, materialName strin
 
 	return false
 }
-
-

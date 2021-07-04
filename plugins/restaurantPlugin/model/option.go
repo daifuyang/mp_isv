@@ -31,7 +31,7 @@ type EatIn struct {
 	EnabledSellClear int     `json:"enabled_sell_clear"` // 启用自动沽清
 	SellClear        string  `json:"sell_clear"`
 	SaleType         int     `json:"sale_type"`
-	EatType          int     `json:"eat_type"`
+	EatType          int     `json:"eat_type"`       //堂食模式
 	SurchargeType    int     `json:"surcharge_type"` // 附件费类型
 	Surcharge        float64 `json:"surcharge"`      // 附件费
 	CustomEnabled    int     `json:"custom_enabled"`
@@ -226,5 +226,136 @@ func (model *Option) Updates(businessInfo BusinessInfo) (Option, error) {
 	}
 
 	return op, nil
+
+}
+
+/**
+ * @Author return <1140444693@qq.com>
+ * @Description 微信扫码领券
+ * @Date 2021/7/3 15:43:10
+ * @Param
+ * @return
+ **/
+// 微信扫码领券
+type Scan struct {
+	AppId string `json:"app_id"`
+	Path string `json:"path"`
+}
+func (model *Scan) Show(mid int) (Scan, error) {
+
+	op := Option{}
+
+	scan := Scan{}
+
+	tx := cmf.NewDb().Where("option_name = ? AND mid = ?", "wechat_cfav", mid).First(&op)
+	if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
+		return scan, tx.Error
+	}
+
+	val := op.OptionValue
+
+	_ = json.Unmarshal([]byte(val), &scan)
+
+	return scan, nil
+
+}
+
+func (model *Scan) Edit(mid int) (Scan, error) {
+
+	op := Option{}
+
+	scan := Scan{}
+
+	result := cmf.NewDb().Where("option_name = ? AND mid = ?", "wechat_cfav", mid).First(&op)
+	if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		return scan, result.Error
+	}
+
+	op.Mid = mid
+	op.AutoLoad = 1
+	op.OptionName = "wechat_cfav"
+
+	val, err := json.Marshal(model)
+	if err != nil {
+		cmfLog.Error(err.Error())
+		return scan, err
+	}
+
+	op.OptionValue = string(val)
+
+	var tx *gorm.DB
+	if op.Id == 0 {
+		tx = cmf.NewDb().Create(&op)
+	} else {
+		tx = cmf.NewDb().Save(&op)
+	}
+
+	if tx.Error != nil {
+		return scan, tx.Error
+	}
+
+	return *model, nil
+
+}
+
+// 微信社群配置
+type Group struct {
+	PlugId string `json:"plugid"`
+}
+
+func (model *Group) Show(mid int) (Group, error) {
+
+	op := Option{}
+
+	group := Group{}
+
+	tx := cmf.NewDb().Where("option_name = ? AND mid = ?", "wechat_work_group", mid).First(&op)
+	if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
+		return group, tx.Error
+	}
+
+	val := op.OptionValue
+
+	_ = json.Unmarshal([]byte(val), &group)
+
+	return group, nil
+
+}
+
+func (model *Group) Edit(mid int) (Group, error) {
+
+	op := Option{}
+
+	group := Group{}
+
+	result := cmf.NewDb().Where("option_name = ? AND mid = ?", "wechat_work_group", mid).First(&op)
+	if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		return group, result.Error
+	}
+
+	op.Mid = mid
+	op.AutoLoad = 1
+	op.OptionName = "wechat_work_group"
+
+	val, err := json.Marshal(model)
+	if err != nil {
+		cmfLog.Error(err.Error())
+		return group, err
+	}
+
+	op.OptionValue = string(val)
+
+	var tx *gorm.DB
+	if op.Id == 0 {
+		tx = cmf.NewDb().Create(&op)
+	} else {
+		tx = cmf.NewDb().Save(&op)
+	}
+
+	if tx.Error != nil {
+		return group, tx.Error
+	}
+
+	return *model, nil
 
 }

@@ -27,7 +27,7 @@ func (rest *Menu) Get(c *gin.Context) {
 	}
 
 	authAccessRule := saasModel.GetAuthAccess(c)
-	fmt.Println("authAccessRule",authAccessRule)
+	fmt.Println("authAccessRule", authAccessRule)
 
 	// 获取当前用户类型
 
