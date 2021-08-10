@@ -13,7 +13,6 @@ import (
 	"gincmf/plugins/restaurantPlugin/model"
 	saasModel "gincmf/plugins/saasPlugin/model"
 	"github.com/gin-gonic/gin"
-	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
 	"gorm.io/gorm"
 	"regexp"
@@ -44,8 +43,17 @@ func (rest *Address) Get(c *gin.Context) {
 		err   error
 	)
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	if storeNumber != "" {
-		store, err = new(model.Store).Show([]string{"store_number = ? AND  mid = ? AND delete_at = ?"}, []interface{}{storeNumber, mid, 0})
+		store := model.Store{
+			Db: db,
+		}
+		store, err = store.Show([]string{"store_number = ? AND  mid = ? AND delete_at = ?"}, []interface{}{storeNumber, mid, 0})
 		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 			rest.rc.Error(c, err.Error(), nil)
 			return
@@ -53,7 +61,7 @@ func (rest *Address) Get(c *gin.Context) {
 	}
 
 	var address []model.Address
-	result := cmf.NewDb().Where("mid = ? AND user_id = ?", mid, userId).Order("`default` desc").Find(&address)
+	result := db.Where("mid = ? AND user_id = ?", mid, userId).Order("`default` desc").Find(&address)
 
 	if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, result.Error.Error(), nil)
@@ -61,7 +69,7 @@ func (rest *Address) Get(c *gin.Context) {
 	}
 
 	// 获取当前外卖配置
-	takeJson := saasModel.Options("takeout", store.Mid)
+	takeJson, err := saasModel.Options(db, "takeout", store.Mid)
 	var takeOut model.TakeOut
 	_ = json.Unmarshal([]byte(takeJson), &takeOut)
 
@@ -121,10 +129,19 @@ func (rest *Address) Show(c *gin.Context) {
 		err   error
 	)
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	var takeOut model.TakeOut
 
 	if storeNumber != "" {
-		store, err = new(model.Store).Show([]string{"store_number = ? AND  mid = ? AND delete_at = ?"}, []interface{}{storeNumber, mid, 0})
+		store := model.Store{
+			Db: db,
+		}
+		store, err = store.Show([]string{"store_number = ? AND  mid = ? AND delete_at = ?"}, []interface{}{storeNumber, mid, 0})
 		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 			rest.rc.Error(c, err.Error(), nil)
 			return
@@ -136,27 +153,33 @@ func (rest *Address) Show(c *gin.Context) {
 		}
 
 		// 获取当前堂食配置
-		takeJson := saasModel.Options("takeout", store.Mid)
+		takeJson, err := saasModel.Options(db, "takeout", store.Mid)
+
+		if err != nil {
+			rest.rc.Error(c, err.Error(), nil)
+			return
+		}
+
 		_ = json.Unmarshal([]byte(takeJson), &takeOut)
 	}
 
 	userId, _ := c.Get("mp_user_id")
 
 	address := model.Address{}
-	var result *gorm.DB
+	var tx *gorm.DB
 	if rewrite.Id == "default" {
-		result = cmf.NewDb().Where("`default` = ? AND mid = ? AND user_id = ?", 1, mid, userId).First(&address)
+		tx = db.Where("`default` = ? AND mid = ? AND user_id = ?", 1, mid, userId).First(&address)
 	} else {
-		result = cmf.NewDb().Where("id = ? AND mid = ? AND user_id = ?", rewrite.Id, mid, userId).First(&address)
+		tx = db.Where("id = ? AND mid = ? AND user_id = ?", rewrite.Id, mid, userId).First(&address)
 	}
 
-	if result.Error != nil {
-		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+	if tx.Error != nil {
+		if errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 			rest.rc.Error(c, "该地址不存在！", nil)
 			return
 		}
 
-		rest.rc.Error(c, result.Error.Error(), nil)
+		rest.rc.Error(c, tx.Error.Error(), nil)
 		return
 	}
 
@@ -194,6 +217,8 @@ func (rest *Address) Show(c *gin.Context) {
  **/
 
 func (rest *Address) Store(c *gin.Context) {
+
+
 
 	mid, _ := c.Get("mid")
 	userId, _ := c.Get("mp_user_id")
@@ -274,6 +299,12 @@ func (rest *Address) Store(c *gin.Context) {
 		dInt = 1
 	}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	address := model.Address{
 		Mid:       mid.(int),
 		UserId:    userId.(int),
@@ -289,10 +320,10 @@ func (rest *Address) Store(c *gin.Context) {
 
 	if dInt == 1 {
 		// 取消默认
-		cmf.NewDb().Model(&model.Address{}).Where("`default`= ? AND  user_id = ?", 1, userId).Update("default", 0)
+		db.Model(&model.Address{}).Where("`default`= ? AND  user_id = ?", 1, userId).Update("default", 0)
 	}
 
-	result := cmf.NewDb().Create(&address)
+	result := db.Create(&address)
 
 	if result.Error != nil {
 		rest.rc.Error(c, result.Error.Error(), nil)
@@ -400,8 +431,15 @@ func (rest *Address) Edit(c *gin.Context) {
 	if d == "1" {
 		dInt = 1
 	}
+
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	oAddr := model.Address{}
-	res := cmf.NewDb().Where("id = ? AND user_id = ?", rewrite.Id, userId).First(&oAddr)
+	res := db.Where("id = ? AND user_id = ?", rewrite.Id, userId).First(&oAddr)
 	if res.Error != nil {
 		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
 			rest.rc.Error(c, "该地址不存在！", nil)
@@ -427,10 +465,10 @@ func (rest *Address) Edit(c *gin.Context) {
 
 	if dInt == 1 {
 		// 取消默认
-		cmf.NewDb().Model(&model.Address{}).Where("`default` = ?", 1).Update("default", 0)
+		db.Model(&model.Address{}).Where("`default` = ?", 1).Update("default", 0)
 	}
 
-	result := cmf.NewDb().Save(&address)
+	result := db.Save(&address)
 
 	if result.Error != nil {
 		rest.rc.Error(c, result.Error.Error(), nil)
@@ -459,11 +497,17 @@ func (rest *Address) Delete(c *gin.Context) {
 		return
 	}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	mid, _ := c.Get("mid")
 	userId, _ := c.Get("mp_user_id")
 
 	address := model.Address{}
-	tx := cmf.NewDb().Where("id = ? AND mid = ? AND user_id = ?", rewrite.Id, mid, userId).First(&address)
+	tx := db.Where("id = ? AND mid = ? AND user_id = ?", rewrite.Id, mid, userId).First(&address)
 	if tx.Error != nil {
 
 		if errors.Is(tx.Error, gorm.ErrRecordNotFound) {
@@ -475,7 +519,7 @@ func (rest *Address) Delete(c *gin.Context) {
 		return
 	}
 
-	tx = cmf.NewDb().Where("id = ? AND mid = ? AND user_id = ?", rewrite.Id, mid, userId).Delete(&address)
+	tx = db.Where("id = ? AND mid = ? AND user_id = ?", rewrite.Id, mid, userId).Delete(&address)
 
 	if tx.Error != nil {
 		rest.rc.Error(c, tx.Error.Error(), nil)

@@ -10,7 +10,6 @@ import (
 	"gincmf/app/util"
 	"gincmf/plugins/restaurantPlugin/model"
 	"github.com/gin-gonic/gin"
-	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
 	"gorm.io/gorm"
 	"strconv"
@@ -30,6 +29,13 @@ type IndexController struct {
 func (rest *IndexController) List(c *gin.Context) {
 	var query []string
 	var queryArgs []interface{}
+
+	db, err := util.NewDb(c)
+	if err != nil {
+		new(controller.Rest).Error(c, err.Error(), nil)
+		c.Abort()
+		return
+	}
 
 	mid, _ := c.Get("mid")
 	query = append(query, "d.mid = ?")
@@ -53,7 +59,9 @@ func (rest *IndexController) List(c *gin.Context) {
 		queryArgs = append(queryArgs, "%"+name+"%")
 	}
 
-	desk := model.Desk{}
+	desk := model.Desk{
+		Db: db,
+	}
 
 	data, err := desk.List(query, queryArgs)
 
@@ -79,6 +87,13 @@ func (rest *IndexController) Get(c *gin.Context) {
 	var query []string
 	var queryArgs []interface{}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		new(controller.Rest).Error(c, err.Error(), nil)
+		c.Abort()
+		return
+	}
+
 	mid, _ := c.Get("mid")
 	query = append(query, "d.mid = ?")
 	queryArgs = append(queryArgs, mid)
@@ -101,7 +116,9 @@ func (rest *IndexController) Get(c *gin.Context) {
 		queryArgs = append(queryArgs, "%"+name+"%")
 	}
 
-	desk := model.Desk{}
+	desk := model.Desk{
+		Db: db,
+	}
 
 	data, err := desk.Index(c, query, queryArgs)
 
@@ -139,7 +156,16 @@ func (rest *IndexController) Show(c *gin.Context) {
 		return
 	}
 
-	desk := model.Desk{}
+	db, err := util.NewDb(c)
+	if err != nil {
+		new(controller.Rest).Error(c, err.Error(), nil)
+		c.Abort()
+		return
+	}
+
+	desk := model.Desk{
+		Db: db,
+	}
 
 	var query []string
 	var queryArgs []interface{}
@@ -193,6 +219,13 @@ func (rest *IndexController) Edit(c *gin.Context) {
 		return
 	}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		new(controller.Rest).Error(c, err.Error(), nil)
+		c.Abort()
+		return
+	}
+
 	mid, _ := c.Get("mid")
 
 	name := c.PostForm("name")
@@ -231,6 +264,7 @@ func (rest *IndexController) Edit(c *gin.Context) {
 		StoreId:    storeIdInt,
 		Name:       name,
 		CategoryId: categoryIdInt,
+		Db: db,
 	}
 
 	data, err := desk.Update()
@@ -261,6 +295,13 @@ func (rest *IndexController) Edit(c *gin.Context) {
 // @Failure 400 {object} model.ReturnData "{"code":400,"msg":"登录状态已失效！"}"
 // @Router /admin/desk [post]
 func (rest *IndexController) Store(c *gin.Context) {
+
+	db, err := util.NewDb(c)
+	if err != nil {
+		new(controller.Rest).Error(c, err.Error(), nil)
+		c.Abort()
+		return
+	}
 
 	mid, _ := c.Get("mid")
 
@@ -309,6 +350,7 @@ func (rest *IndexController) Store(c *gin.Context) {
 		Name:       name,
 		DeskNumber: deskNumber,
 		CategoryId: categoryIdInt,
+		Db: db,
 	}
 
 	data, err := desk.Store()
@@ -348,11 +390,18 @@ func (rest *IndexController) Delete(c *gin.Context) {
 		return
 	}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		new(controller.Rest).Error(c, err.Error(), nil)
+		c.Abort()
+		return
+	}
+
 	mid, _ := c.Get("mid")
 	midInt := mid.(int)
 	desk := model.Desk{}
 
-	result := cmf.NewDb().Where("mid = ? AND id = ?", midInt, rewrite.Id).Delete(&desk)
+	result := db.Where("mid = ? AND id = ?", midInt, rewrite.Id).Delete(&desk)
 
 	if result.Error != nil {
 		rest.rc.Error(c, result.Error.Error(), nil)

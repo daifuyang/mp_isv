@@ -8,10 +8,10 @@ package open
 import (
 	"errors"
 	"fmt"
+	"gincmf/app/util"
 	resModel "gincmf/plugins/restaurantPlugin/model"
 	"gincmf/plugins/wechatPlugin/model"
 	"github.com/gin-gonic/gin"
-	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
 	"github.com/gincmf/wechatEasySdk/open"
 	"gorm.io/gorm"
@@ -181,9 +181,15 @@ func (rest *Wxa) OpenDelivery(c *gin.Context) {
 		return
 	}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	deliveryId := rewrite.Id
 	immediateDelivery := resModel.ImmediateDelivery{}
-	tx := cmf.NewDb().Where("delivery_id = ?", deliveryId).First(&immediateDelivery)
+	tx := db.Where("delivery_id = ?", deliveryId).First(&immediateDelivery)
 	if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, tx.Error.Error(), nil)
 		return
@@ -210,7 +216,7 @@ func (rest *Wxa) OpenDelivery(c *gin.Context) {
 		immediateDelivery.DeliveryId = deliveryId
 		immediateDelivery.CreateAt = time.Now().Unix()
 
-		cmf.NewDb().Create(&immediateDelivery)
+		db.Create(&immediateDelivery)
 	}
 
 	// 添加绑定账号

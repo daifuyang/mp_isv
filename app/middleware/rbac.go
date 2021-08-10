@@ -3,6 +3,7 @@ package middleware
 import (
 	"fmt"
 	"gincmf/app/model"
+	"gincmf/app/util"
 	saasModel "gincmf/plugins/saasPlugin/model"
 	"github.com/gin-gonic/gin"
 	cmf "github.com/gincmf/cmf/bootstrap"
@@ -28,12 +29,19 @@ func Rbac(c *gin.Context) {
 		urlPath := url.Path
 		urlQuery := url.Query()
 
+		db, err := util.NewDb(c)
+		if err != nil {
+			new(controller.Rest).Error(c, err.Error(), nil)
+			c.Abort()
+			return
+		}
+
 		// 判断当前url是否在所属的业务规则当中
 		prefix := cmf.Conf().Database.Prefix
 
 		var ruleApi []model.AuthRuleApi
 
-		tx := cmf.NewDb().Table(prefix+"auth_rule_api as api").
+		tx := db.Table(prefix+"auth_rule_api as api").
 			Joins("INNER JOIN "+prefix+"auth_rule r ON api.auth_rule_name = r.name").
 			Where("url = ?", urlPath).Scan(&ruleApi)
 
@@ -60,9 +68,14 @@ func Rbac(c *gin.Context) {
 			}
 
 			// 查询当前用户角色
-			user := new(saasModel.AdminUser).CurrentUser(c)
+			user,err := new(saasModel.AdminUser).CurrentUser(c)
+
+			if err !=nil {
+
+			}
+
 			// 获取当前用户全部的权限列表
-			role := model.GetRoleById(user.Id)
+			role := model.GetRoleById(c, user.Id)
 			var roleIds []string
 			for _, v := range role {
 				roleIds = append(roleIds, strconv.Itoa(v.Id))
@@ -93,7 +106,7 @@ func Rbac(c *gin.Context) {
 			prefix := cmf.Conf().Database.Prefix
 
 			// 查询当前角色是否进行授权
-			tx := cmf.NewDb().Table(prefix+"auth_access access").Select("access.*,r.name").
+			tx := db.Table(prefix+"auth_access access").Select("access.*,r.name").
 				Joins("INNER JOIN "+prefix+"auth_rule r ON access.rule_name = r.name").Where(queryStr, queryArgs...).Scan(&authAccessRule)
 
 			if tx.Error != nil {

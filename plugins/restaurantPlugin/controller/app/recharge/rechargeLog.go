@@ -7,6 +7,7 @@ package recharge
 
 import (
 	appModel "gincmf/app/model"
+	"gincmf/app/util"
 	"github.com/gin-gonic/gin"
 	"github.com/gincmf/cmf/controller"
 )
@@ -21,7 +22,17 @@ func (rest Log) Get(c *gin.Context) {
 	var query = []string{"user_id = ?"}
 	var queryArgs = []interface{}{mpUserId}
 
-	data, err := new(appModel.RechargeLog).Index(c, query, queryArgs)
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
+	rechargeLog := appModel.RechargeLog{
+		Db: db,
+	}
+
+	data, err := rechargeLog.Index(c, query, queryArgs)
 
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)

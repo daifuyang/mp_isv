@@ -6,18 +6,18 @@
 package model
 
 import (
-	cmf "github.com/gincmf/cmf/bootstrap"
 	"gorm.io/gorm"
 	"strings"
 )
 
 // 标签内容
 type PortalTag struct {
-	Id          int    `json:"id"`
-	Status      int    `gorm:"type:tinyint(3);comment:状态,1:发布,0:不发布;default:1;not null;" json:"status"`
-	Recommended int    `gorm:"type:tinyint(3);comment:是否推荐,1:推荐;0:不推荐;default:0;not null;" json:"recommended"`
-	PostCount   int64  `gorm:"type:bigint(20);comment:标签文章数;default:0;not null;" json:"post_count"`
-	Name        string `gorm:"type:varchar(20);comment:标签名称;not null;" json:"name"`
+	Id          int      `json:"id"`
+	Status      int      `gorm:"type:tinyint(3);comment:状态,1:发布,0:不发布;default:1;not null;" json:"status"`
+	Recommended int      `gorm:"type:tinyint(3);comment:是否推荐,1:推荐;0:不推荐;default:0;not null;" json:"recommended"`
+	PostCount   int64    `gorm:"type:bigint(20);comment:标签文章数;default:0;not null;" json:"post_count"`
+	Name        string   `gorm:"type:varchar(20);comment:标签名称;not null;" json:"name"`
+	Db          *gorm.DB `gorm:"-" json:"-"`
 }
 
 func (model *PortalTag) Error() string {
@@ -26,21 +26,25 @@ func (model *PortalTag) Error() string {
 
 // 标签关系
 type PortalTagPost struct {
-	Id     int `json:"id"`
-	TagId  int `gorm:"type:bigint(20);comment:标签id;not null;" json:"tag_id"`
-	PostId int `gorm:"type:bigint(20);comment:文章id;not null;" json:"post_id"`
-	Status int `gorm:"type:tinyint(3);comment:状态,1:发布,0:不发布;default:1;not null;" json:"status"`
+	Id     int      `json:"id"`
+	TagId  int      `gorm:"type:bigint(20);comment:标签id;not null;" json:"tag_id"`
+	PostId int      `gorm:"type:bigint(20);comment:文章id;not null;" json:"post_id"`
+	Status int      `gorm:"type:tinyint(3);comment:状态,1:发布,0:不发布;default:1;not null;" json:"status"`
+	Db     *gorm.DB `gorm:"-" json:"-"`
 }
 
 func (model *PortalTag) AutoMigrate() {
-	cmf.NewDb().AutoMigrate(&model)
-	cmf.NewDb().AutoMigrate(&PortalTagPost{})
+	model.Db.AutoMigrate(&model)
+	model.Db.AutoMigrate(&PortalTagPost{})
 }
 
 func (model *PortalTag) Show(query []string, queryArgs []interface{}) (PortalTag, error) {
+
+	db := model.Db
+
 	tag := PortalTag{}
 	queryStr := strings.Join(query, " AND ")
-	result := cmf.NewDb().Where(queryStr, queryArgs...).Find(&tag)
+	result := db.Where(queryStr, queryArgs...).Find(&tag)
 
 	if result.Error != nil {
 		return tag, nil
@@ -51,13 +55,15 @@ func (model *PortalTag) Show(query []string, queryArgs []interface{}) (PortalTag
 
 func (model PortalTag) Save(postId int) error {
 
-	var count int64
-	cmf.NewDb().Model(&PortalTagPost{}).Where("post_id = ?", postId).Count(&count)
+	db := model.Db
 
-	cmf.NewDb().Where("id = ?", model.Id).First(&model)
+	var count int64
+	db.Model(&PortalTagPost{}).Where("post_id = ?", postId).Count(&count)
+
+	db.Where("id = ?", model.Id).First(&model)
 
 	model.PostCount = count
-	tx := cmf.NewDb().Save(&model)
+	tx := db.Save(&model)
 
 	if tx.Error != nil {
 		return tx.Error
@@ -67,21 +73,23 @@ func (model PortalTag) Save(postId int) error {
 }
 
 func (model PortalTag) FirstOrSave() (PortalTag, error) {
+
+	db := model.Db
 	// 新建
 
 	var tx *gorm.DB
 
 	if model.Id == 0 {
-		tx = cmf.NewDb().Create(&model)
+		tx = db.Create(&model)
 	} else {
 		// 更新
 		// 统计文章标签数
 		var count int64
-		cmf.NewDb().Model(&PortalTagPost{}).Where("tag_id = ?", model.Id).Count(&count)
+		db.Model(&PortalTagPost{}).Where("tag_id = ?", model.Id).Count(&count)
 
 		model.PostCount = count
 
-		tx = cmf.NewDb().Where("id = ?", model.Id).Save(model)
+		tx = db.Where("id = ?", model.Id).Save(model)
 	}
 
 	if tx.Error != nil {
@@ -95,12 +103,13 @@ func (model PortalTag) FirstOrSave() (PortalTag, error) {
 func (model *PortalTagPost) FirstOrSave(kId []int) error {
 
 	// [0,1,2]  [1,3,4]
+	db := model.Db
 
 	postId := model.PostId
 
 	// 查出原来的
 	var tagPost []PortalTagPost
-	cmf.NewDb().Where("post_id = ?", postId).Find(&tagPost)
+	db.Where("post_id = ?", postId).Find(&tagPost)
 
 	// 待添加的
 	var toAdd []PortalTagPost
@@ -133,12 +142,12 @@ func (model *PortalTagPost) FirstOrSave(kId []int) error {
 	// 删除要删除的
 	if len(toDel) > 0 {
 		delStr := strings.Join(toDel, " OR ")
-		cmf.NewDb().Where(delStr, toDelArgs...).Delete(&PortalTagPost{})
+		db.Where(delStr, toDelArgs...).Delete(&PortalTagPost{})
 	}
 
 	if len(toAdd) > 0 {
 		// 增加待增加的
-		cmf.NewDb().Create(toAdd)
+		db.Create(toAdd)
 	}
 
 	// 统计当前标签文章数

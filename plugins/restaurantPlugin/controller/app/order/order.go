@@ -97,6 +97,12 @@ type balancePay struct {
 
 func (rest *Order) Get(c *gin.Context) {
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		new(controller.Rest).Error(c, err.Error(), nil)
+		return
+	}
+
 	mid, _ := c.Get("mid")
 
 	// 默认获取当天的，history获取历史的
@@ -139,7 +145,9 @@ func (rest *Order) Get(c *gin.Context) {
 	}
 
 	// 获取全部订单
-	fo := model.FoodOrder{}
+	fo := model.FoodOrder{
+		Db: db,
+	}
 	data, err := fo.AppIndexByStore(c, query, queryArgs)
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, err.Error(), nil)
@@ -165,6 +173,12 @@ func (rest *Order) Show(c *gin.Context) {
 		return
 	}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		new(controller.Rest).Error(c, err.Error(), nil)
+		return
+	}
+
 	mid, _ := c.Get("mid")
 
 	// 默认获取当天的，history获取历史的
@@ -178,7 +192,9 @@ func (rest *Order) Show(c *gin.Context) {
 		queryArgs = append(queryArgs, mpUserId)
 	}
 
-	foodOrder := model.FoodOrder{}
+	foodOrder := model.FoodOrder{
+		Db: db,
+	}
 	appId, exist := c.Get("app_id")
 	if exist {
 		foodOrder.AppId = appId.(string)
@@ -212,6 +228,13 @@ func (rest *Order) DeliveryFee(c *gin.Context) {
 	 发件人
 	 cargo货品信息
 	*/
+
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	mid, _ := c.Get("mid")
 
 	mpUserId, _ := c.Get("mp_user_id") // 用户id
@@ -224,7 +247,7 @@ func (rest *Order) DeliveryFee(c *gin.Context) {
 		OrderDetail []orderDetail `json:"order_detail"`
 	}
 
-	err := c.ShouldBind(&form)
+	err = c.ShouldBind(&form)
 	if err != nil {
 		c.JSON(400, gin.H{"msg": err.Error()})
 		return
@@ -241,7 +264,10 @@ func (rest *Order) DeliveryFee(c *gin.Context) {
 	}
 
 	// 获取当前会员信息
-	u, err := new(model.User).GetMpUser(mpUserId.(int), userMpType)
+	user := model.User{
+		Db: db,
+	}
+	u, err := user.GetMpUser(mpUserId.(int), userMpType)
 	if err != nil {
 		cmfLog.Error(err.Error())
 		rest.rc.Error(c, err.Error(), nil)
@@ -249,7 +275,6 @@ func (rest *Order) DeliveryFee(c *gin.Context) {
 	}
 
 	storeId, _ := c.Get("store_id")
-	store := model.Store{}
 
 	var rewrite struct {
 		Id int `uri:"id"`
@@ -259,6 +284,9 @@ func (rest *Order) DeliveryFee(c *gin.Context) {
 		return
 	}
 
+	store := model.Store{
+		Db: db,
+	}
 	store, err = store.Show([]string{"id = ?", "delete_at = ?"}, []interface{}{storeId, 0})
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, err.Error(), nil)
@@ -288,7 +316,9 @@ func (rest *Order) DeliveryFee(c *gin.Context) {
 	for _, v := range od {
 
 		foodId := v.FoodId
-		food := model.Food{}
+		food := model.Food{
+			Db: db,
+		}
 		foodData, err := food.Show([]string{"mid = ? AND id = ? AND delete_at = ?"}, []interface{}{mid, foodId, 0})
 		if err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -309,7 +339,7 @@ func (rest *Order) DeliveryFee(c *gin.Context) {
 		if foodData.UseMaterial == 1 {
 			for _, item := range v.Material {
 				m := model.FoodMaterialPost{}
-				result := cmf.NewDb().Where("id = ? AND mid = ?", item.Id, mid).First(&m)
+				result := db.Where("id = ? AND mid = ?", item.Id, mid).First(&m)
 				if result.Error != nil {
 					if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 						rest.rc.ErrorCode(c, 90001, item.MaterialName+"加料已下架，请删除重新下单！", item)
@@ -357,7 +387,9 @@ func (rest *Order) DeliveryFee(c *gin.Context) {
 
 			// 打印单项详情
 
-			foodSku := model.FoodSku{}
+			foodSku := model.FoodSku{
+				Db: db,
+			}
 			skuData, err := foodSku.Detail([]string{"sku_id = ?"}, []interface{}{v.SkuId})
 
 			if err != nil {
@@ -522,6 +554,7 @@ func (rest *Order) DeliveryFee(c *gin.Context) {
 		TotalAmount: totalFee,
 		AddressId:   addressId,
 		GoodsWeight: goodsWeight,
+		Db:          db,
 	}
 
 	if exist {
@@ -569,11 +602,17 @@ func (rest *Order) CheckOrder(c *gin.Context) {
 		return
 	}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		new(controller.Rest).Error(c, err.Error(), nil)
+		return
+	}
+
 	orderId := rewrite.Id
 
 	fo := model.FoodOrder{}
 	// 支付成功
-	tx := cmf.NewDb().Where("order_id", orderId).First(&fo)
+	tx := db.Where("order_id", orderId).First(&fo)
 	if tx.Error != nil {
 		rest.rc.Error(c, tx.Error.Error(), nil)
 		return
@@ -586,12 +625,14 @@ func (rest *Order) CheckOrder(c *gin.Context) {
 
 	// 查询订单列表
 	var fod []model.FoodOrderDetail
-	cmf.NewDb().Where("order_id = ?", orderId).Find(&fod)
+	db.Where("order_id = ?", orderId).Find(&fod)
 
 	for _, v := range fod {
 
 		foodId := v.FoodId
-		food := model.Food{}
+		food := model.Food{
+			Db: db,
+		}
 		foodData, err := food.Show([]string{"mid = ? AND id = ? AND delete_at = ?"}, []interface{}{fo.Mid, foodId, 0})
 		if err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -604,7 +645,9 @@ func (rest *Order) CheckOrder(c *gin.Context) {
 
 		if food.UseSku == 1 {
 
-			foodSku := model.FoodSku{}
+			foodSku := model.FoodSku{
+				Db: db,
+			}
 			skuData, err := foodSku.Detail([]string{"sku_id = ?"}, []interface{}{v.SkuId})
 
 			if err != nil {
@@ -685,8 +728,6 @@ func (rest *Order) PreCreate(c *gin.Context) {
 		return
 	}
 
-	appIdStr := appId.(string)
-
 	authorizerAccessToken, akExist := c.Get("authorizerAccessToken")
 
 	var form struct {
@@ -728,8 +769,18 @@ func (rest *Order) PreCreate(c *gin.Context) {
 		userMpType = "alipay-mp"
 	}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	// 获取当前会员信息
-	u, err := new(model.User).GetMpUser(mpUserId.(int), userMpType)
+	user := model.User{
+		Db: db,
+	}
+
+	u, err := user.GetMpUser(mpUserId.(int), userMpType)
 	if err != nil {
 		cmfLog.Error(err.Error())
 		rest.rc.Error(c, err.Error(), nil)
@@ -743,6 +794,7 @@ func (rest *Order) PreCreate(c *gin.Context) {
 		UserId:  userId,
 		FormId:  form.FormId,
 		OpenId:  openid.(string),
+		Db:      db,
 	}
 
 	if deliveryMap.DeliveryToken != "" {
@@ -756,7 +808,9 @@ func (rest *Order) PreCreate(c *gin.Context) {
 		fo.AccessToken = authorizerAccessToken.(string)
 	}
 
-	store := model.Store{}
+	store := model.Store{
+		Db: db,
+	}
 	store, err = store.Show([]string{"id = ?", "delete_at = ?"}, []interface{}{storeId, 0})
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, err.Error(), nil)
@@ -903,7 +957,7 @@ func (rest *Order) PreCreate(c *gin.Context) {
 		if orderType <= 3 && form.DeskId > 0 {
 			deskId := form.DeskId // 桌号
 			desk := model.Desk{}
-			tx := cmf.NewDb().Where("id = ?", deskId).First(&desk)
+			tx := db.Where("id = ?", deskId).First(&desk)
 			if tx.Error != nil {
 				if errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 					rest.rc.Error(c, "桌号不存在！", nil)
@@ -980,7 +1034,9 @@ func (rest *Order) PreCreate(c *gin.Context) {
 		fod := model.FoodOrderDetail{}
 
 		foodId := v.FoodId
-		food := model.Food{}
+		food := model.Food{
+			Db: db,
+		}
 		foodData, err := food.Show([]string{"mid = ? AND id = ? AND delete_at = ?"}, []interface{}{mid, foodId, 0})
 		if err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -1014,7 +1070,7 @@ func (rest *Order) PreCreate(c *gin.Context) {
 		if foodData.UseMaterial == 1 {
 			for _, item := range v.Material {
 				m := model.FoodMaterialPost{}
-				result := cmf.NewDb().Where("id = ? AND mid = ?", item.Id, mid).First(&m)
+				result := db.Where("id = ? AND mid = ?", item.Id, mid).First(&m)
 				if result.Error != nil {
 					if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 						rest.rc.Error(c, item.MaterialName+"加料已下架，请删除重新下单！", item)
@@ -1083,6 +1139,10 @@ func (rest *Order) PreCreate(c *gin.Context) {
 		// 是否启用规格
 		if foodData.UseSku == 1 {
 
+			if v.Count == 0 {
+				continue
+			}
+
 			if v.SkuId == 0 {
 				rest.rc.Error(c, "规格参数不能为空！", nil)
 				return
@@ -1092,7 +1152,9 @@ func (rest *Order) PreCreate(c *gin.Context) {
 
 			var printOrderItem = make(map[string]string, 0)
 
-			foodSku := model.FoodSku{}
+			foodSku := model.FoodSku{
+				Db: db,
+			}
 			skuData, err := foodSku.Detail([]string{"sku_id = ?"}, []interface{}{v.SkuId})
 
 			if err != nil {
@@ -1219,6 +1281,10 @@ func (rest *Order) PreCreate(c *gin.Context) {
 			printOrder = append(printOrder, printOrderItem)
 
 		} else {
+
+			if v.Count == 0 {
+				continue
+			}
 
 			// 打印单项详情
 			var printOrderItem = make(map[string]string, 0)
@@ -1367,7 +1433,9 @@ func (rest *Order) PreCreate(c *gin.Context) {
 
 	if form.VoucherId > 0 {
 		// 优惠券 先判断优惠券是否存在
-		vp := model.VoucherPost{}
+		vp := model.VoucherPost{
+			Db: db,
+		}
 		vpData, err = vp.Show([]string{"p.user_id = ? AND p.mid = ? AND p.id = ?"}, []interface{}{mpUserId, mid, form.VoucherId})
 		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 			rest.rc.Error(c, err.Error(), nil)
@@ -1422,7 +1490,7 @@ func (rest *Order) PreCreate(c *gin.Context) {
 	fo.OrderId = orderId
 
 	// 企业主体
-	businessJson := saasModel.Options("business_info", mid.(int))
+	businessJson, err := saasModel.Options(db, "business_info", mid.(int))
 	bi := model.BusinessInfo{}
 	_ = json.Unmarshal([]byte(businessJson), &bi)
 
@@ -1452,7 +1520,7 @@ func (rest *Order) PreCreate(c *gin.Context) {
 	var rechargeLog appModel.RechargeLog
 	var bp balancePay
 
-	txBegin := cmf.NewDb().Begin()
+	txBegin := db.Begin()
 	defer func() {
 		if r := recover(); r != nil {
 			txBegin.RollbackTo("sp1")
@@ -1525,7 +1593,14 @@ func (rest *Order) PreCreate(c *gin.Context) {
 			fo.Name = name
 			fo.Mobile = mobile
 
-			takeJson := saasModel.Options("takeout", store.Mid)
+			takeJson, err := saasModel.Options(txBegin, "takeout", store.Mid)
+
+			if err != nil {
+				txBegin.RollbackTo("sp1")
+				rest.rc.Error(c, err.Error(), nil)
+				return
+			}
+
 			var takeOut model.TakeOut
 			_ = json.Unmarshal([]byte(takeJson), &takeOut)
 
@@ -1542,17 +1617,23 @@ func (rest *Order) PreCreate(c *gin.Context) {
 		// 生成取餐号
 		queueNo := ""
 		if form.DeskId == 0 {
-			queueNo = model.QueueNo(appIdStr, fo.AppointmentAt)
+			queueNo = model.QueueNo(midStr, fo.AppointmentAt)
 		} else {
 
-			eatinJson := saasModel.Options("eatin", fo.Mid)
-			eatIn := model.EatIn{}
+			eatinJson, err := saasModel.Options(txBegin, "eatin", fo.Mid)
 
+			if err != nil {
+				txBegin.RollbackTo("sp1")
+				rest.rc.Error(c, err.Error(), nil)
+				return
+			}
+
+			eatIn := model.EatIn{}
 			_ = json.Unmarshal([]byte(eatinJson), &eatIn)
 
 			// 绑定桌号的先付模式（无多人点餐）
 			if eatIn.Status == 1 && eatIn.EatType == 1 {
-				queueNo = model.QueueNo(appIdStr, fo.AppointmentAt)
+				queueNo = model.QueueNo(midStr, fo.AppointmentAt)
 			}
 
 		}
@@ -1566,8 +1647,14 @@ func (rest *Order) PreCreate(c *gin.Context) {
 		fo.QueueNo = queueNo
 
 		// 整单打印的内容
-		content, err := new(model.FoodOrder).SendPrinter(fo, printOrder, store.StoreName, appointmentTime, false)
+
+		foodOrder := model.FoodOrder{
+			Db: txBegin,
+		}
+
+		content, err := foodOrder.SendPrinter(fo, printOrder, store.StoreName, appointmentTime, false)
 		if err != nil {
+			txBegin.RollbackTo("sp1")
 			rest.rc.Error(c, err.Error(), nil)
 			return
 		}
@@ -1738,6 +1825,16 @@ func (rest *Order) PreCreate(c *gin.Context) {
 			payResult := new(pay.PartnerPay).Jsapi(bizContent)
 			if payResult.Code != "" {
 				txBegin.RollbackTo("sp1")
+				rest.rc.Error(c, "服务器网络请求失败，请稍后重试！", nil)
+				return
+			}
+
+			payResultJson, _ := json.Marshal(&payResult)
+
+			cmfLog.Save(string(payResultJson), "preCreate.log")
+
+			if payResult.PrepayId == "" {
+				txBegin.RollbackTo("sp1")
 				rest.rc.Error(c, payResult.Message, nil)
 				return
 			}
@@ -1750,6 +1847,8 @@ func (rest *Order) PreCreate(c *gin.Context) {
 			fo.RequestPayment.NonceStr = cmfUtil.GetMd5(strconv.FormatInt(time.Now().Unix(), 10))
 			fo.RequestPayment.Package = "prepay_id=" + fo.TradeNo
 			fo.RequestPayment.SignType = "RSA"
+
+			// fmt.Println("fo", fo)
 
 		} else {
 			txBegin.RollbackTo("sp1")
@@ -1789,7 +1888,7 @@ func (rest *Order) PreCreate(c *gin.Context) {
 
 	if fo.PayType == "balance" {
 
-		err := bp.submit()
+		err := bp.submit(c)
 		if err != nil {
 			rest.rc.Error(c, err.Error(), nil)
 			return
@@ -1832,10 +1931,13 @@ func (rest *Order) PreCreate(c *gin.Context) {
 	}
 
 	txBegin.Commit()
+
+	fmt.Println("msg", msg)
+
 	rest.rc.Success(c, msg, data)
 }
 
-func (b balancePay) submit() error {
+func (b balancePay) submit(c *gin.Context) error {
 
 	// 获取当前会员信息
 	userMpType := ""
@@ -1847,7 +1949,16 @@ func (b balancePay) submit() error {
 		userMpType = "alipay-mp"
 	}
 
-	u, err := new(model.User).GetMpUser(b.userId, userMpType)
+	db, err := util.NewDb(c)
+	if err != nil {
+		return err
+	}
+
+	user := model.User{
+		Db: db,
+	}
+
+	u, err := user.GetMpUser(b.userId, userMpType)
 	if err != nil {
 		cmfLog.Error(err.Error())
 		return err
@@ -1859,7 +1970,7 @@ func (b balancePay) submit() error {
 	balanceDecimal := decimal.NewFromFloat(balance).Sub(decimal.NewFromFloat(b.totalFee))
 	balance, _ = balanceDecimal.Round(2).Float64()
 
-	tx := cmf.NewDb().Model(&u).Where("id = ?", b.userId).Updates(map[string]interface{}{
+	tx := db.Model(&u).Where("id = ?", b.userId).Updates(map[string]interface{}{
 		"balance": balance,
 	})
 
@@ -1869,7 +1980,7 @@ func (b balancePay) submit() error {
 	}
 
 	// 标记优惠券为已使用
-	cmf.NewDb().Model(&model.VoucherPost{}).Where("id = ?", b.voucherId).Update("status", 1)
+	db.Model(&model.VoucherPost{}).Where("id = ?", b.voucherId).Update("status", 1)
 
 	// 菜品减库存
 
@@ -1891,7 +2002,12 @@ func (b balancePay) submit() error {
 				myResult := new(base.Printer).Printer(sn, text, content.Count)
 				fmt.Println("myResult", myResult)
 				if myResult.Ret > 0 {
-					new(model.Printer).NsqProducer(b.mid, b.orderId)
+
+					printer := model.Printer{
+						Db: db,
+					}
+
+					printer.NsqProducer(b.mid, b.orderId)
 				}
 			}
 
@@ -1899,7 +2015,12 @@ func (b balancePay) submit() error {
 				myResult := new(xpyunYun.Printer).Printer(sn, text, content.Count)
 				fmt.Println("myResult", myResult)
 				if myResult.Content.Code > 0 {
-					new(model.Printer).NsqProducer(b.mid, b.orderId)
+
+					printer := model.Printer{
+						Db: db,
+					}
+
+					printer.NsqProducer(b.mid, b.orderId)
 				}
 			}
 
@@ -1925,6 +2046,7 @@ func (b balancePay) submit() error {
 		Fee:        strconv.FormatFloat(b.totalFee, 'f', -1, 64),
 		CreateTime: createTime,
 		Remark:     orderRemark,
+		Db:         db,
 	}
 
 	if b.mpType == "wechat" {
@@ -1938,7 +2060,12 @@ func (b balancePay) submit() error {
 	wxSubscribe.TradeSuccess()
 
 	// 创建通知提醒
-	_, err = new(saasModel.AdminNotice).Save(b.mid, b.noticeTitle, b.noticeDesc, b.orderId, 0, b.audio)
+
+	adminNotice := saasModel.AdminNotice{
+		Db: db,
+	}
+
+	_, err = adminNotice.Save(b.mid, b.noticeTitle, b.noticeDesc, b.orderId, 0, b.audio)
 
 	if err != nil {
 		return tx.Error
@@ -1958,13 +2085,16 @@ func (b balancePay) submit() error {
 
 func (rest *Order) ReceiveNotify(c *gin.Context) {
 
-	iNewDb, exist := c.Get("DB")
-	var newDb *gorm.DB
+	mpType, _ := c.Get("mp_type")
+
+	db, exist := c.Get("DB")
+
 	if !exist {
 		rest.rc.Error(c, "数据库异常！", nil)
 	}
 
-	newDb = iNewDb.(*gorm.DB)
+	dbName := db.(string)
+	newDb := cmf.ManualDb(dbName)
 
 	mid, _ := c.Get("mid")
 
@@ -2061,6 +2191,7 @@ func (rest *Order) ReceiveNotify(c *gin.Context) {
 		od := orderData{
 			payType:        "alipay",
 			mid:            mid.(int),
+			mpType:         mpType.(string),
 			appId:          appId,
 			orderId:        orderId,
 			tradeNo:        tradeNo,
@@ -2294,7 +2425,7 @@ func (rest *Order) PayNotify(c *gin.Context) {
 			}
 
 			od := orderData{
-				payType:               "wxpay",
+				mpType:                "wechat",
 				mid:                   mid,
 				appId:                 appId,
 				orderId:               orderId,
@@ -2344,6 +2475,7 @@ type orderData struct {
 	payType               string
 	appId                 string
 	mid                   int
+	mpType                string
 	orderId               string
 	tradeNo               string
 	buyerId               string
@@ -2401,7 +2533,7 @@ func (rest *orderData) orderHandle() (err error) {
 	reg := regexp.MustCompile(`[a-zA-Z]+`)
 	prefix := reg.FindString(orderId)
 
-	mpType := ""
+	mpType := rest.mpType
 
 	payType := ""
 
@@ -2417,6 +2549,13 @@ func (rest *orderData) orderHandle() (err error) {
 		userMpType = "wechat-mp"
 	}
 
+	txBegin := newDb.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			txBegin.RollbackTo("sp1")
+		}
+	}()
+
 	switch prefix {
 	case "vip":
 
@@ -2429,49 +2568,57 @@ func (rest *orderData) orderHandle() (err error) {
 
 		// 获取订单号
 		co := model.MemberCardOrder{}
-		tx := newDb.Where("order_id = ? AND order_status = 'WAIT_BUYER_PAY'", orderId).First(&co)
+		tx := txBegin.Where("order_id = ? AND order_status = 'WAIT_BUYER_PAY'", orderId).First(&co)
 		if tx.Error != nil {
+			txBegin.RollbackTo("sp1")
 			return tx.Error
 		}
 
 		if !(co.OrderStatus == "WAIT_BUYER_PAY" || co.OrderStatus == "TRADE_CLOSED") {
+			txBegin.RollbackTo("sp1")
 			return errors.New("订单状态错误！")
 		}
 
 		if co.PayType == "wxpay" {
-			mpType = "wechat"
 			payType = "wxpay"
 		}
 
 		if co.PayType == "alipay" {
-			mpType = "alipay"
 			payType = "alipay"
 		}
 
 		// 获取会员
 		card := model.CardTemplate{}
-		tx = newDb.Where("id = ? AND status  = ?", "1", "1").First(&card)
+		tx = txBegin.Where("id = ? AND status  = ?", "1", "1").First(&card)
 		if tx.Error != nil {
+			txBegin.RollbackTo("sp1")
 			return tx.Error
 		}
 
 		validPeriod := card.ValidPeriod
 		validPeriodUnix := validPeriod * 86400
-		fmt.Println("validPeriodUnix", validPeriodUnix)
 
 		// 获取用户id
 		userId = co.UserId
 
-		u, err = new(model.User).GetMpUser(userId, userMpType)
+		user := model.User{
+			Db: txBegin,
+		}
+
+		u, err = user.GetMpUser(userId, userMpType)
 		if err != nil {
+			txBegin.RollbackTo("sp1")
 			return err
 		}
 
-		vip := model.MemberCard{}
+		vip := model.MemberCard{
+			Db: txBegin,
+		}
 
 		// 判断用户是否已经开过会员卡
 		vip, err := vip.Show([]string{"user_id = ?"}, []interface{}{userId})
 		if err != nil {
+			txBegin.RollbackTo("sp1")
 			return err
 		}
 
@@ -2489,16 +2636,21 @@ func (rest *orderData) orderHandle() (err error) {
 			endAt = -1
 		}
 		vip.EndAt = endAt
-		tx = newDb.Where("vip_num = ?", co.VipNum).Updates(&vip)
+		tx = txBegin.Where("vip_num = ?", co.VipNum).Updates(&vip)
 		if tx.Error != nil {
+			txBegin.RollbackTo("sp1")
 			return err
 		}
 
 		// 修改订单状态
-		newDb.Where("order_id = ?", orderId).Updates(&model.MemberCardOrder{
+		tx = txBegin.Where("order_id = ?", orderId).Updates(&model.MemberCardOrder{
 			FinishedAt:  time.Now().Unix(),
 			OrderStatus: "TRADE_FINISHED",
 		})
+		if tx.Error != nil {
+			txBegin.RollbackTo("sp1")
+			return err
+		}
 
 		/*同步会员卡接口*/
 		if rest.payType == "alipay" {
@@ -2508,8 +2660,16 @@ func (rest *orderData) orderHandle() (err error) {
 			bizContent["buyer_id"] = buyerId
 			bizContent["amount"] = totalAmount
 
-			if len(vList) > 0 && vList[0].Amount != "" {
-				bizContent["discount_amount"] = vList[0].Amount
+			var disAmount float64 = 0
+			for _, vv := range vList {
+				if vv.Type == "ALIPAY_BIZ_VOUCHER" || vv.Type == "ALIPAY_COMMON_ITEM_VOUCHER" {
+					da, _ := strconv.ParseFloat(vv.Amount, 64)
+					disAmount += da
+				}
+			}
+
+			if disAmount > 0 {
+				bizContent["discount_amount"] = disAmount
 			} else {
 				bizContent["pay_amount"] = buyerPayAmount
 			}
@@ -2518,10 +2678,12 @@ func (rest *orderData) orderHandle() (err error) {
 			fileResult, err := new(merchant.File).Upload(upContent, util.GetAbsPath("images/vip.png"))
 
 			if err != nil {
+				txBegin.RollbackTo("sp1")
 				return err
 			}
 
 			if fileResult.Response.Code != "10000" {
+				txBegin.RollbackTo("sp1")
 				return errors.New(fileResult.Response.SubMsg)
 			}
 
@@ -2570,7 +2732,7 @@ func (rest *orderData) orderHandle() (err error) {
 
 			result := new(merchant.Order).Sync(bizContent)
 			if result.Response.Code != "10000" {
-				return errors.New("同步小程序订单失败！" + result.Response.SubMsg)
+				cmfLog.Save("同步小程序订单失败！"+result.Response.SubMsg+" | "+result.Response.SubCode, "sync.log")
 			}
 		}
 
@@ -2578,29 +2740,36 @@ func (rest *orderData) orderHandle() (err error) {
 		// 支付充值
 
 		ro := model.RechargeOrder{}
-		tx := newDb.Where("order_id = ?", orderId).First(&ro)
+		tx := txBegin.Where("order_id = ?", orderId).First(&ro)
 		if tx.Error != nil {
+			txBegin.RollbackTo("sp1")
 			return tx.Error
 		}
 
-		if !(ro.OrderStatus == "WAIT_BUYER_PAY" || ro.OrderStatus == "TRADE_CLOSED") {
-			return errors.New("订单状态错误！")
-		}
+		//if !(ro.OrderStatus == "WAIT_BUYER_PAY" || ro.OrderStatus == "TRADE_CLOSED") {
+		//	txBegin.RollbackTo("sp1")
+		//	return errors.New("订单状态错误！")
+		//}
 
 		userId = ro.UserId
 
-		u, err = new(model.User).GetMpUser(userId, userMpType)
+		user := model.User{
+			Db: txBegin,
+		}
+
+		u, err = user.GetMpUser(userId, userMpType)
 		if err != nil {
+			txBegin.RollbackTo("sp1")
 			return err
 		}
 
+		fmt.Println("u", u)
+
 		if ro.PayType == "wxpay" {
-			mpType = "wechat"
 			payType = "wxpay"
 		}
 
 		if ro.PayType == "alipay" {
-			mpType = "alipay"
 			payType = "alipay"
 		}
 
@@ -2608,9 +2777,14 @@ func (rest *orderData) orderHandle() (err error) {
 
 		fmt.Println("totalFloat", totalFloat)
 
-		recJson := saasModel.Options("recharge", mid)
-		if json.Valid([]byte(recJson)) {
+		recJson, err := saasModel.Options(txBegin, "recharge", mid)
 
+		if err != nil {
+			txBegin.RollbackTo("sp1")
+			return err
+		}
+
+		if json.Valid([]byte(recJson)) {
 		}
 
 		var recharge []model.Recharge
@@ -2669,20 +2843,22 @@ func (rest *orderData) orderHandle() (err error) {
 
 		}
 
-		tx = newDb.Model(&ro).Where("order_id = ?", orderId).Updates(&model.RechargeOrder{
+		tx = txBegin.Model(&ro).Where("order_id = ?", orderId).Updates(&model.RechargeOrder{
 			ActualFee:   money,
 			SendFee:     tMoney,
 			RefundFee:   totalFloat,
 			OrderStatus: "TRADE_FINISHED",
 		})
 		if tx.Error != nil {
+			txBegin.RollbackTo("sp1")
 			return tx.Error
 		}
 
 		// 充值余额
-		user := model.User{}
-		tx = newDb.Where("id = ? AND  user_status = 1", ro.UserId).First(&user)
+		user = model.User{}
+		tx = txBegin.Where("id = ? AND  user_status = 1", ro.UserId).First(&user)
 		if tx.Error != nil {
+			txBegin.RollbackTo("sp1")
 			cmfLog.Error(tx.Error.Error())
 			return tx.Error
 		}
@@ -2691,8 +2867,9 @@ func (rest *orderData) orderHandle() (err error) {
 		balance := user.Balance + money
 		user.Balance = balance
 
-		tx = newDb.Updates(&user)
+		tx = txBegin.Updates(&user)
 		if tx.Error != nil {
+			txBegin.RollbackTo("sp1")
 			return tx.Error
 		}
 
@@ -2716,7 +2893,11 @@ func (rest *orderData) orderHandle() (err error) {
 			CreateAt: time.Now().Unix(),
 		}
 
-		newDb.Create(&rechargeLog)
+		tx = txBegin.Create(&rechargeLog)
+		if tx.Error != nil {
+			txBegin.RollbackTo("sp1")
+			return tx.Error
+		}
 
 		if rest.payType == "wxpay" {
 			subject = "余额储值"
@@ -2732,15 +2913,16 @@ func (rest *orderData) orderHandle() (err error) {
 			bizContent["seller_id"] = sellerId
 			bizContent["amount"] = totalAmount
 
-			var vListAmount float64 = 0
-
-			for _, v := range vList {
-				tempAmount, _ := strconv.ParseFloat(v.Amount, 64)
-				vListAmount += tempAmount
+			var disAmount float64 = 0
+			for _, vv := range vList {
+				if vv.Type == "ALIPAY_BIZ_VOUCHER" || vv.Type == "ALIPAY_COMMON_ITEM_VOUCHER" {
+					da, _ := strconv.ParseFloat(vv.Amount, 64)
+					disAmount += da
+				}
 			}
 
-			if len(vList) > 0 && vListAmount > 0 {
-				bizContent["discount_amount"] = vListAmount
+			if disAmount > 0 {
+				bizContent["discount_amount"] = disAmount
 			} else {
 				bizContent["pay_amount"] = buyerPayAmount
 			}
@@ -2749,10 +2931,12 @@ func (rest *orderData) orderHandle() (err error) {
 			fileResult, err := new(merchant.File).Upload(upContent, util.GetAbsPath("images/recharge.png"))
 
 			if err != nil {
+				txBegin.RollbackTo("sp1")
 				return err
 			}
 
 			if fileResult.Response.Code != "10000" {
+				txBegin.RollbackTo("sp1")
 				return errors.New(fileResult.Response.SubMsg)
 			}
 
@@ -2801,37 +2985,45 @@ func (rest *orderData) orderHandle() (err error) {
 
 			result := new(merchant.Order).Sync(bizContent)
 			if result.Response.Code != "10000" {
-				return errors.New("同步小程序订单失败！" + result.Response.SubMsg)
+				cmfLog.Save("同步小程序订单失败！"+result.Response.SubMsg+" | "+result.Response.SubCode, "sync.log")
+				// txBegin.RollbackTo("sp1")
+				// return errors.New("同步小程序订单失败！" + result.Response.SubMsg)
 			}
 		}
+
 	case "T":
 		fallthrough
 	case "W":
 
 		// 支付成功
-		tx := newDb.Where("order_id", orderId).First(&fo)
+		tx := txBegin.Where("order_id", orderId).First(&fo)
 		if tx.Error != nil {
+			txBegin.RollbackTo("sp1")
 			return tx.Error
 		}
 
 		if !(fo.OrderStatus == "WAIT_BUYER_PAY" || fo.OrderStatus == "TRADE_CLOSED") {
+			txBegin.RollbackTo("sp1")
 			return errors.New("订单状态错误！")
 		}
 
 		userId = fo.UserId
 
-		u, err = new(model.User).GetMpUser(userId, userMpType)
+		user := model.User{
+			Db: txBegin,
+		}
+
+		u, err = user.GetMpUser(userId, userMpType)
 		if err != nil {
+			txBegin.RollbackTo("sp1")
 			return err
 		}
 
 		if fo.PayType == "wxpay" {
-			mpType = "wechat"
 			payType = "wxpay"
 		}
 
 		if fo.PayType == "alipay" {
-			mpType = "alipay"
 			payType = "alipay"
 		}
 
@@ -2839,12 +3031,14 @@ func (rest *orderData) orderHandle() (err error) {
 		// 生成取餐号
 		queueNo := ""
 		if fo.DeskId == 0 {
-			queueNo = model.QueueNo(appId, fo.AppointmentAt)
+			midStr := strconv.Itoa(fo.Mid)
+			queueNo = model.QueueNo(midStr, fo.AppointmentAt)
 		} else {
 			deskId := fo.DeskId
 			desk := model.Desk{}
-			tx := newDb.Where("id = ?", deskId).First(&desk)
+			tx := txBegin.Where("id = ?", deskId).First(&desk)
 			if tx.Error != nil {
+				txBegin.RollbackTo("sp1")
 				if errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 					return errors.New("桌号不存在！")
 				}
@@ -2853,14 +3047,20 @@ func (rest *orderData) orderHandle() (err error) {
 			deskName = desk.Name
 			fo.DeskName = deskName
 
-			eatinJson := saasModel.Options("eatin", fo.Mid)
+			eatinJson, err := saasModel.Options(txBegin, "eatin", fo.Mid)
+			if err != nil {
+				txBegin.RollbackTo("sp1")
+				return err
+			}
+
 			eatIn := model.EatIn{}
 
 			_ = json.Unmarshal([]byte(eatinJson), &eatIn)
 
 			// 绑定桌号的先付模式（无多人点餐）
 			if eatIn.Status == 1 && eatIn.EatType == 1 {
-				queueNo = model.QueueNo(appId, fo.AppointmentAt)
+				midStr := strconv.Itoa(fo.Mid)
+				queueNo = model.QueueNo(midStr, fo.AppointmentAt)
 			}
 
 		}
@@ -2879,7 +3079,12 @@ func (rest *orderData) orderHandle() (err error) {
 			noticeDesc = "您有新的外卖订单，请及时处理！"
 		}
 
-		businessJson := saasModel.Options("business_info", fo.Mid)
+		businessJson, err := saasModel.Options(txBegin, "business_info", fo.Mid)
+		if err != nil {
+			txBegin.RollbackTo("sp1")
+			return err
+		}
+
 		bi := model.BusinessInfo{}
 		_ = json.Unmarshal([]byte(businessJson), &bi)
 		if rest.payType == "wxpay" {
@@ -2899,7 +3104,13 @@ func (rest *orderData) orderHandle() (err error) {
 				body = bi.BrandName + "外卖"
 			}
 			canPrinter = false
-			takeJson := saasModel.Options("takeout", fo.Mid)
+			takeJson, err := saasModel.Options(txBegin, "takeout", fo.Mid)
+
+			if err != nil {
+				txBegin.RollbackTo("sp1")
+				return err
+			}
+
 			takeOut := model.TakeOut{}
 			_ = json.Unmarshal([]byte(takeJson), &takeOut)
 			if takeOut.AutomaticOrder == 1 {
@@ -2932,10 +3143,11 @@ func (rest *orderData) orderHandle() (err error) {
 			foParams["fee"] = fo.OriginalFee - vListAmount
 			foParams["refund_fee"] = fo.OriginalFee - vListAmount
 
-			if len(vList) > 0 && vListAmount > 0 {
+			/*	if len(vList) > 0 && vListAmount > 0 {
 
 				tx := newDb.Where("alipay_voucher_id = ?", vList[0].VoucherId).First(&vp)
 				if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
+					txBegin.RollbackTo("sp1")
 					return tx.Error
 				}
 
@@ -2950,7 +3162,7 @@ func (rest *orderData) orderHandle() (err error) {
 					foParams["fee"] = fee
 				}
 
-			}
+			}*/
 		}
 
 		if rest.payType == "wxpay" {
@@ -2961,39 +3173,49 @@ func (rest *orderData) orderHandle() (err error) {
 
 		if vp.Id > 0 {
 			// 标记优惠券为已使用
-			tx = newDb.Model(&model.VoucherPost{}).Where("id = ?", vp.Id).Update("status", 1)
+			tx = txBegin.Model(&model.VoucherPost{}).Where("id = ?", vp.Id).Update("status", 1)
 			if tx.Error != nil {
+				txBegin.RollbackTo("sp1")
 				return tx.Error
 			}
 		}
 
 		// 修改订单状态
-		tx = newDb.Model(&fo).Where("order_id = ?", orderId).Updates(foParams)
+		tx = txBegin.Model(&fo).Where("order_id = ?", orderId).Updates(foParams)
 		if tx.Error != nil {
+			txBegin.RollbackTo("sp1")
 			return tx.Error
 		}
 
 		// 减库存
-		foodOrder := model.FoodOrder{OrderId: orderId, Db: newDb}
+		foodOrder := model.FoodOrder{OrderId: orderId, Db: txBegin}
 		foodOrder.ReduceInventory()
 
 		// 获取订单门店
 		storeId := fo.StoreId
 
 		// 获取门店信息
-		store := model.Store{}
+		store := model.Store{
+			Db: txBegin,
+		}
 		store, err = store.Show([]string{"id = ?", "delete_at = ?"}, []interface{}{storeId, 0})
 		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+			txBegin.RollbackTo("sp1")
 			return err
 		}
 
 		if store.Id == 0 {
+			txBegin.RollbackTo("sp1")
 			return errors.New("该门店不存在或以关闭！")
 		}
 
 		// 查询订单列表
 		var fod []model.FoodOrderDetail
-		newDb.Where("order_id = ?", orderId).Find(&fod)
+		tx = txBegin.Where("order_id = ?", orderId).Find(&fod)
+		if tx.Error != nil {
+			txBegin.RollbackTo("sp1")
+			return tx.Error
+		}
 
 		bizContent := make(map[string]interface{}, 0)
 		if rest.payType == "alipay" {
@@ -3002,11 +3224,22 @@ func (rest *orderData) orderHandle() (err error) {
 			bizContent["buyer_id"] = buyerId
 			bizContent["seller_id"] = sellerId
 			bizContent["amount"] = totalAmount
-			if len(vList) > 0 && vList[0].Amount != "" {
-				bizContent["discount_amount"] = vList[0].Amount
+			var disAmount float64 = 0
+			for _, vv := range vList {
+				da, _ := strconv.ParseFloat(vv.Amount, 64)
+				disAmount += da
+			}
+
+			fmt.Println("totalAmount", totalAmount)
+			fmt.Println("disAmount", disAmount)
+			fmt.Println("buyerPayAmount", buyerPayAmount)
+
+			if disAmount > 0 {
+				bizContent["discount_amount"] = disAmount
 			} else {
 				bizContent["pay_amount"] = buyerPayAmount
 			}
+
 		}
 		var itemOrderInfo []map[string]interface{}
 
@@ -3092,6 +3325,7 @@ func (rest *orderData) orderHandle() (err error) {
 			printOrder = append(printOrder, printOrderItem)
 
 		}
+
 		if rest.payType == "alipay" {
 			bizContent["item_order_list"] = itemOrderInfo
 			extInfo := []map[string]string{
@@ -3132,7 +3366,8 @@ func (rest *orderData) orderHandle() (err error) {
 
 			result := new(merchant.Order).Sync(bizContent)
 			if result.Response.Code != "10000" {
-				return errors.New("同步小程序订单失败！" + result.Response.SubMsg)
+				cmfLog.Save("同步小程序订单失败！"+result.Response.SubMsg+" | "+result.Response.SubCode, "sync.log")
+				// return errors.New("同步小程序订单失败！" + result.Response.SubMsg)
 			}
 		}
 
@@ -3148,6 +3383,7 @@ func (rest *orderData) orderHandle() (err error) {
 		}
 
 		if fo.PayType == "wxpay" {
+
 			wxSubscribe := model.Subscribe{
 				Id:          fo.Id,
 				Mid:         fo.Mid,
@@ -3159,12 +3395,15 @@ func (rest *orderData) orderHandle() (err error) {
 				Fee:         strconv.FormatFloat(fo.Fee, 'f', -1, 64),
 				CreateTime:  time.Unix(fo.CreateAt, 0).Format(cmfData.TimeLayout),
 				Remark:      orderRemark,
+				Db:          txBegin,
 			}
+
 			wxSubscribe.TradeSuccess()
 
 		}
 
 		if fo.PayType == "alipay" {
+
 			wxSubscribe := model.Subscribe{
 				Id:          fo.Id,
 				Mid:         fo.Mid,
@@ -3176,15 +3415,22 @@ func (rest *orderData) orderHandle() (err error) {
 				Fee:         strconv.FormatFloat(fo.Fee, 'f', -1, 64),
 				CreateTime:  time.Unix(fo.CreateAt, 0).Format(cmfData.TimeLayout),
 				Remark:      orderRemark,
+				Db:          txBegin,
 			}
+
 			wxSubscribe.TradeSuccess()
 
 		}
 
 		// 保存通知
-		_, err = new(saasModel.AdminNotice).Save(mid, noticeTitle, noticeDesc, fo.Id, 0, audio)
+		adminNotice := saasModel.AdminNotice{
+			Db: txBegin,
+		}
+
+		_, err = adminNotice.Save(mid, noticeTitle, noticeDesc, fo.Id, 0, audio)
 
 		if err != nil {
+			txBegin.RollbackTo("sp1")
 			cmfLog.Save(err.Error(), "payErr.log")
 			return err
 		}
@@ -3197,8 +3443,14 @@ func (rest *orderData) orderHandle() (err error) {
 		}
 
 		// 获取门店打印机状态
-		_, err = new(model.FoodOrder).SendPrinter(fo, printOrder, store.StoreName, appointmentTime, canPrinter)
+
+		foodOrderModel := model.FoodOrder{
+			Db: txBegin,
+		}
+
+		_, err = foodOrderModel.SendPrinter(fo, printOrder, store.StoreName, appointmentTime, canPrinter)
 		if err != nil {
+			txBegin.RollbackTo("sp1")
 			cmfLog.Save(err.Error(), "payErr.log")
 			return err
 		}
@@ -3213,11 +3465,18 @@ func (rest *orderData) orderHandle() (err error) {
 		是否开启了消费送经验
 	*/
 
+	fmt.Println("prefix", prefix)
 	if prefix != "vip" {
 
 		score := u.Score
 		tScore := 0
-		scoreJson := saasModel.Options("score", mid)
+		scoreJson, err := saasModel.Options(txBegin, "score", mid)
+
+		if err != nil {
+			txBegin.RollbackTo("sp1")
+			return err
+		}
+
 		scoreMap := model.Score{}
 		_ = json.Unmarshal([]byte(scoreJson), &scoreMap)
 
@@ -3259,6 +3518,7 @@ func (rest *orderData) orderHandle() (err error) {
 				Score:  tScore,
 				Fee:    strconv.FormatFloat(totalFee, 'f', 2, 64),
 				Remark: remark,
+				Db:     txBegin,
 			}
 
 			// 达到消费门槛1元
@@ -3274,6 +3534,7 @@ func (rest *orderData) orderHandle() (err error) {
 				Exp:    point,
 				Fee:    strconv.FormatFloat(totalFee, 'f', 2, 64),
 				Remark: remark,
+				Db:     txBegin,
 			}
 
 			if score > 0 {
@@ -3283,12 +3544,13 @@ func (rest *orderData) orderHandle() (err error) {
 				}
 			}
 
-			tx := newDb.Model(&u).Where("id = ?", u.Id).Updates(map[string]interface{}{
+			tx := txBegin.Model(&u).Where("id = ?", u.Id).Updates(map[string]interface{}{
 				"score": score,
 				"exp":   exp,
 			})
 
 			if tx.Error != nil {
+				txBegin.RollbackTo("sp1")
 				cmfLog.Error(tx.Error.Error())
 				return tx.Error
 			}
@@ -3337,6 +3599,7 @@ func (rest *orderData) orderHandle() (err error) {
 
 	gpUnix, err := time.ParseInLocation(timeLayout, gmtPayment, time.Local)
 	if err != nil {
+		txBegin.RollbackTo("sp1")
 		fmt.Println("gmtUnixErr", err.Error())
 		return
 	}
@@ -3353,10 +3616,13 @@ func (rest *orderData) orderHandle() (err error) {
 	payLog.FundBillList = fbl
 
 	// 存入
-	tx := newDb.Create(&payLog)
+	tx := txBegin.Create(&payLog)
 	if tx.Error != nil {
+		txBegin.RollbackTo("sp1")
 		return tx.Error
 	}
+
+	txBegin.Commit()
 
 	return nil
 
@@ -3392,7 +3658,9 @@ func rechargeSend(newDb *gorm.DB, totalFloat float64, userId int, recharge []mod
 			if v.EnabledVoucher == 1 {
 				vPost = make([]model.VoucherPost, 0)
 				for _, voucher := range v.Voucher {
-					mv := model.Voucher{}
+					mv := model.Voucher{
+						Db: newDb,
+					}
 					vp := marketing.VoucherValidPeriod{}
 					data, err := mv.Show([]string{"id = ? AND status = ?"}, []interface{}{voucher.VoucherId, 1})
 					if err != nil {
@@ -3437,13 +3705,20 @@ func rechargeSend(newDb *gorm.DB, totalFloat float64, userId int, recharge []mod
 	newDb.Create(&vPost)
 	// 推送到支付宝卡包
 	for _, v := range vPost {
-		tp := appModel.UserPart{}
+		tp := appModel.UserPart{
+			Db: newDb,
+		}
 		tpData, err := tp.Show([]string{"u.id = ? AND tp.type = ? AND u.user_status = ?"}, []interface{}{v.UserId, "alipay-mp", 1})
 		if err != nil {
 			cmfLog.Error("rechargeSend" + err.Error())
 			return 0, 0
 		}
-		new(model.Voucher).Send(v.TemplateId, tpData.OpenId, v.VoucherName)
+
+		voucher := model.Voucher{
+			Db: newDb,
+		}
+
+		voucher.Send(v.TemplateId, tpData.OpenId, v.VoucherName)
 	}
 
 	return money, point
@@ -3467,14 +3742,22 @@ func (rest *Order) Cancel(c *gin.Context) {
 		return
 	}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		new(controller.Rest).Error(c, err.Error(), nil)
+		return
+	}
+
 	mid, _ := c.Get("mid")
 
 	// 默认获取当天的，history获取历史的
 	var query = []string{"mid = ?", "id = ?", "order_status = ?"}
 	var queryArgs = []interface{}{mid, rewrite.Id, "WAIT_BUYER_PAY"}
 
-	order := model.FoodOrder{}
-	_, err := order.Show(query, queryArgs)
+	order := model.FoodOrder{
+		Db: db,
+	}
+	_, err = order.Show(query, queryArgs)
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)
 		return
@@ -3488,7 +3771,7 @@ func (rest *Order) Cancel(c *gin.Context) {
 
 	queryStr := strings.Join(query, " AND ")
 
-	tx := cmf.NewDb().Where(queryStr, queryArgs...).Updates(foodOrder)
+	tx := db.Where(queryStr, queryArgs...).Updates(foodOrder)
 
 	if tx.Error != nil {
 		rest.rc.Error(c, tx.Error.Error(), nil)

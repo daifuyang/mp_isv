@@ -7,7 +7,6 @@ package model
 
 import (
 	"errors"
-	"fmt"
 	"github.com/gin-gonic/gin"
 	cmf "github.com/gincmf/cmf/bootstrap"
 	cmfLog "github.com/gincmf/cmf/log"
@@ -50,8 +49,8 @@ type FoodCategoryStoreHouse struct {
  * @return
  **/
 func (model *FoodCategory) AutoMigrate() {
-	cmf.NewDb().AutoMigrate(&model)
-	// cmf.NewDb().AutoMigrate(&FoodCategoryStoreHouse{})
+	model.Db.AutoMigrate(&model)
+	// model.Db.AutoMigrate(&FoodCategoryStoreHouse{})
 }
 
 /**
@@ -62,6 +61,8 @@ func (model *FoodCategory) AutoMigrate() {
  * @return
  **/
 func (model FoodCategory) Index(c *gin.Context, query []string, queryArgs []interface{}) (cmfModel.Paginate, error) {
+
+	db := model.Db
 
 	// 获取默认的系统分页
 	current, pageSize, err := model.paginate.Default(c)
@@ -75,8 +76,8 @@ func (model FoodCategory) Index(c *gin.Context, query []string, queryArgs []inte
 	var total int64 = 0
 
 	var foodCategory []FoodCategory
-	cmf.NewDb().Where(queryStr, queryArgs...).Find(&foodCategory).Order("list_order desc,id desc").Count(&total)
-	result := cmf.NewDb().Where(queryStr, queryArgs...).Limit(pageSize).Offset((current - 1) * pageSize).Order("list_order desc,id desc").Find(&foodCategory)
+	db.Where(queryStr, queryArgs...).Find(&foodCategory).Order("list_order desc,id desc").Count(&total)
+	result := db.Where(queryStr, queryArgs...).Limit(pageSize).Offset((current - 1) * pageSize).Order("list_order desc,id desc").Find(&foodCategory)
 
 	if result.Error != nil {
 		return cmfModel.Paginate{}, result.Error
@@ -129,12 +130,13 @@ type FoodCategoryTemp struct {
  **/
 func (model FoodCategory) List(query []string, queryArgs []interface{}) ([]FoodCategoryTemp, error) {
 
+	db := model.Db
 	// 合并参数合计
 	queryStr := strings.Join(query, " AND ")
 	var foodCategory []FoodCategory
 	var foodCategoryTemp []FoodCategoryTemp
 
-	result := cmf.NewDb().Where(queryStr, queryArgs...).Order("list_order desc,id desc").Find(&foodCategory)
+	result := db.Where(queryStr, queryArgs...).Order("list_order desc,id desc").Find(&foodCategory)
 
 	if result.Error != nil {
 		return foodCategoryTemp, result.Error
@@ -164,11 +166,12 @@ func (model FoodCategory) List(query []string, queryArgs []interface{}) ([]FoodC
  **/
 func (model FoodCategory) ListByStore(query []string, queryArgs []interface{}) ([]FoodCategory, error) {
 
+	db := model.Db
 	// 合并参数合计
 	queryStr := strings.Join(query, " AND ")
 	var foodCategory []FoodCategory
 
-	result := cmf.NewDb().Where(queryStr, queryArgs...).Order("list_order desc, id desc").Find(&foodCategory)
+	result := db.Where(queryStr, queryArgs...).Order("list_order desc, id desc").Find(&foodCategory)
 
 	if result.Error != nil {
 		return foodCategory, result.Error
@@ -191,16 +194,15 @@ func (model FoodCategory) ListByStore(query []string, queryArgs []interface{}) (
  **/
 func (model FoodCategory) ListByFood(query []string, queryArgs []interface{}) ([]FoodCategory, error) {
 
+	db := model.Db
+
 	// 合并参数合计
 	queryStr := strings.Join(query, " AND ")
 	var foodCategory []FoodCategory
 
 	prefix := cmf.Conf().Database.Prefix
 
-	table := cmf.NewDb().Statement.Table
-	fmt.Println("table", table)
-
-	result := cmf.NewDb().Table(prefix+"food_category fc").Select("fc.*").
+	result := db.Debug().Table(prefix+"food_category fc").Select("fc.*").
 		Joins("INNER JOIN "+prefix+"food_category_post cp ON fc.id = cp.food_category_id").
 		Joins("INNER JOIN "+prefix+"food f ON f.id = cp.food_id").
 		Where(queryStr, queryArgs...).Find(&foodCategory)
@@ -227,15 +229,17 @@ func (model FoodCategory) ListByFood(query []string, queryArgs []interface{}) ([
  **/
 func (model FoodCategory) Show(query []string, queryArgs []interface{}) (FoodCategory, error) {
 
+	db := model.Db
 	query = append(query, "delete_at = ?")
 	queryArgs = append(queryArgs, "0")
 	queryStr := strings.Join(query, " AND ")
 	foodCategory := FoodCategory{}
-	result := cmf.NewDb().Where(queryStr, queryArgs...).First(&foodCategory)
+	result := db.Where(queryStr, queryArgs...).First(&foodCategory)
 	if result.Error != nil {
 		return foodCategory, result.Error
 	}
 	return foodCategory, nil
+
 }
 
 /**
@@ -247,13 +251,14 @@ func (model FoodCategory) Show(query []string, queryArgs []interface{}) (FoodCat
  **/
 func (model FoodCategory) Edit(query []string, queryArgs []interface{}) (FoodCategory, error) {
 
+	db := model.Db
 	queryStr := strings.Join(query, " AND ")
 	foodCategory := FoodCategory{}
-	result := cmf.NewDb().Where(queryStr, queryArgs...).First(&foodCategory)
+	result := db.Where(queryStr, queryArgs...).First(&foodCategory)
 	if result.Error != nil {
 		return foodCategory, errors.New("当前菜单不存在！")
 	}
-	result = cmf.NewDb().Save(&model)
+	result = db.Save(&model)
 	if result != nil {
 		return foodCategory, result.Error
 	}

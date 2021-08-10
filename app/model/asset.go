@@ -10,7 +10,6 @@ import (
 	"errors"
 	"gincmf/app/util"
 	"github.com/gin-gonic/gin"
-	cmf "github.com/gincmf/cmf/bootstrap"
 	cmfModel "github.com/gincmf/cmf/model"
 	"gorm.io/gorm"
 	"strings"
@@ -30,6 +29,7 @@ type Asset struct {
 	AssetType  int    `gorm:"column:type;type:tinyint(3);comment:资源类型;not null" json:"asset_type"`
 	More       string `gorm:"type:text;comment:更多配置" json:"more"`
 	paginate   cmfModel.Paginate
+	Db         *gorm.DB `gorm:"-" json:"-"`
 }
 
 type TempAsset struct {
@@ -39,6 +39,7 @@ type TempAsset struct {
 
 func (model *Asset) Get(c *gin.Context, query []string, queryArgs []interface{}) (cmfModel.Paginate, error) {
 
+	db := model.Db
 	var assets []Asset
 	// 获取默认的系统分页
 	current, pageSize, err := model.paginate.Default(c)
@@ -51,8 +52,8 @@ func (model *Asset) Get(c *gin.Context, query []string, queryArgs []interface{})
 	queryStr := strings.Join(query, " AND ")
 
 	var total int64 = 0
-	cmf.NewDb().Where(queryStr, queryArgs...).Find(&assets).Count(&total)
-	tx := cmf.NewDb().Where(queryStr, queryArgs...).Limit(pageSize).Offset((current - 1) * pageSize).Order("id desc").Find(&assets)
+	db.Where(queryStr, queryArgs...).Find(&assets).Count(&total)
+	tx := db.Where(queryStr, queryArgs...).Limit(pageSize).Offset((current - 1) * pageSize).Order("id desc").Find(&assets)
 
 	if tx.Error != nil && errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 		return cmfModel.Paginate{}, tx.Error

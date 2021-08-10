@@ -37,6 +37,7 @@ type PortalCategory struct {
 	OneTpl         string            `gorm:"type:varchar(50);comment:分类文章页模板;not null" json:"one_tpl"`
 	More           string            `gorm:"type:text(0);comment:扩展属性" json:"more"`
 	paginate       cmfModel.Paginate `gorm:"-"`
+	Db             *gorm.DB          `gorm:"-" json:"-"`
 }
 
 type portalTree struct {
@@ -55,16 +56,21 @@ type categoryOptions struct {
 
 func (model *PortalCategory) Init(mid int) {
 
+	db := model.Db
+
 	pc := PortalCategory{
 		Id:   1,
 		Mid:  mid,
 		Name: "新鲜事",
 	}
-	cmf.NewDb().FirstOrCreate(&pc)
+
+	db.FirstOrCreate(&pc)
 
 }
 
 func (model *PortalCategory) Index(c *gin.Context, query []string, queryArgs []interface{}) (cmfModel.Paginate, error) {
+
+	db := model.Db
 
 	// 获取默认的系统分页
 	current, pageSize, err := model.paginate.Default(c)
@@ -78,9 +84,9 @@ func (model *PortalCategory) Index(c *gin.Context, query []string, queryArgs []i
 	var total int64 = 0
 
 	var category []PortalCategory
-	cmf.NewDb().Where(queryStr, queryArgs...).Find(&category).Count(&total)
+	db.Where(queryStr, queryArgs...).Find(&category).Count(&total)
 
-	result := cmf.NewDb().Where(queryStr, queryArgs...).Limit(pageSize).Offset((current - 1) * pageSize).Find(&category)
+	result := db.Where(queryStr, queryArgs...).Limit(pageSize).Offset((current - 1) * pageSize).Find(&category)
 
 	if result.Error != nil {
 
@@ -110,12 +116,14 @@ func (model *PortalCategory) Index(c *gin.Context, query []string, queryArgs []i
 
 func (model *PortalCategory) List() ([]PortalCategory, error) {
 
+	db := model.Db
+
 	query := []string{"mid = ? AND delete_at = ?"}
 	queryArgs := []interface{}{model.Mid, "0"}
 	queryStr := strings.Join(query, " AND ")
 
 	var category []PortalCategory
-	result := cmf.NewDb().Where(queryStr, queryArgs...).Find(&category)
+	result := db.Where(queryStr, queryArgs...).Find(&category)
 
 	if result.Error != nil {
 		if !errors.Is(result.Error, gorm.ErrRecordNotFound) {
@@ -202,12 +210,14 @@ func (model PortalCategory) recursionMenu(category []PortalCategory, parentId in
 
 func (model *PortalCategory) ListWithPost(query []string, queryArgs []interface{}) ([]PortalCategory, error) {
 
+	db := model.Db
+	
 	queryStr := strings.Join(query, " AND ")
 	var category []PortalCategory
 
 	prefix := cmf.Conf().Database.Prefix
 
-	result := cmf.NewDb().Table(prefix+"portal_post p").Select("pc.*").
+	result := db.Table(prefix+"portal_post p").Select("pc.*").
 		Joins("INNER JOIN "+prefix+"portal_category_post pcp ON pcp.post_id = p.id").
 		Joins("INNER JOIN "+prefix+"portal_category pc ON pc.id = pcp.category_id").
 		Where(queryStr, queryArgs...).Scan(&category)
@@ -238,12 +248,16 @@ type tempPortalCategory struct {
 }
 
 func (model *PortalCategory) Show() (tempPortalCategory, error) {
+
 	id := model.Id
 	if id == 0 {
 		panic("分类id不能为0或空！")
 	}
+
+	db := model.Db
+
 	category := PortalCategory{}
-	result := cmf.NewDb().Where("id = ? and delete_at = ?", id, 0).First(&category)
+	result := db.Where("id = ? and delete_at = ?", id, 0).First(&category)
 
 	tpc := tempPortalCategory{}
 
@@ -274,15 +288,18 @@ func (model *PortalCategory) Edit() (PortalCategory, error) {
 		panic("分类id不能为0或空！")
 	}
 
+	db := model.Db
+
 	category := PortalCategory{
 		Id: id,
+		Db: db,
 	}
 	data, err := category.Show()
 	if err != nil {
 		return data.PortalCategory, err
 	}
 
-	result := cmf.NewDb().Save(&model)
+	result := db.Save(&model)
 	if result.Error != nil {
 		return PortalCategory{}, result.Error
 	}
@@ -300,8 +317,11 @@ func (model *PortalCategory) Edit() (PortalCategory, error) {
  **/
 
 func (model *PortalCategory) Save() (PortalCategory, error) {
+
+	db := model.Db
+
 	category := PortalCategory{}
-	result := cmf.NewDb().Create(&model)
+	result := db.Create(&model)
 	if result.Error != nil {
 		return category, result.Error
 	}
@@ -323,8 +343,11 @@ func (model *PortalCategory) Delete() (PortalCategory, error) {
 		panic("分类id不能为0或空！")
 	}
 
+	db := model.Db
+
 	category := PortalCategory{
 		Id: id,
+		Db: db,
 	}
 
 	data, err := category.Show()
@@ -335,14 +358,14 @@ func (model *PortalCategory) Delete() (PortalCategory, error) {
 	// 查看当前分类下是否存在子分类
 
 	var count int64
-	cmf.NewDb().Model(model).Where("parent_id = ? AND delete_at = ?", id, 0).Count(&count)
+	db.Model(model).Where("parent_id = ? AND delete_at = ?", id, 0).Count(&count)
 
 	if count > 0 {
 		return PortalCategory{}, errors.New("请先删除分类下的子分类！")
 	}
 
 	deleteAt := time.Now().Unix()
-	result := cmf.NewDb().Model(model).Where("id = ?", id).Update("delete_at", deleteAt)
+	result := db.Model(model).Where("id = ?", id).Update("delete_at", deleteAt)
 
 	if result.Error != nil {
 		return PortalCategory{}, result.Error
@@ -359,8 +382,11 @@ func (model *PortalCategory) Delete() (PortalCategory, error) {
  * @return
  **/
 func (model *PortalCategory) BatchDelete(ids []string) (PortalCategory, error) {
+
+	db := model.Db
+
 	deleteAt := time.Now().Unix()
-	if err := cmf.NewDb().Model(&model).Where("id IN (?)", ids).Updates(map[string]interface{}{"delete_at": deleteAt}).Error; err != nil {
+	if err := db.Model(&model).Where("id IN (?)", ids).Updates(map[string]interface{}{"delete_at": deleteAt}).Error; err != nil {
 		return PortalCategory{}, err
 	}
 	return PortalCategory{}, nil
@@ -368,7 +394,9 @@ func (model *PortalCategory) BatchDelete(ids []string) (PortalCategory, error) {
 
 func (model *PortalCategory) GetTopId(id int) (int, error) {
 
-	tx := cmf.NewDb().Where("id = ? AND delete_at = ?", id, 0).First(&model)
+	db := model.Db
+
+	tx := db.Where("id = ? AND delete_at = ?", id, 0).First(&model)
 
 	if tx.Error != nil {
 		return 0, tx.Error
@@ -376,7 +404,7 @@ func (model *PortalCategory) GetTopId(id int) (int, error) {
 
 	var category []PortalCategory
 
-	tx = cmf.NewDb().Where("delete_at = ?", 0).Find(&category)
+	tx = db.Where("delete_at = ?", 0).Find(&category)
 	if tx.Error != nil {
 		return 0, tx.Error
 	}
@@ -416,13 +444,15 @@ var cOptions []categoryOptions
 
 func (model *PortalCategory) ListWithOptions(query []string, queryArgs []interface{}) ([]categoryOptions, error) {
 
+	db := model.Db
+
 	var pc []PortalCategory
 
 	queryStr := strings.Join(query, " AND ")
 
 	cOptions = make([]categoryOptions, 0)
 
-	tx := cmf.NewDb().Where(queryStr, queryArgs...).Find(&pc)
+	tx := db.Where(queryStr, queryArgs...).Find(&pc)
 	if tx.Error != nil {
 		return cOptions, nil
 	}

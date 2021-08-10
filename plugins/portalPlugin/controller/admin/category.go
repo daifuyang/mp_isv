@@ -7,6 +7,7 @@ package admin
 
 import (
 	"fmt"
+	"gincmf/app/util"
 	"gincmf/plugins/portalPlugin/model"
 	"github.com/gin-gonic/gin"
 	"github.com/gincmf/cmf/controller"
@@ -29,8 +30,15 @@ func (rest *Category) List(c *gin.Context) {
 	mid, _ := c.Get("mid")
 	midInt, _ := mid.(int)
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	category := model.PortalCategory{
 		Mid: midInt,
+		Db:  db,
 	}
 	data, err := category.ListWithTree()
 	if err != nil {
@@ -46,7 +54,15 @@ func (rest *Category) Options(c *gin.Context) {
 	mid, _ := c.Get("mid")
 	midInt, _ := mid.(int)
 
-	category := model.PortalCategory{}
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
+	category := model.PortalCategory{
+		Db: db,
+	}
 
 	var query = []string{"mid = ? AND delete_at  = ?"}
 	var queryArgs = []interface{}{midInt, 0}
@@ -78,7 +94,15 @@ func (rest *Category) Get(c *gin.Context) {
 		queryArgs = append(queryArgs, "%"+name+"%")
 	}
 
-	category := model.PortalCategory{}
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
+	category := model.PortalCategory{
+		Db: db,
+	}
 	data, err := category.Index(c, query, queryArgs)
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)
@@ -105,8 +129,15 @@ func (rest *Category) Show(c *gin.Context) {
 		return
 	}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	portalCategory := model.PortalCategory{
 		Id: rewrite.Id,
+		Db: db,
 	}
 
 	data, err := portalCategory.Show()
@@ -138,10 +169,17 @@ func (rest *Category) Edit(c *gin.Context) {
 		rest.rc.Error(c, "分类名称不能为空！", nil)
 	}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	portalCategory := model.PortalCategory{
 		Id:   rewrite.Id,
 		Mid:  midInt,
 		Name: name,
+		Db:   db,
 	}
 
 	pid := c.DefaultPostForm("parent_id", "")
@@ -214,10 +252,17 @@ func (rest *Category) Store(c *gin.Context) {
 	pid := c.DefaultPostForm("parent_id", "0")
 	parentId, _ := strconv.Atoi(pid)
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	portalCategory := model.PortalCategory{
 		Mid:      midInt,
 		ParentId: parentId,
 		Name:     name,
+		Db:       db,
 	}
 	status := c.PostForm("status")
 	statusInt := 1
@@ -284,8 +329,16 @@ func (rest *Category) Delete(c *gin.Context) {
 		err    error
 	)
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	// 软删除
-	portalCategory := model.PortalCategory{}
+	portalCategory := model.PortalCategory{
+		Db: db,
+	}
 
 	if len(ids) == 0 {
 		if err := c.ShouldBindUri(&rewrite); err != nil {

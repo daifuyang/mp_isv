@@ -6,6 +6,7 @@
 package card
 
 import (
+	"gincmf/app/util"
 	"gincmf/plugins/restaurantPlugin/model"
 	"github.com/gin-gonic/gin"
 	"github.com/gincmf/cmf/controller"
@@ -17,13 +18,24 @@ type Order struct {
 
 func (rest Order) Get(c *gin.Context) {
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		new(controller.Rest).Error(c, err.Error(), nil)
+		c.Abort()
+		return
+	}
+
 	mpUserId, _ := c.Get("mp_user_id")
 	mid, _ := c.Get("mid")
 
 	var query = []string{"user_id = ? AND co.mid = ? AND order_status = ?"}
 	var queryArgs = []interface{}{mpUserId, mid, "TRADE_FINISHED"}
 
-	data, err := new(model.MemberCardOrder).Index(c, query, queryArgs)
+	memberCardOrder := model.MemberCardOrder{
+		Db: db,
+	}
+
+	data, err := memberCardOrder.Index(c, query, queryArgs)
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)
 		return

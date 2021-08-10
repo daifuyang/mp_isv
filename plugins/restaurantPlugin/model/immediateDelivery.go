@@ -7,28 +7,29 @@ package model
 
 import (
 	"fmt"
-	cmf "github.com/gincmf/cmf/bootstrap"
 	cmfData "github.com/gincmf/cmf/data"
+	"gorm.io/gorm"
 	"time"
 )
 
 type ImmediateDelivery struct {
-	Id           int    `json:"id"`
-	DeliveryId   string `gorm:"type:varchar(20);comment:配送公司Id" json:"delivery_id"`
-	DeliveryName string `gorm:"type:varchar(32);comment:配送公司名称" json:"delivery_name"`
-	Shopid       string `gorm:"type:varchar(64);comment:配送公司开发平台app_key" json:"shop_id"`
-	AppKey       string `gorm:"type:varchar(64);comment:配送公司开发平台app_key" json:"app_key"`
-	AppSecret    string `gorm:"type:varchar(128);comment:配送公司开发平台app_secret" json:"app_secret"`
-	AuditResult  int    `gorm:"type:tinyint(3);comment:审核状态;default:0" json:"audit_result"`
-	IsOpen       int    `gorm:"type:tinyint(3);comment:是否开通物流权限;default:0" json:"is_open"`
-	Status       int    `gorm:"type:tinyint(3);comment:状态（启用，停用）;default:0" json:"status"`
-	IsMain       int    `gorm:"type:tinyint(3);comment:主配送公司;default:0" json:"is_main"`
-	CreateAt     int64  `gorm:"type:bigint(20)" json:"create_at"`
-	CreateTime   string `gorm:"-" json:"create_time"`
+	Id           int      `json:"id"`
+	DeliveryId   string   `gorm:"type:varchar(20);comment:配送公司Id" json:"delivery_id"`
+	DeliveryName string   `gorm:"type:varchar(32);comment:配送公司名称" json:"delivery_name"`
+	Shopid       string   `gorm:"type:varchar(64);comment:配送公司开发平台app_key" json:"shop_id"`
+	AppKey       string   `gorm:"type:varchar(64);comment:配送公司开发平台app_key" json:"app_key"`
+	AppSecret    string   `gorm:"type:varchar(128);comment:配送公司开发平台app_secret" json:"app_secret"`
+	AuditResult  int      `gorm:"type:tinyint(3);comment:审核状态;default:0" json:"audit_result"`
+	IsOpen       int      `gorm:"type:tinyint(3);comment:是否开通物流权限;default:0" json:"is_open"`
+	Status       int      `gorm:"type:tinyint(3);comment:状态（启用，停用）;default:0" json:"status"`
+	IsMain       int      `gorm:"type:tinyint(3);comment:主配送公司;default:0" json:"is_main"`
+	CreateAt     int64    `gorm:"type:bigint(20)" json:"create_at"`
+	CreateTime   string   `gorm:"-" json:"create_time"`
+	Db           *gorm.DB `gorm:"-" json:"-"`
 }
 
 func (model *ImmediateDelivery) AutoMigrate() {
-	cmf.NewDb().AutoMigrate(&ImmediateDelivery{})
+	model.Db.AutoMigrate(&ImmediateDelivery{})
 }
 
 type DeliveryGoods struct {

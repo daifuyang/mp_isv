@@ -45,6 +45,6 @@ func Test_menu(t *testing.T) {
 	cmf.ManualDb("tenant_562847651")
 	cmf.NewDb().Migrator().DropTable(&model.AdminMenu{})
 	cmf.NewDb().AutoMigrate(&model.AdminMenu{})
-	model.AutoAdminMenu()
+	model.AutoAdminMenu("562847651")
 
 }

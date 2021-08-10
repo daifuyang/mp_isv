@@ -9,7 +9,6 @@ import (
 	"errors"
 	"gincmf/app/model"
 	"github.com/gin-gonic/gin"
-	cmf "github.com/gincmf/cmf/bootstrap"
 	cmfModel "github.com/gincmf/cmf/model"
 	"gorm.io/gorm"
 	"strings"
@@ -19,9 +18,12 @@ import (
 type Role struct {
 	Mid int `gorm:"type:int(11);comment:小程序加密编号;not null" json:"mid"`
 	model.Role
+	Db *gorm.DB `gorm:"-" json:"-"`
 }
 
 func (m *Role) Init(mid int) {
+
+	db := m.Db
 
 	role := []Role{
 		{
@@ -58,12 +60,14 @@ func (m *Role) Init(mid int) {
 
 	// 添加角色权限
 	for _, v := range role {
-		cmf.NewDb().Where("mid = ? AND name = ?", v.Mid, v.Name).FirstOrCreate(&v)
+		db.Where("mid = ? AND name = ?", v.Mid, v.Name).FirstOrCreate(&v)
 	}
 
 }
 
 func (m *Role) Get(c *gin.Context, query []string, queryArgs []interface{}) (cmfModel.Paginate, error) {
+
+	db := m.Db
 
 	var role []Role
 	// 获取默认的系统分页
@@ -78,8 +82,8 @@ func (m *Role) Get(c *gin.Context, query []string, queryArgs []interface{}) (cmf
 
 	var total int64 = 0
 
-	cmf.NewDb().Where(queryStr, queryArgs...).Find(&role).Count(&total)
-	tx := cmf.NewDb().Limit(pageSize).Where(queryStr, queryArgs...).Offset((current - 1) * pageSize).Find(&role)
+	db.Where(queryStr, queryArgs...).Find(&role).Count(&total)
+	tx := db.Limit(pageSize).Where(queryStr, queryArgs...).Offset((current - 1) * pageSize).Find(&role)
 
 	if tx.Error != nil && errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 		return cmfModel.Paginate{}, tx.Error

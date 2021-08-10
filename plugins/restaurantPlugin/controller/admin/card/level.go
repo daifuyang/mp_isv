@@ -8,9 +8,9 @@ package card
 import (
 	"encoding/json"
 	"errors"
+	"gincmf/app/util"
 	"gincmf/plugins/restaurantPlugin/model"
 	"github.com/gin-gonic/gin"
-	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
 	"gorm.io/gorm"
 	"strconv"
@@ -22,11 +22,17 @@ type Level struct {
 
 func (rest *Level) Show(c *gin.Context) {
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	mid, _ := c.Get("mid")
 
 	// 配置卡券基本配置
 	op := model.Option{}
-	vipResult := cmf.NewDb().Where("option_name = ? AND mid = ?", "vip_info", mid).First(&op)
+	vipResult := db.Where("option_name = ? AND mid = ?", "vip_info", mid).First(&op)
 	if vipResult.Error != nil && !errors.Is(vipResult.Error, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, vipResult.Error.Error(), nil)
 		return
@@ -41,6 +47,12 @@ func (rest *Level) Show(c *gin.Context) {
 
 func (rest *Level) Edit(c *gin.Context) {
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	mid, _ := c.Get("mid")
 
 	var form struct {
@@ -52,7 +64,7 @@ func (rest *Level) Edit(c *gin.Context) {
 		Level           []model.SLevel `json:"level"`
 	}
 
-	err := c.ShouldBindJSON(&form)
+	err = c.ShouldBindJSON(&form)
 	if err != nil {
 		c.JSON(400, gin.H{"msg": err.Error()})
 		return
@@ -101,7 +113,7 @@ func (rest *Level) Edit(c *gin.Context) {
 
 	// 配置卡券基本配置
 	op := model.Option{}
-	vipResult := cmf.NewDb().Where("option_name = ? AND mid = ?", "vip_info", mid).First(&op)
+	vipResult := db.Where("option_name = ? AND mid = ?", "vip_info", mid).First(&op)
 	if vipResult.Error != nil && !errors.Is(vipResult.Error, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, vipResult.Error.Error(), nil)
 		return
@@ -124,9 +136,9 @@ func (rest *Level) Edit(c *gin.Context) {
 	op.OptionValue = string(vipInfoJson)
 
 	if vipResult.RowsAffected == 0 {
-		cmf.NewDb().Create(&op)
+		db.Create(&op)
 	} else {
-		cmf.NewDb().Save(&op)
+		db.Save(&op)
 	}
 
 	rest.rc.Success(c, "编辑成功！", vipInfoMap)

@@ -149,6 +149,8 @@ type material struct {
 
 func (model FoodOrder) IndexByStore(c *gin.Context, query []string, queryArgs []interface{}) (cmfModel.Paginate, error) {
 
+	db := model.Db
+
 	// 获取默认的系统分页
 	current, pageSize, err := model.paginate.Default(c)
 
@@ -162,12 +164,12 @@ func (model FoodOrder) IndexByStore(c *gin.Context, query []string, queryArgs []
 	prefix := cmf.Conf().Database.Prefix
 	var total int64 = 0
 
-	cmf.NewDb().Table(prefix+"food_order fo").
+	db.Table(prefix+"food_order fo").
 		Joins("INNER JOIN "+prefix+"store s ON s.id = fo.store_id").
 		Joins("LEFT JOIN "+prefix+"pay_log l ON l.order_id = fo.order_id").
 		Where(queryStr, queryArgs...).Order("fo.id desc").Count(&total)
 
-	result := cmf.NewDb().Table(prefix+"food_order fo").Select("fo.*,s.store_name,l.total_amount,buyer_pay_amount").
+	result := db.Table(prefix+"food_order fo").Select("fo.*,s.store_name,l.total_amount,l.buyer_pay_amount").
 		Joins("INNER JOIN "+prefix+"store s ON s.id = fo.store_id").
 		Joins("LEFT JOIN "+prefix+"pay_log l ON l.order_id = fo.order_id").
 		Where(queryStr, queryArgs...).Limit(pageSize).Offset((current - 1) * pageSize).
@@ -211,7 +213,7 @@ func (model FoodOrder) IndexByStore(c *gin.Context, query []string, queryArgs []
 		fo[k].FinishedTime = time.Unix(v.FinishedAt, 0).Format(data.TimeLayout)
 
 		var fod []FoodOrderDetail
-		tx := cmf.NewDb().Where("order_id = ?", v.OrderId).Find(&fod)
+		tx := db.Where("order_id = ?", v.OrderId).Find(&fod)
 		if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 			return cmfModel.Paginate{}, result.Error
 		}
@@ -223,11 +225,11 @@ func (model FoodOrder) IndexByStore(c *gin.Context, query []string, queryArgs []
 			}
 
 			fcp := FoodCategoryPost{}
-			cmf.NewDb().Where("food_id = ?", dv.FoodId).First(&fcp)
+			db.Where("food_id = ?", dv.FoodId).First(&fcp)
 			categoryId := fcp.FoodCategoryId
 
 			food := Food{}
-			cmf.NewDb().Where("food_id = ?", dv.FoodId).First(&food)
+			db.Where("food_id = ?", dv.FoodId).First(&food)
 
 			fod[dk].CategoryId = categoryId
 			fod[dk].Food = food
@@ -291,6 +293,7 @@ func (model FoodOrder) IndexByStore(c *gin.Context, query []string, queryArgs []
 
 func (model FoodOrder) AppIndexByStore(c *gin.Context, query []string, queryArgs []interface{}) (cmfModel.Paginate, error) {
 
+	db := model.Db
 	// 获取默认的系统分页
 	current, pageSize, err := model.paginate.Default(c)
 
@@ -304,12 +307,12 @@ func (model FoodOrder) AppIndexByStore(c *gin.Context, query []string, queryArgs
 	prefix := cmf.Conf().Database.Prefix
 	var total int64 = 0
 
-	cmf.NewDb().Table(prefix+"food_order fo").
+	db.Table(prefix+"food_order fo").
 		Joins("INNER JOIN "+prefix+"store s ON s.id = fo.store_id").
 		Joins("LEFT JOIN "+prefix+"pay_log l ON l.order_id = fo.order_id").
 		Where(queryStr, queryArgs...).Order("fo.id desc").Count(&total)
 
-	result := cmf.NewDb().Table(prefix+"food_order fo").Select("fo.*,s.store_name,l.total_amount,buyer_pay_amount").
+	result := db.Table(prefix+"food_order fo").Select("fo.*,s.store_name,l.total_amount,buyer_pay_amount").
 		Joins("INNER JOIN "+prefix+"store s ON s.id = fo.store_id").
 		Joins("LEFT JOIN "+prefix+"pay_log l ON l.order_id = fo.order_id").
 		Where(queryStr, queryArgs...).Limit(pageSize).Offset((current - 1) * pageSize).
@@ -353,7 +356,7 @@ func (model FoodOrder) AppIndexByStore(c *gin.Context, query []string, queryArgs
 		fo[k].FinishedTime = time.Unix(v.FinishedAt, 0).Format(data.TimeLayout)
 
 		var fod []FoodOrderDetail
-		tx := cmf.NewDb().Where("order_id = ?", v.OrderId).Find(&fod)
+		tx := db.Where("order_id = ?", v.OrderId).Find(&fod)
 		if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 			return cmfModel.Paginate{}, result.Error
 		}
@@ -365,11 +368,11 @@ func (model FoodOrder) AppIndexByStore(c *gin.Context, query []string, queryArgs
 			}
 
 			fcp := FoodCategoryPost{}
-			cmf.NewDb().Where("food_id = ?", dv.FoodId).First(&fcp)
+			db.Where("food_id = ?", dv.FoodId).First(&fcp)
 			categoryId := fcp.FoodCategoryId
 
 			food := Food{}
-			cmf.NewDb().Where("food_id = ?", dv.FoodId).First(&food)
+			db.Where("food_id = ?", dv.FoodId).First(&food)
 
 			fod[dk].CategoryId = categoryId
 			fod[dk].Food = food
@@ -436,9 +439,11 @@ func (model FoodOrder) ShowByStore(query []string, queryArgs []interface{}) (Foo
 	queryStr := strings.Join(query, " AND ")
 	var fo FoodOrder
 
+	db := model.Db
+
 	prefix := cmf.Conf().Database.Prefix
 
-	result := cmf.NewDb().Table(prefix+"food_order fo").Select("fo.*,s.store_name,s.store_number,s.longitude,s.latitude,s.province_name as store_province,s.city_name as store_city,s.district_name as store_district,s.address as store_address,s.phone as store_phone,l.total_amount").
+	result := db.Table(prefix+"food_order fo").Select("fo.*,s.store_name,s.store_number,s.longitude,s.latitude,s.province_name as store_province,s.city_name as store_city,s.district_name as store_district,s.address as store_address,s.phone as store_phone,l.total_amount").
 		Joins("INNER JOIN "+prefix+"store s ON s.id = fo.store_id").
 		Joins("LEFT JOIN "+prefix+"pay_log l ON l.order_id = fo.order_id").
 		Where(queryStr, queryArgs...).Scan(&fo)
@@ -455,7 +460,7 @@ func (model FoodOrder) ShowByStore(query []string, queryArgs []interface{}) (Foo
 	fo.AppointmentTime = time.Unix(fo.AppointmentAt, 0).Format(data.TimeLayout)
 	fo.CreateTime = time.Unix(fo.CreateAt, 0).Format(data.TimeLayout)
 	var fod []FoodOrderDetail
-	tx := cmf.NewDb().Where("order_id", fo.OrderId).Find(&fod)
+	tx := db.Where("order_id", fo.OrderId).Find(&fod)
 	if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 		return fo, result.Error
 	}
@@ -466,11 +471,11 @@ func (model FoodOrder) ShowByStore(query []string, queryArgs []interface{}) (Foo
 	for dk, dv := range fod {
 
 		fcp := FoodCategoryPost{}
-		cmf.NewDb().Where("food_id = ?", dv.FoodId).First(&fcp)
+		db.Where("food_id = ?", dv.FoodId).First(&fcp)
 		categoryId := fcp.FoodCategoryId
 
 		food := Food{}
-		cmf.NewDb().Where("id = ?", dv.FoodId).First(&food)
+		db.Where("id = ?", dv.FoodId).First(&food)
 		food.PrevPath = util.GetFileUrl(food.Thumbnail, "thumbnail500x500")
 
 		fod[dk].CategoryId = categoryId
@@ -544,11 +549,14 @@ func (model FoodOrder) ShowByStore(query []string, queryArgs []interface{}) (Foo
 		fo.RequestPayment.PaySign = signature
 	}
 
+	fo.Db = db
 	return fo, nil
 
 }
 
 func (model FoodOrder) ByStore(current int, pageSize int, query []string, queryArgs []interface{}) (cmfModel.Paginate, error) {
+
+	db := model.Db
 
 	queryStr := strings.Join(query, " AND ")
 	var fo []FoodOrder
@@ -556,12 +564,12 @@ func (model FoodOrder) ByStore(current int, pageSize int, query []string, queryA
 	prefix := cmf.Conf().Database.Prefix
 	var total int64 = 0
 
-	cmf.NewDb().Table(prefix+"food_order fo").
+	db.Table(prefix+"food_order fo").
 		Joins("INNER JOIN "+prefix+"store s ON s.id = fo.store_id").
 		Joins("LEFT JOIN "+prefix+"pay_log l ON l.order_id = fo.order_id").
 		Where(queryStr, queryArgs...).Order("fo.id desc").Count(&total)
 
-	result := cmf.NewDb().Table(prefix+"food_order fo").Select("fo.*,s.store_name,l.total_amount").
+	result := db.Table(prefix+"food_order fo").Select("fo.*,s.store_name,l.total_amount").
 		Joins("INNER JOIN "+prefix+"store s ON s.id = fo.store_id").
 		Joins("LEFT JOIN "+prefix+"pay_log l ON l.order_id = fo.order_id").
 		Where(queryStr, queryArgs...).Limit(pageSize).Offset((current - 1) * pageSize).Order("fo.id desc").Scan(&fo)
@@ -581,9 +589,11 @@ func (model FoodOrder) ByStore(current int, pageSize int, query []string, queryA
 
 func (model FoodOrder) List(query []string, queryArgs []interface{}) ([]FoodOrder, error) {
 
+	db := model.Db
+
 	queryStr := strings.Join(query, " AND ")
 	var fd []FoodOrder
-	result := cmf.NewDb().Where(queryStr, queryArgs...).Find(&fd)
+	result := db.Where(queryStr, queryArgs...).Find(&fd)
 	if result.Error != nil {
 		return fd, result.Error
 	}
@@ -593,9 +603,11 @@ func (model FoodOrder) List(query []string, queryArgs []interface{}) ([]FoodOrde
 
 func (model FoodOrder) Show(query []string, queryArgs []interface{}) (FoodOrder, error) {
 
+	db := model.Db
+
 	queryStr := strings.Join(query, " AND ")
 	fd := FoodOrder{}
-	result := cmf.NewDb().Where(queryStr, queryArgs...).First(&fd)
+	result := db.Where(queryStr, queryArgs...).First(&fd)
 	if result.Error != nil {
 		return fd, result.Error
 	}
@@ -605,10 +617,7 @@ func (model FoodOrder) Show(query []string, queryArgs []interface{}) (FoodOrder,
 
 func (model FoodOrder) Store() (fo FoodOrder, err error) {
 
-	db := cmf.NewDb()
-	if model.Db != nil {
-		db = model.Db
-	}
+	db := model.Db
 
 	o, err := model.Show([]string{"order_id = ?"}, []interface{}{model.OrderId})
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
@@ -638,6 +647,8 @@ func (model FoodOrder) Store() (fo FoodOrder, err error) {
  **/
 func (model FoodOrder) Confirm(query []string, queryArgs []interface{}) error {
 
+	db := model.Db
+
 	data, err := model.Show(query, queryArgs)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -658,7 +669,7 @@ func (model FoodOrder) Confirm(query []string, queryArgs []interface{}) error {
 	case "WAIT_BUYER_PAY":
 		err = errors.New("用户未支付，无法确认订单！")
 	case "TRADE_SUCCESS":
-		result := cmf.NewDb().Model(&model).Where("order_id = ?", data.OrderId).Update("order_status", "TRADE_FINISHED")
+		result := db.Model(&model).Where("order_id = ?", data.OrderId).Update("order_status", "TRADE_FINISHED")
 		if result.Error != nil {
 			err = errors.New(result.Error.Error())
 		}
@@ -685,6 +696,8 @@ func (model FoodOrder) Confirm(query []string, queryArgs []interface{}) error {
 
 func (model FoodOrder) Cancel(query []string, queryArgs []interface{}, appId string) error {
 
+	db := model.Db
+
 	data, err := model.Show(query, queryArgs)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -709,7 +722,7 @@ func (model FoodOrder) Cancel(query []string, queryArgs []interface{}, appId str
 		// 查询pay_log的退款金额
 
 		payLog := appModel.PayLog{}
-		result := cmf.NewDb().Where("order_id = ?", data.OrderId).First(&payLog)
+		result := db.Where("order_id = ?", data.OrderId).First(&payLog)
 		if result.Error != nil {
 			if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 				return errors.New("订单支付日志不存在！")
@@ -727,7 +740,7 @@ func (model FoodOrder) Cancel(query []string, queryArgs []interface{}, appId str
 		fmt.Println(result)
 
 		if rResult.Response.Code == "10000" {
-			result := cmf.NewDb().Model(&model).Where("order_id = ?", data.OrderId).Update("order_status", "TRADE_REFUND")
+			result := db.Model(&model).Where("order_id = ?", data.OrderId).Update("order_status", "TRADE_REFUND")
 			if result.Error != nil {
 				err = errors.New(result.Error.Error())
 			}
@@ -746,7 +759,7 @@ func (model FoodOrder) Cancel(query []string, queryArgs []interface{}, appId str
 				GmtRefund:    time.Now().Unix(),
 			}
 
-			cmf.NewDb().Debug().Create(&payLog)
+			db.Debug().Create(&payLog)
 
 			err = nil
 		} else {
@@ -767,17 +780,14 @@ func (model FoodOrder) Cancel(query []string, queryArgs []interface{}, appId str
 // 减库存
 func (model *FoodOrder) ReduceInventory() {
 
-	db := cmf.NewDb()
-	if model.Db != nil {
-		db = model.Db
-	}
+	db := model.Db
 
 	var fod []FoodOrderDetail
 	db.Where("order_id = ?", model.OrderId).Find(&fod)
 	for _, v := range fod {
 
 		var food Food
-		tx := cmf.NewDb().Where("id = ?", v.FoodId).First(&food)
+		tx := db.Where("id = ?", v.FoodId).First(&food)
 		if tx.Error != nil {
 			continue
 		}
@@ -831,10 +841,7 @@ func (model *FoodOrder) ReduceInventory() {
  **/
 func (model *FoodOrder) Refund(refundFee float64, refundReason string, authorizerAccessToken string) error {
 
-	db := cmf.NewDb()
-	if model.Db != nil {
-		db = model.Db
-	}
+	db := model.Db
 
 	// 如果是余额支付
 	if model.PayType == "balance" {
@@ -845,7 +852,11 @@ func (model *FoodOrder) Refund(refundFee float64, refundReason string, authorize
 			return tx.Error
 		}
 
-		userData, err := new(User).Show([]string{"u.id = ?", "u.mid = ?", "user_type = 0", "u.delete_at = 0"}, []interface{}{model.UserId, model.Mid})
+		user := User{
+			Db: db,
+		}
+
+		userData, err := user.Show([]string{"u.id = ?", "u.mid = ?", "user_type = 0", "u.delete_at = 0"}, []interface{}{model.UserId, model.Mid})
 		if err != nil {
 			return err
 		}
@@ -932,7 +943,7 @@ func (model *FoodOrder) Refund(refundFee float64, refundReason string, authorize
 		}
 
 		theme := saasModel.MpTheme{}
-		tx = cmf.NewDb().Where("mid = ?", model.Mid).First(&theme)
+		tx = db.Where("mid = ?", model.Mid).First(&theme)
 		if tx.Error != nil {
 			return tx.Error
 		}
@@ -945,6 +956,9 @@ func (model *FoodOrder) Refund(refundFee float64, refundReason string, authorize
 
 		refund := decimal.NewFromFloat(refundFee).Round(2).Mul(decimal.NewFromInt(100)).IntPart()
 		total := decimal.NewFromFloat(model.OriginalFee).Round(2).Mul(decimal.NewFromInt(100)).IntPart()
+
+		fmt.Println("refund", refund)
+		fmt.Println("total", total)
 
 		bizContent["sub_mchid"] = theme.SubMchid
 		bizContent["out_trade_no"] = model.OrderId
@@ -959,6 +973,7 @@ func (model *FoodOrder) Refund(refundFee float64, refundReason string, authorize
 		refundsResponse := new(pay.PartnerPay).Refunds(bizContent)
 
 		if refundsResponse.Code != "" {
+			cmfLog.Error(refundsResponse.Message)
 			return errors.New(refundsResponse.Message)
 		}
 
@@ -981,6 +996,7 @@ func (model *FoodOrder) Refund(refundFee float64, refundReason string, authorize
 			OrderId:     model.OrderId,
 			Fee:         strconv.FormatFloat(refundFee, 'f', -1, 64),
 			Remark:      refundReason,
+			Db:          db,
 		}
 
 		if model.FormId != "" {
@@ -994,7 +1010,12 @@ func (model *FoodOrder) Refund(refundFee float64, refundReason string, authorize
 		}
 
 		// 获取当前会员信息
-		u, err = new(User).GetMpUser(model.UserId, userMpType)
+
+		user := User{
+			Db: db,
+		}
+
+		u, err = user.GetMpUser(model.UserId, userMpType)
 		if err != nil {
 			cmfLog.Error(err.Error())
 			return err
@@ -1031,7 +1052,7 @@ func (model *FoodOrder) Refund(refundFee float64, refundReason string, authorize
 	})
 
 	// 修改支付日志为已退款
-	payLog := &appModel.PayLog{}
+	payLog := appModel.PayLog{}
 	tx = db.Where("order_id = ?", model.OrderId).First(&payLog)
 
 	if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
@@ -1060,13 +1081,18 @@ func (model *FoodOrder) Refund(refundFee float64, refundReason string, authorize
 			payLog.TradeStatus = "TRADE_REFUND"
 		}
 
-		cmf.NewDb().Where("order_id = ?", model.OrderId).Updates(&payLog)
+		db.Where("order_id = ?", model.OrderId).Updates(&payLog)
 	}
 
 	// 收回已发放的积分
 	if model.PayType == "alipay" || model.PayType == "wxpay" {
 
-		scoreJson := saasModel.Options("score", model.Mid)
+		scoreJson, err := saasModel.Options(model.Db, "score", model.Mid)
+
+		if err != nil {
+			return err
+		}
+
 		scoreMap := Score{}
 		_ = json.Unmarshal([]byte(scoreJson), &scoreMap)
 
@@ -1085,6 +1111,7 @@ func (model *FoodOrder) Refund(refundFee float64, refundReason string, authorize
 				Score:  tScore,
 				Fee:    strconv.FormatFloat(refundFee, 'f', 2, 64),
 				Remark: remark,
+				Db:     db,
 			}
 
 			// 达到消费门槛1元
@@ -1120,6 +1147,8 @@ func (model *FoodOrder) Refund(refundFee float64, refundReason string, authorize
 
 func (model *FoodOrder) Printer() error {
 
+	db := model.Db
+
 	id := model.Id
 
 	if id == 0 {
@@ -1128,14 +1157,14 @@ func (model *FoodOrder) Printer() error {
 
 	fo := FoodOrder{}
 	// 查询订单
-	tx := cmf.NewDb().Where("id = ?", id).First(&fo)
+	tx := db.Where("id = ?", id).First(&fo)
 	if tx.Error != nil {
 		return tx.Error
 	}
 
 	// 查询订单列表
 	var fod = make([]FoodOrderDetail, 0)
-	tx = cmf.NewDb().Where("order_id", fo.OrderId).Find(&fod)
+	tx = db.Where("order_id", fo.OrderId).Find(&fod)
 	if tx.Error != nil {
 		return tx.Error
 	}
@@ -1164,7 +1193,9 @@ func (model *FoodOrder) Printer() error {
 	storeId := fo.StoreId
 
 	// 获取门店信息
-	store := Store{}
+	store := Store{
+		Db: db,
+	}
 	store, err := store.Show([]string{"id = ?", "delete_at = ?"}, []interface{}{storeId, 0})
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return err
@@ -1177,7 +1208,10 @@ func (model *FoodOrder) Printer() error {
 	appointmentTime := time.Unix(fo.AppointmentAt, 0).Format(data.TimeLayout)
 
 	// 获取门店打印机状态
-	_, err = new(FoodOrder).SendPrinter(fo, printOrder, store.StoreName, appointmentTime, true)
+	foodOrder := FoodOrder{
+		Db: db,
+	}
+	_, err = foodOrder.SendPrinter(fo, printOrder, store.StoreName, appointmentTime, true)
 
 	return err
 
@@ -1192,8 +1226,10 @@ func (model *FoodOrder) Printer() error {
  **/
 func (model *FoodOrder) GetDeliveryFee(store Store, deliveryGoods []DeliveryGoods) (foodOrder FoodOrder, err error) {
 
+	db := model.Db
+
 	addr := Address{}
-	tx := cmf.NewDb().Where("id = ?", model.AddressId).First(&addr)
+	tx := db.Where("id = ?", model.AddressId).First(&addr)
 
 	if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 		return foodOrder, tx.Error
@@ -1231,7 +1267,11 @@ func (model *FoodOrder) GetDeliveryFee(store Store, deliveryGoods []DeliveryGood
 	latitude, _ := strconv.ParseFloat(lMap[1], 64)
 
 	// 获取当前外卖配置
-	takeJson := saasModel.Options("takeout", store.Mid)
+	takeJson, err := saasModel.Options(model.Db, "takeout", store.Mid)
+
+	if err != nil {
+		return foodOrder, err
+	}
 
 	var takeOut TakeOut
 	_ = json.Unmarshal([]byte(takeJson), &takeOut)
@@ -1244,7 +1284,12 @@ func (model *FoodOrder) GetDeliveryFee(store Store, deliveryGoods []DeliveryGood
 	}
 
 	// 企业主体
-	businessJson := saasModel.Options("business_info", model.Mid)
+	businessJson, err := saasModel.Options(model.Db, "business_info", model.Mid)
+
+	if err != nil {
+		return foodOrder, err
+	}
+
 	bi := BusinessInfo{}
 	_ = json.Unmarshal([]byte(businessJson), &bi)
 
@@ -1259,7 +1304,7 @@ func (model *FoodOrder) GetDeliveryFee(store Store, deliveryGoods []DeliveryGood
 
 	// 查询是否开通第三方配送
 	var immediateDelivery []ImmediateDelivery
-	tx = cmf.NewDb().Where("status", 1).Find(&immediateDelivery)
+	tx = db.Where("status", 1).Find(&immediateDelivery)
 	if tx.Error != nil {
 		return foodOrder, tx.Error
 	}
@@ -1442,8 +1487,10 @@ func (model *FoodOrder) GetDeliveryFee(store Store, deliveryGoods []DeliveryGood
  **/
 func (model *FoodOrder) AddOrder(store Store, deliveryGoods []DeliveryGoods) (foodOrder FoodOrder, err error) {
 
+	db := model.Db
+
 	addr := Address{}
-	tx := cmf.NewDb().Where("id = ?", model.AddressId).First(&addr)
+	tx := db.Where("id = ?", model.AddressId).First(&addr)
 
 	if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 		return foodOrder, tx.Error
@@ -1481,7 +1528,11 @@ func (model *FoodOrder) AddOrder(store Store, deliveryGoods []DeliveryGoods) (fo
 	latitude, _ := strconv.ParseFloat(lMap[1], 64)
 
 	// 获取当前外卖配置
-	takeJson := saasModel.Options("takeout", store.Mid)
+	takeJson, err := saasModel.Options(model.Db, "takeout", store.Mid)
+
+	if err != nil {
+		return foodOrder, err
+	}
 
 	var takeOut TakeOut
 	_ = json.Unmarshal([]byte(takeJson), &takeOut)
@@ -1494,13 +1545,18 @@ func (model *FoodOrder) AddOrder(store Store, deliveryGoods []DeliveryGoods) (fo
 	}
 
 	// 企业主体
-	businessJson := saasModel.Options("business_info", model.Mid)
+	businessJson, err := saasModel.Options(model.Db, "business_info", model.Mid)
+
+	if err != nil {
+		return foodOrder, err
+	}
+
 	bi := BusinessInfo{}
 	_ = json.Unmarshal([]byte(businessJson), &bi)
 
 	// 查询是否开通第三方配送
 	var immediateDelivery []ImmediateDelivery
-	tx = cmf.NewDb().Where("status", 1).Find(&immediateDelivery)
+	tx = db.Where("status", 1).Find(&immediateDelivery)
 	if tx.Error != nil {
 		return foodOrder, tx.Error
 	}
@@ -1603,7 +1659,7 @@ func (model *FoodOrder) AddOrder(store Store, deliveryGoods []DeliveryGoods) (fo
 		ido.OrderStatus = data.OrderStatus
 		ido.CreateAt = time.Now().Unix()
 
-		cmf.NewDb().Create(&ido)
+		db.Create(&ido)
 
 	}
 
@@ -1618,10 +1674,13 @@ type Content struct {
 
 // 发送打印订单请求
 func (model *FoodOrder) SendPrinter(fo FoodOrder, printOrder []map[string]string, storeName string, appointmentTime string, canPrinter bool) (content []Content, err error) {
+
+	db := model.Db
+
 	// 获取门店打印机状态
 	var printers []Printer
 
-	tx := cmf.NewDb().Where("store_id = ? AND mid = ?", fo.StoreId, fo.Mid).Find(&printers)
+	tx := db.Where("store_id = ? AND mid = ?", fo.StoreId, fo.Mid).Find(&printers)
 	if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 		return content, tx.Error
 	}
@@ -1684,8 +1743,12 @@ func (model *FoodOrder) SendPrinter(fo FoodOrder, printOrder []map[string]string
 					myResult := new(base.Printer).Printer(p.Sn, pItemContent, p.Count)
 					fmt.Println("myResult", myResult)
 
+					printer := Printer{
+						Db: db,
+					}
+
 					if myResult.Ret > 0 {
-						new(Printer).NsqProducer(fo.Mid, fo.Id)
+						printer.NsqProducer(fo.Mid, fo.Id)
 					}
 
 				}
@@ -1695,7 +1758,12 @@ func (model *FoodOrder) SendPrinter(fo FoodOrder, printOrder []map[string]string
 					fmt.Println("myResult", myResult.Content)
 
 					if myResult.Content.Code > 0 {
-						new(Printer).NsqProducer(fo.Mid, fo.Id)
+
+						printer := Printer{
+							Db: db,
+						}
+
+						printer.NsqProducer(fo.Mid, fo.Id)
 					}
 
 				}
@@ -1733,7 +1801,12 @@ func (model *FoodOrder) SendPrinter(fo FoodOrder, printOrder []map[string]string
 						fmt.Println("myResult", myResult)
 
 						if myResult.Ret > 0 {
-							new(Printer).NsqProducer(fo.Mid, fo.Id)
+
+							printer := Printer{
+								Db: db,
+							}
+
+							printer.NsqProducer(fo.Mid, fo.Id)
 						}
 
 					}
@@ -1742,7 +1815,13 @@ func (model *FoodOrder) SendPrinter(fo FoodOrder, printOrder []map[string]string
 						myResult := new(xpyunYun.Printer).Printer(p.Sn, pItemContent, p.Count)
 						fmt.Println("myResult", myResult.Content)
 						if myResult.Content.Code > 0 {
-							new(Printer).NsqProducer(fo.Mid, fo.Id)
+
+							printer := Printer{
+								Db: db,
+							}
+
+							printer.NsqProducer(fo.Mid, fo.Id)
+
 						} else {
 							fmt.Println("nsq err", err)
 						}

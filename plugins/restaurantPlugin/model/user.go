@@ -39,23 +39,27 @@ type User struct {
 	MemberStatus int     `gorm:"->" json:"member_status"`
 	SessionKey   string  `gorm:"->" json:"session_key"`
 	paginate     cmfModel.Paginate
+	Db           *gorm.DB `gorm:"-" json:"-"`
 }
 
 type ThirdPart struct {
-	Id         int    `json:"id"`
-	Mid        int    `gorm:"type:bigint(20);comment:对应小程序id;not null" json:"mid"`
-	Type       string `gorm:"type:varchar(10);not null" json:"type"`
-	UserId     int    `gorm:"type:int(11);not null" json:"user_id"`
-	OpenId     string `gorm:"type:varchar(128);not null" json:"open_id"`
-	SessionKey string `gorm:"type:varchar(255);not null" json:"session_key"`
+	Id         int      `json:"id"`
+	Mid        int      `gorm:"type:bigint(20);comment:对应小程序id;not null" json:"mid"`
+	Type       string   `gorm:"type:varchar(10);not null" json:"type"`
+	UserId     int      `gorm:"type:int(11);not null" json:"user_id"`
+	OpenId     string   `gorm:"type:varchar(128);not null" json:"open_id"`
+	SessionKey string   `gorm:"type:varchar(255);not null" json:"session_key"`
+	Db         *gorm.DB `gorm:"-" json:"-"`
 }
 
 func (model *User) Show(query []string, queryArgs []interface{}) (User, error) {
 
+	db := model.Db
+
 	var user User
 	queryStr := strings.Join(query, " AND ")
 	prefix := cmf.Conf().Database.Prefix
-	tx := cmf.NewDb().Table(prefix+"user u").Select("u.*,tp.open_id,tp.session_key,mc.vip_num,mc.vip_level,mc.vip_name,mc.start_at,mc.end_at,mc.create_at,mc.update_at,mc.delete_at,mc.status as member_status").
+	tx := db.Table(prefix+"user u").Select("u.*,tp.open_id,tp.session_key,mc.vip_num,mc.vip_level,mc.vip_name,mc.start_at,mc.end_at,mc.create_at,mc.update_at,mc.delete_at,mc.status as member_status").
 		Joins("LEFT JOIN "+prefix+"third_part tp ON tp.user_id = u.id").
 		Joins("LEFT JOIN "+prefix+"member_card mc ON u.id = mc.user_id").
 		Where(queryStr, queryArgs...).
@@ -78,7 +82,15 @@ func (model *User) Show(query []string, queryArgs []interface{}) (User, error) {
 	}
 
 	// 获取会员权益
-	level := new(Level).LevelDetail(user.VipLevel, user.Mid)
+	levelModel := Level{
+		Db: db,
+	}
+	level, err := levelModel.LevelDetail(user.VipLevel, user.Mid)
+
+	if err != nil {
+		return user, tx.Error
+	}
+
 	if level.LevelId != "" {
 		user.Level = &level
 	}
@@ -87,7 +99,7 @@ func (model *User) Show(query []string, queryArgs []interface{}) (User, error) {
 
 	// 获取会员卡状态
 	card := CardTemplate{}
-	tx = cmf.NewDb().Where("id = ? AND status = ? AND delete_at = ?", 1, 1, 0).First(&card)
+	tx = db.Where("id = ? AND status = ? AND delete_at = ?", 1, 1, 0).First(&card)
 
 	if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 		return user, tx.Error
@@ -104,6 +116,8 @@ func (model *User) Show(query []string, queryArgs []interface{}) (User, error) {
 
 func (model *User) ThirdPartIndex(c *gin.Context, query []string, queryArgs []interface{}) (cmfModel.Paginate, error) {
 
+	db := model.Db
+
 	current, pageSize, err := new(cmfModel.Paginate).Default(c)
 
 	if err != nil {
@@ -119,14 +133,14 @@ func (model *User) ThirdPartIndex(c *gin.Context, query []string, queryArgs []in
 
 	var user []User
 
-	cmf.NewDb().Table(prefix+"third_part tp").Select("u.*,mc.vip_num,mc.vip_level,mc.vip_name,mc.start_at,mc.end_at,mc.create_at,mc.update_at,mc.delete_at,tp.type,tp.open_id").
+	db.Table(prefix+"third_part tp").Select("u.*,mc.vip_num,mc.vip_level,mc.vip_name,mc.start_at,mc.end_at,mc.create_at,mc.update_at,mc.delete_at,tp.type,tp.open_id").
 		Joins("LEFT JOIN "+prefix+"user u ON u.id = tp.user_id").
 		Joins("LEFT JOIN "+prefix+"member_card mc ON u.id = mc.user_id").
 		Where(queryStr, queryArgs...).
 		Group("u.id").
 		Count(&total)
 
-	tx := cmf.NewDb().Table(prefix+"third_part tp").Select("u.*,mc.vip_num,mc.vip_level,mc.vip_name,mc.start_at,mc.end_at,mc.create_at,mc.update_at,mc.delete_at,tp.type,tp.open_id").
+	tx := db.Table(prefix+"third_part tp").Select("u.*,mc.vip_num,mc.vip_level,mc.vip_name,mc.start_at,mc.end_at,mc.create_at,mc.update_at,mc.delete_at,tp.type,tp.open_id").
 		Joins("LEFT JOIN "+prefix+"user u ON u.id = tp.user_id").
 		Joins("LEFT JOIN "+prefix+"member_card mc ON u.id = mc.user_id").
 		Where(queryStr, queryArgs...).
@@ -164,8 +178,10 @@ func (model *User) ThirdPartIndex(c *gin.Context, query []string, queryArgs []in
 
 func (model *User) GetBalance(userId int) (float64, error) {
 
+	db := model.Db
+
 	u := User{}
-	tx := cmf.NewDb().Where("id = ?", userId).First(&u)
+	tx := db.Where("id = ?", userId).First(&u)
 
 	if tx.Error != nil {
 		return 0, tx.Error
@@ -223,10 +239,11 @@ func (model *User) CurrentMpUser(c *gin.Context) User {
 
 type UserPart struct {
 	User
-	Mid        int    `json:"mid"`
-	Type       string `json:"type"`
-	OpenId     string `json:"open_id"`
-	SessionKey string `json:"session_key"`
+	Mid        int      `json:"mid"`
+	Type       string   `json:"type"`
+	OpenId     string   `json:"open_id"`
+	SessionKey string   `json:"session_key"`
+	Db         *gorm.DB `gorm:"-" json:"-"`
 }
 
 /**
@@ -246,13 +263,15 @@ type UserPart struct {
  **/
 func (model UserPart) Show(query []string, queryArgs []interface{}) (UserPart, error) {
 
+	db := model.Db
+
 	up := UserPart{}
 
 	queryStr := strings.Join(query, " AND ")
 
 	prefix := cmf.Conf().Database.Prefix
 
-	result := cmf.NewDb().Table(prefix+"third_part tp").Select("u.*,tp.type,tp.user_id,tp.open_id,tp.session_key").
+	result := db.Table(prefix+"third_part tp").Select("u.*,tp.type,tp.user_id,tp.open_id,tp.session_key").
 		Joins("LEFT JOIN "+prefix+"user u ON tp.user_id = u.id").
 		Where(queryStr, queryArgs...).Order("tp.id desc").Scan(&up)
 
@@ -264,6 +283,9 @@ func (model UserPart) Show(query []string, queryArgs []interface{}) (UserPart, e
 }
 
 func (model *User) CurrentUser(c *gin.Context) User {
+
+	db := model.Db
+
 	u := User{}
 	session := sessions.Default(c)
 	user := session.Get("user")
@@ -272,7 +294,7 @@ func (model *User) CurrentUser(c *gin.Context) User {
 	userIdInt, _ := userId.(int)
 
 	if user == nil {
-		cmf.NewDb().First(&u, "id = ? AND user_type = 1 AND user_status = 1 AND  delete_at = 0", userId)
+		db.First(&u, "id = ? AND user_type = 1 AND user_status = 1 AND  delete_at = 0", userId)
 		jsonBytes, _ := json.Marshal(u)
 		session.Set("user", string(jsonBytes))
 		session.Save()
@@ -281,7 +303,7 @@ func (model *User) CurrentUser(c *gin.Context) User {
 		json.Unmarshal([]byte(jsonBytes), &u)
 		if u.Id == 0 || u.Id != userIdInt {
 			u = User{}
-			cmf.NewDb().First(&u, "id = ? AND user_type = 1 AND user_status = 1 AND  delete_at = 0", userId)
+			db.First(&u, "id = ? AND user_type = 1 AND user_status = 1 AND  delete_at = 0", userId)
 			jsonBytes, _ := json.Marshal(u)
 			session.Set("user", string(jsonBytes))
 			session.Save()

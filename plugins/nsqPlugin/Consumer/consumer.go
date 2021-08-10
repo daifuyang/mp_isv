@@ -56,8 +56,11 @@ func (*ConsumerT) HandleMessage(msg *nsq.Message) error {
 			return nil
 		}
 
-		cmf.ManualDb(messageJson.Database)
-		err := new(resModel.Printer).Send(messageJson.Mid, messageJson.TargetId)
+		printer := resModel.Printer{
+			Db: cmf.ManualDb(messageJson.Database),
+		}
+
+		err := printer.Send(messageJson.Mid, messageJson.TargetId)
 		fmt.Println("err", err)
 		return err
 	}

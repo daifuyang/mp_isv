@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"gincmf/app/model"
-	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/wechatEasySdk/open"
 	"gorm.io/gorm"
 )
@@ -24,16 +23,19 @@ type PriTmpl struct {
 	PayTmpId      string `json:"pay_tmp_id"`
 	RefundTmpId   string `json:"refund_tmp_id"`
 	FinishedTmpId string `json:"finished_tmp_id"`
+	TakeTmpId     string `json:"take_tmp_id"`
 }
 
 type Subscribe struct {
-	Mid int `json:"mid"`
+	Mid int      `json:"mid"`
+	Db  *gorm.DB `gorm:"-" json:"-"`
 }
 
 func (model *Subscribe) Show(mid int) (priTmpl PriTmpl, err error) {
 
+	db := model.Db
 	op := Option{}
-	result := cmf.NewDb().Where("option_name = ? AND mid = ?", "subscribe", mid).First(&op)
+	result := db.Where("option_name = ? AND mid = ?", "subscribe", mid).First(&op)
 	if result.Error != nil {
 		return priTmpl, result.Error
 	}
@@ -50,11 +52,12 @@ func (model *Subscribe) Show(mid int) (priTmpl PriTmpl, err error) {
 
 func (model *Subscribe) Edit(ak string, mid int) (priTmpl PriTmpl, err error) {
 
+	db := model.Db
 	op := Option{}
 	op.Mid = mid
 	op.AutoLoad = 1
 	op.OptionName = "subscribe"
-	result := cmf.NewDb().Where("option_name = ? AND mid = ?", "subscribe", mid).First(&op)
+	result := db.Where("option_name = ? AND mid = ?", "subscribe", mid).First(&op)
 	if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return priTmpl, result.Error
 	}
@@ -94,8 +97,21 @@ func (model *Subscribe) Edit(ak string, mid int) (priTmpl PriTmpl, err error) {
 			"sceneDesc": "点餐完成通知",
 		})
 
-		if refundResponse.Errcode == 0 {
+		if finishedResponse.Errcode == 0 {
 			priTmpl.FinishedTmpId = finishedResponse.PriTmplId
+		} else {
+			return priTmpl, errors.New(finishedResponse.Errmsg)
+		}
+
+		// 订单取餐提醒模板
+		takeResponse := new(open.Wxa).AddTemplate(ak, map[string]interface{}{
+			"tid":       "250",
+			"kidList":   []string{"22", "23", "7", "12"},
+			"sceneDesc": "取餐提醒通知",
+		})
+
+		if takeResponse.Errcode == 0 {
+			priTmpl.TakeTmpId = takeResponse.PriTmplId
 		} else {
 			return priTmpl, errors.New(finishedResponse.Errmsg)
 		}
@@ -106,7 +122,9 @@ func (model *Subscribe) Edit(ak string, mid int) (priTmpl PriTmpl, err error) {
 		}
 		op.OptionValue = string(jsonStr)
 
-		cmf.NewDb().Create(&op)
+		db.Create(&op)
+	} else {
+		json.Unmarshal([]byte(op.OptionValue), &priTmpl)
 	}
 
 	return priTmpl, nil

@@ -6,6 +6,7 @@
 package admin
 
 import (
+	"gincmf/app/util"
 	"gincmf/plugins/alipayPlugin/model"
 	"github.com/gin-gonic/gin"
 	"github.com/gincmf/cmf/controller"
@@ -24,9 +25,18 @@ type ContactButton struct {
  **/
 func (rest *ContactButton) Get(c *gin.Context) {
 	mid, _ := c.Get("mid")
-	cb := model.ContactButton{}
-	data, err := cb.Show(mid.(int))
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
+	cb := model.ContactButton{
+		Db: db,
+	}
+
+	data, err := cb.Show(mid.(int))
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)
 		return
@@ -39,7 +49,15 @@ func (rest *ContactButton) Edit(c *gin.Context) {
 
 	mid, _ := c.Get("mid")
 
-	var cb model.ContactButton
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
+	var cb = model.ContactButton{
+		Db: db,
+	}
 	if err := c.ShouldBindJSON(&cb); err != nil {
 		c.JSON(400, gin.H{"msg": err.Error()})
 		return

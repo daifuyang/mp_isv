@@ -10,28 +10,37 @@ import (
 	"gincmf/plugins/wechatPlugin/model"
 	"github.com/gincmf/alipayEasySdk/mini"
 	"github.com/gincmf/wechatEasySdk/open"
+	"gorm.io/gorm"
 	"strconv"
 )
 
 type Subscribe struct {
-	Type        string `json:"type"`
-	AccessToken string `json:"access_token"`
-	StoreName   string `json:"store_name"`
-	OrderId     string `json:"order_id"`
-	OpenId      string `json:"open_id"`
-	Fee         string `json:"fee"`
-	CreateTime  string `json:"create_time"`
-	Remark      string `json:"remark"`
-	Id          int    `json:"id"`
-	Mid         int    `json:"mid"`
+	Type        string   `json:"type"`
+	AccessToken string   `json:"access_token"`
+	StoreName   string   `json:"store_name"`
+	OrderId     string   `json:"order_id"`
+	OpenId      string   `json:"open_id"`
+	Fee         string   `json:"fee"`
+	CreateTime  string   `json:"create_time"`
+	Remark      string   `json:"remark"`
+	Id          int      `json:"id"`
+	Mid         int      `json:"mid"`
+	Db          *gorm.DB `gorm:"-" json:"-"`
 }
 
 // 下单成功
 func (rest *Subscribe) TradeSuccess() error {
 
+	db := rest.Db
+
 	if rest.Type == "wechat" {
 
-		sub, err := new(model.Subscribe).Show(rest.Mid)
+		subscribe := model.Subscribe{
+			Db: db,
+		}
+
+		sub, err := subscribe.Show(rest.Mid)
+
 		if err != nil {
 			return err
 		}
@@ -124,7 +133,11 @@ func (rest *Subscribe) TradeRefund() error {
 
 	if rest.Type == "wechat" {
 
-		sub, err := new(model.Subscribe).Show(rest.Mid)
+		subscribe := model.Subscribe{
+			Db: rest.Db,
+		}
+
+		sub, err := subscribe.Show(rest.Mid)
 		if err != nil {
 			return err
 		}
@@ -187,6 +200,92 @@ func (rest *Subscribe) TradeRefund() error {
 			"to_user_id":       rest.OpenId,
 			"form_id":          rest.AccessToken,
 			"user_template_id": "PM1074b47fe64844de9cea5186c743e728",
+			"page":             "pages/order/detail?id=" + strconv.Itoa(rest.Id),
+			"data":             keywords,
+		}
+
+		messageResult := new(mini.TemplateMessage).Send(bizContent)
+
+		if messageResult.Response.Code != "10000" {
+			return errors.New(messageResult.Response.SubMsg)
+		}
+
+		return nil
+
+	}
+
+	return errors.New("类型不能为空！")
+
+}
+
+// 通知取餐
+func (rest *Subscribe) TradeTake() error {
+
+	if rest.Type == "wechat" {
+
+		sub, err := new(model.Subscribe).Show(rest.Mid)
+		if err != nil {
+			return err
+		}
+
+		if sub.TakeTmpId != "" {
+
+			ak := rest.AccessToken
+
+			keywords := map[string]interface{}{
+				"character_string22": map[string]string{
+					"value": rest.OrderId,
+				},
+				"thing23": map[string]string{
+					"value": rest.StoreName,
+				},
+				"thing7": map[string]string{
+					"value": "您的餐品已制作完成，请到前台领取",
+				},
+				"character_string12": map[string]string{
+					"value": rest.Remark,
+				},
+			}
+
+			bizContent := map[string]interface{}{
+				"touser":            rest.OpenId,
+				"template_id":       sub.TakeTmpId,
+				"page":              "pages/order/detail?id=" + strconv.Itoa(rest.Id),
+				"miniprogram_state": "formal",
+				"data":              keywords,
+			}
+
+			response := new(open.Subscribe).Send(ak, bizContent)
+
+			if response.Errcode != 0 {
+				return errors.New(response.Errmsg)
+			}
+		}
+		return nil
+
+	}
+
+	if rest.Type == "alipay" {
+
+		keywords := map[string]interface{}{
+			"keyword1": map[string]string{
+				"value": rest.OrderId,
+			},
+			"keyword2": map[string]string{
+				"value": rest.StoreName,
+			},
+			"keyword3": map[string]string{
+				"value": "您的餐品已制作完成，请到前台领取",
+			},
+			"keyword4": map[string]string{
+				"value": rest.Remark,
+			},
+		}
+
+		bizContent := map[string]interface{}{
+			"to_user_id":       rest.OpenId,
+			"form_id":          rest.AccessToken,
+			"user_template_id": "PMa377665ddeda439dac5e81dd338d625f",
 			"page":             "pages/order/detail?id=" + strconv.Itoa(rest.Id),
 			"data":             keywords,
 		}

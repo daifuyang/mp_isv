@@ -8,9 +8,9 @@ package settings
 import (
 	"encoding/json"
 	"errors"
+	"gincmf/app/util"
 	"gincmf/plugins/restaurantPlugin/model"
 	"github.com/gin-gonic/gin"
-	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
 	"gorm.io/gorm"
 )
@@ -21,10 +21,16 @@ type Score struct {
 
 func (rest *Score) Show(c *gin.Context) {
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	mid, _ := c.Get("mid")
 
 	op := model.Option{}
-	result := cmf.NewDb().Where("option_name = ? AND mid = ?", "score", mid).First(&op)
+	result := db.Where("option_name = ? AND mid = ?", "score", mid).First(&op)
 	if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, result.Error.Error(), nil)
 		return
@@ -39,10 +45,16 @@ func (rest *Score) Show(c *gin.Context) {
 // 编辑
 func (rest *Score) Edit(c *gin.Context) {
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	mid, _ := c.Get("mid")
 
 	var form model.Score
-	err := c.ShouldBindJSON(&form)
+	err = c.ShouldBindJSON(&form)
 	if err != nil {
 		c.JSON(400, gin.H{"msg": err.Error()})
 		return
@@ -56,7 +68,7 @@ func (rest *Score) Edit(c *gin.Context) {
 
 	op := model.Option{}
 
-	result := cmf.NewDb().Where("option_name = ? AND mid = ?", "score", mid).First(&op)
+	result := db.Where("option_name = ? AND mid = ?", "score", mid).First(&op)
 	if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, result.Error.Error(), nil)
 		return
@@ -67,9 +79,9 @@ func (rest *Score) Edit(c *gin.Context) {
 	op.OptionName = "score"
 	op.OptionValue = string(jsonStr)
 	if result.RowsAffected == 0 {
-		cmf.NewDb().Create(&op)
+		db.Create(&op)
 	} else {
-		cmf.NewDb().Save(&op)
+		db.Save(&op)
 	}
 
 	rest.rc.Success(c, "修改成功！", form)

@@ -7,6 +7,7 @@ package dishes
 
 import (
 	"errors"
+	"gincmf/app/util"
 	"gincmf/plugins/restaurantPlugin/model"
 	"github.com/gin-gonic/gin"
 	"github.com/gincmf/cmf/controller"
@@ -42,8 +43,16 @@ func (rest *Food) List(c *gin.Context) {
 		return
 	}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	// 获取门店参数
-	category := model.FoodCategory{}
+	category := model.FoodCategory{
+		Db: db,
+	}
 
 	var query []string
 	var queryArgs []interface{}
@@ -70,7 +79,9 @@ func (rest *Food) List(c *gin.Context) {
 	foodQuery = append(foodQuery, "(f.scene = 0 OR f.scene = ?)")
 	foodQueryArgs = append(foodQueryArgs, scene)
 
-	food := model.Food{}
+	food := model.Food{
+		Db: db,
+	}
 	foodData, err := food.ListByCategory(foodQuery, foodQueryArgs)
 
 	if err != nil {
@@ -128,8 +139,15 @@ func (rest *Food) Detail(c *gin.Context) {
 	id := rewrite.Id
 
 	mid, _ := c.Get("mid")
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
 
-	food := model.Food{}
+	food := model.Food{
+		Db: db,
+	}
 	query := []string{"mid = ? AND id = ? AND delete_at = ?"}
 	queryArgs := []interface{}{mid, id, 0}
 	data, err := food.Detail(query, queryArgs)
@@ -165,7 +183,15 @@ func (rest *Food) Sku(c *gin.Context) {
 		return
 	}
 
-	fSku := model.FoodSku{}
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
+	fSku := model.FoodSku{
+		Db: db,
+	}
 
 	query := []string{"food_id = ? AND attr_post = ?"}
 	queryArgs := []interface{}{rewrite.Id, sku}

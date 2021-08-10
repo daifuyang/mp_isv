@@ -54,6 +54,7 @@ type RechargeOrder struct {
 
 func (model *RechargeOrder) Index(c *gin.Context, query []string, queryArgs []interface{}) (cmfModel.Paginate, error) {
 
+	db := model.Db
 	// 获取默认的系统分页
 	current, pageSize, err := model.paginate.Default(c)
 
@@ -69,14 +70,14 @@ func (model *RechargeOrder) Index(c *gin.Context, query []string, queryArgs []in
 
 	prefix := cmf.Conf().Database.Prefix
 
-	cmf.NewDb().Table(prefix+"recharge_order ro").
+	db.Table(prefix+"recharge_order ro").
 		Select("ro.*,u.id as user_id,u.user_login,u.user_nickname,u.user_realname").
 		Joins("INNER JOIN "+prefix+"user u ON ro.user_id = u.id").
 		Where(queryStr, queryArgs...).
 		Order("ro.id desc").
 		Scan(&ro).Count(&total)
 
-	tx := cmf.NewDb().Table(prefix+"recharge_order ro").
+	tx := db.Table(prefix+"recharge_order ro").
 		Select("ro.*,u.id as user_id,u.user_login,u.user_nickname,u.user_realname").
 		Joins("INNER JOIN "+prefix+"user u ON ro.user_id = u.id").
 		Where(queryStr, queryArgs...).
@@ -110,10 +111,7 @@ func (model *RechargeOrder) Index(c *gin.Context, query []string, queryArgs []in
  **/
 func (model *RechargeOrder) Refund(refundFee float64, refundReason string, authorizerAccessToken string) error {
 
-	db := cmf.NewDb()
-	if model.Db != nil {
-		db = model.Db
-	}
+	db := model.Db
 
 	userMpType := ""
 	if model.PayType == "alipay" {
@@ -124,7 +122,11 @@ func (model *RechargeOrder) Refund(refundFee float64, refundReason string, autho
 		userMpType = "wechat-mp"
 	}
 
-	u, err := new(User).GetMpUser(model.UserId, userMpType)
+	user := User{
+		Db: db,
+	}
+
+	u, err := user.GetMpUser(model.UserId, userMpType)
 	if err != nil {
 		cmfLog.Error(err.Error())
 		return err
@@ -185,7 +187,7 @@ func (model *RechargeOrder) Refund(refundFee float64, refundReason string, autho
 		}
 
 		theme := saasModel.MpTheme{}
-		tx = cmf.NewDb().Where("mid = ?", model.Mid).First(&theme)
+		tx = db.Where("mid = ?", model.Mid).First(&theme)
 		if tx.Error != nil {
 			return tx.Error
 		}
@@ -287,13 +289,13 @@ func (model *RechargeOrder) Refund(refundFee float64, refundReason string, autho
 			payLog.TradeStatus = "TRADE_REFUND"
 		}
 
-		cmf.NewDb().Where("order_id = ?", model.OrderId).Updates(&payLog)
+		db.Where("order_id = ?", model.OrderId).Updates(&payLog)
 	}
 
 	// 收回已发放的积分
 	if model.PayType == "alipay" || model.PayType == "wxpay" {
 
-		scoreJson := saasModel.Options("score", model.Mid)
+		scoreJson, err := saasModel.Options(model.Db, "score", model.Mid)
 		scoreMap := Score{}
 		_ = json.Unmarshal([]byte(scoreJson), &scoreMap)
 
@@ -312,6 +314,7 @@ func (model *RechargeOrder) Refund(refundFee float64, refundReason string, autho
 				Score:  tScore,
 				Fee:    strconv.FormatFloat(refundFee, 'f', 2, 64),
 				Remark: remark,
+				Db: db,
 			}
 
 			// 达到消费门槛1元

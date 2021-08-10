@@ -8,6 +8,7 @@ package middleware
 import (
 	"encoding/json"
 	"gincmf/app/model"
+	"gincmf/app/util"
 	saasModel "gincmf/plugins/saasPlugin/model"
 	"github.com/gin-gonic/gin"
 	"github.com/gincmf/alipayEasySdk"
@@ -25,7 +26,7 @@ func AppAuthToken(c *gin.Context) {
 		alipayJson, _ := c.Get("alipay_json")
 
 		if alipayJson == "" {
-			controller.Rest{}.Error(c, "AppAuthToken获取失败，请先绑定支付宝小程序！", nil)
+			new(controller.Rest).Error(c, "AppAuthToken获取失败，请先绑定支付宝小程序！", nil)
 			c.Abort()
 			return
 		}
@@ -38,7 +39,7 @@ func AppAuthToken(c *gin.Context) {
 		alipayEasySdk.SetOption("AppAuthToken", mpMap.AppAuthToken)
 
 		if mpMap.AuthAppId == "" {
-			controller.Rest{}.Error(c, "AuthAppId获取失败，请先绑定支付宝小程序！", nil)
+			new(controller.Rest).Error(c, "AuthAppId获取失败，请先绑定支付宝小程序！", nil)
 			c.Abort()
 			return
 		}
@@ -71,7 +72,7 @@ func ValidationAlipay(c *gin.Context) {
 	tx := cmf.Db().Where("mp_id = ? AND type = ?", mid, "alipay").Order("id desc").First(&mpIsv)
 
 	if tx.RowsAffected == 0 {
-		controller.Rest{}.ErrorCode(c, 20001, "请先绑定支付宝小程序！", nil)
+		new(controller.Rest).ErrorCode(c, 20001, "请先绑定支付宝小程序！", nil)
 		c.Abort()
 		return
 	}
@@ -96,6 +97,13 @@ func ValidationAlipay(c *gin.Context) {
 
 func UseAlipay(c *gin.Context) {
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 0, "msg": err.Error()})
+		c.Abort()
+		return
+	}
+
 	mid, exist := c.Get("mid")
 	if !exist {
 		c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "小程序商户id不能为空"})
@@ -104,10 +112,10 @@ func UseAlipay(c *gin.Context) {
 	}
 
 	// 验证当前小程序是否存在
-	result := cmf.NewDb().Where("mid = ?", mid).First(&saasModel.MpTheme{})
+	result := db.Where("mid = ?", mid).First(&saasModel.MpTheme{})
 
 	if result.RowsAffected == 0 {
-		controller.Rest{}.ErrorCode(c, 20001, "小程序编号不正确！", nil)
+		new(controller.Rest).ErrorCode(c, 20001, "小程序编号不正确！", nil)
 		c.Abort()
 		return
 	}
@@ -120,7 +128,7 @@ func UseAlipay(c *gin.Context) {
 		mpJson, _ := json.Marshal(&mpIsv)
 
 		if mpIsv.AuthAppId == "" {
-			controller.Rest{}.Error(c, "AuthAppId获取失败，请先绑定支付宝小程序！", nil)
+			new(controller.Rest).Error(c, "AuthAppId获取失败，请先绑定支付宝小程序！", nil)
 			c.Abort()
 			return
 		}

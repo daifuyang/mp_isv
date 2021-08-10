@@ -7,9 +7,9 @@ package dishes
 
 import (
 	"errors"
+	"gincmf/app/util"
 	"gincmf/plugins/restaurantPlugin/model"
 	"github.com/gin-gonic/gin"
-	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
 	"gorm.io/gorm"
 	"strconv"
@@ -31,14 +31,20 @@ func (rest SpecController) AddKey(c *gin.Context) {
 		Name: name,
 	}
 
-	result := cmf.NewDb().Where("name = ?", name).First(&attrKey)
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
+	result := db.Where("name = ?", name).First(&attrKey)
 	if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, result.Error.Error(), nil)
 		return
 	}
 
 	if result.RowsAffected == 0 {
-		cmf.NewDb().Create(&attrKey)
+		db.Create(&attrKey)
 	}
 
 	rest.rc.Success(c, "添加成功！", attrKey)
@@ -58,9 +64,16 @@ func (rest SpecController) AddValue(c *gin.Context) {
 	}
 	attrVal := c.PostForm("attr_value")
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	attrValue := model.FoodAttrValue{
 		AttrId:    attrIdInt,
 		AttrValue: attrVal,
+		Db: db,
 	}
 
 	attrValue, err = attrValue.AddAttrValue()

@@ -5,6 +5,7 @@
 package admin
 
 import (
+	"gincmf/app/util"
 	"github.com/gin-gonic/gin"
 	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
@@ -29,14 +30,20 @@ type tempAuthorize struct {
 
 func (rest *Authorize) Get(c *gin.Context) {
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	var adminMenu []tempAuthorize
 	prefix := cmf.Conf().Database.Prefix
-	result := cmf.NewDb().Table(prefix + "admin_menu m").
+	result := db.Table(prefix + "admin_menu m").
 		Select("r.id as rule_id,m.id,m.unique_name,m.parent_id,m.name,m.path,m.icon,m.hide_in_menu,m.list_order").
 		Joins("INNER JOIN  " + prefix + "auth_rule r ON m.unique_name = r.name").Scan(&adminMenu)
 
 	if result.RowsAffected == 0 {
-		controller.Rest{}.Error(c, "暂无菜单,请联系管理员添加！", nil)
+		rest.rc.Error(c, "暂无菜单,请联系管理员添加！", nil)
 		return
 	}
 
@@ -54,14 +61,20 @@ func (rest *Authorize) Show(c *gin.Context) {
 		return
 	}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	var adminMenu []tempAuthorize
 	prefix := cmf.Conf().Database.Prefix
-	result := cmf.NewDb().Debug().Table(prefix + "admin_menu m").
+	result := db.Table(prefix + "admin_menu m").
 		Select("r.id as rule_id,m.id,m.unique_name,m.parent_id,m.name,m.path,m.icon,m.hide_in_menu,m.list_order").
 		Joins("INNER JOIN  " + prefix + "auth_rule r ON m.unique_name = r.name").Scan(&adminMenu)
 
 	if result.RowsAffected == 0 {
-		controller.Rest{}.Error(c, "暂无菜单,请联系管理员添加！", nil)
+		rest.rc.Error(c, "暂无菜单,请联系管理员添加！", nil)
 		return
 	}
 

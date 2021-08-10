@@ -13,6 +13,7 @@ import (
 type Tenant struct {
 	Id           int    `json:"id"`
 	TenantId     int    `gorm:"type:int(11);not null;index:idx_tenant_id" json:"tenant_id"`
+	Company      string `gorm:"type:varchar(100);not null;comment:公司名称" json:"company"`
 	UserLogin    string `gorm:"type:varchar(60);not null;index:idx_user_login" json:"user_login"`
 	AliasName    string `gorm:"type:varchar(60);not null;index:idx_user_name;comment:子账户登录别名" json:"alias_name"`
 	Mobile       string `gorm:"type:varchar(20);not null" json:"mobile"`

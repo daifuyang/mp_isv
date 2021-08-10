@@ -34,7 +34,15 @@ func (rest *User) Show(c *gin.Context) {
 	Openid, _ := c.Get("open_id")
 	mpType, _ := c.Get("mp_type")
 
-	u := resModel.User{}
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
+	u := resModel.User{
+		Db: db,
+	}
 	data, err := u.Show([]string{"u.id = ? AND u.user_type = 0"}, []interface{}{userId})
 
 	data.OpenId = Openid.(string)
@@ -48,9 +56,10 @@ func (rest *User) Show(c *gin.Context) {
 	au := appModel.User{
 		LastLoginAt: time.Now().Unix(),
 		LastLoginIp: c.ClientIP(),
+		Db:          db,
 	}
 
-	cmf.NewDb().Where("id", userId).Updates(&au)
+	db.Where("id", userId).Updates(&au)
 
 	data.LastLoginAt = au.LastLoginAt
 	data.LastLoginIp = au.LastLoginIp
@@ -59,6 +68,12 @@ func (rest *User) Show(c *gin.Context) {
 }
 
 func (rest *User) Save(c *gin.Context) {
+
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
 
 	openid, _ := c.Get("open_id")
 	mid, _ := c.Get("mid")
@@ -109,7 +124,7 @@ func (rest *User) Save(c *gin.Context) {
 	u := resModel.User{}
 
 	// 查询当前手机号用户是否存在
-	tx := cmf.NewDb().Where("mobile = ?", form.Mobile).First(&u)
+	tx := db.Where("mobile = ?", form.Mobile).First(&u)
 	if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, tx.Error.Error(), nil)
 		return
@@ -153,11 +168,11 @@ func (rest *User) Save(c *gin.Context) {
 	if tx.RowsAffected == 0 {
 		u.CreateAt = time.Now().Unix()
 		u.UpdateAt = time.Now().Unix()
-		tx = cmf.NewDb().Create(&u)
+		tx = db.Create(&u)
 	} else {
 		// 更新
 		u.UpdateAt = time.Now().Unix()
-		tx = cmf.NewDb().Save(&u)
+		tx = db.Save(&u)
 	}
 
 	if tx.Error != nil {
@@ -166,7 +181,7 @@ func (rest *User) Save(c *gin.Context) {
 	}
 
 	// 更新三方关联
-	tx = cmf.NewDb().Model(&resModel.ThirdPart{}).Where("open_id = ? AND mid = ?", openid, mid).Update("user_id", u.Id)
+	tx = db.Model(&resModel.ThirdPart{}).Where("open_id = ? AND mid = ?", openid, mid).Update("user_id", u.Id)
 	if tx.Error != nil {
 		rest.rc.Error(c, tx.Error.Error(), nil)
 		return
@@ -198,7 +213,16 @@ func (rest *User) SaveAvatar(c *gin.Context) {
 
 	// 查询当前手机号用户是否存在
 
-	data, err := new(resModel.User).Show([]string{"u.id = ? AND  u.mid = ? AND u.delete_at = 0 AND u.user_type = 0"}, []interface{}{userId, mid})
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
+	user := resModel.User{
+		Db: db,
+	}
+	data, err := user.Show([]string{"u.id = ? AND  u.mid = ? AND u.delete_at = 0 AND u.user_type = 0"}, []interface{}{userId, mid})
 
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)
@@ -212,7 +236,7 @@ func (rest *User) SaveAvatar(c *gin.Context) {
 
 	data.Avatar = avatar
 
-	tx := cmf.NewDb().Save(&data)
+	tx := db.Save(&data)
 	if tx.Error != nil {
 		rest.rc.Error(c, tx.Error.Error(), nil)
 		return
@@ -238,10 +262,16 @@ func (rest *User) SaveMobile(c *gin.Context) {
 		return
 	}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	u := resModel.User{}
 
 	// 查询当前手机号用户是否存在绑定
-	tx := cmf.NewDb().Where("mobile = ?", form.Mobile).First(&u)
+	tx := db.Where("mobile = ?", form.Mobile).First(&u)
 	if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, tx.Error.Error(), nil)
 		return
@@ -275,7 +305,7 @@ func (rest *User) SaveMobile(c *gin.Context) {
 	u.Mobile = form.Mobile
 
 	mUser := resModel.User{}
-	tx = cmf.NewDb().Where("mobile = ?", form.Mobile).First(&mUser)
+	tx = db.Where("mobile = ?", form.Mobile).First(&mUser)
 	if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, tx.Error.Error(), nil)
 		return
@@ -284,17 +314,17 @@ func (rest *User) SaveMobile(c *gin.Context) {
 	if mUser.Id == 0 {
 		u.CreateAt = time.Now().Unix()
 		u.UpdateAt = time.Now().Unix()
-		tx = cmf.NewDb().Create(&u)
+		tx = db.Create(&u)
 	} else {
 		if u.Id == 0 {
 			u.Id = mUser.Id
 		}
 		u.UpdateAt = time.Now().Unix()
-		tx = cmf.NewDb().Updates(&u)
+		tx = db.Updates(&u)
 	}
 
 	// 更新三方关联
-	tx = cmf.NewDb().Model(&resModel.ThirdPart{}).Where("open_id = ? AND mid = ?", Openid, mid).Update("user_id", u.Id)
+	tx = db.Model(&resModel.ThirdPart{}).Where("open_id = ? AND mid = ?", Openid, mid).Update("user_id", u.Id)
 	if tx.Error != nil {
 		rest.rc.Error(c, tx.Error.Error(), nil)
 		return
@@ -325,9 +355,15 @@ func (rest *User) BindMpMobile(c *gin.Context) {
 
 	mobile := ""
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	theme := saasModel.MpTheme{}
 
-	tx := cmf.NewDb().Where("mid = ?", mid).First(&theme)
+	tx := db.Where("mid = ?", mid).First(&theme)
 	if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, tx.Error.Error(), nil)
 		return
@@ -371,7 +407,12 @@ func (rest *User) BindMpMobile(c *gin.Context) {
 		partType = "wechat-mp"
 		query := []string{"tp.open_id = ? AND tp.mid = ?"}
 		queryArgs := []interface{}{openid, mid}
-		userPart, err := new(resModel.UserPart).Show(query, queryArgs)
+
+		userPart := resModel.UserPart{
+			Db: db,
+		}
+
+		userPart, err := userPart.Show(query, queryArgs)
 
 		if err != nil {
 			rest.rc.Error(c, err.Error(), nil)
@@ -416,7 +457,7 @@ func (rest *User) BindMpMobile(c *gin.Context) {
 	// 查询当前手机号用户是否存在绑定
 	prefix := cmf.Conf().Database.Prefix
 
-	tx = cmf.NewDb().Table(prefix+"user u").
+	tx = db.Table(prefix+"user u").
 		Joins("INNER JOIN "+prefix+"third_part part ON u.id = part.user_id AND part.type = '"+partType+"'").
 		Where("u.mobile = ?", mobile).
 		Scan(&u)
@@ -443,7 +484,7 @@ func (rest *User) BindMpMobile(c *gin.Context) {
 	}
 
 	mUser := resModel.User{}
-	tx = cmf.NewDb().Where("mobile = ?", mobile).First(&mUser)
+	tx = db.Where("mobile = ?", mobile).First(&mUser)
 	if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, tx.Error.Error(), nil)
 		return
@@ -451,16 +492,19 @@ func (rest *User) BindMpMobile(c *gin.Context) {
 
 	// 保存
 	if mUser.Id == 0 {
-		tx = cmf.NewDb().Create(&u)
+		u.CreateAt = time.Now().Unix()
+		u.UpdateAt = time.Now().Unix()
+		tx = db.Create(&u)
 	} else {
 		if u.Id == 0 {
 			u.Id = mUser.Id
 		}
-		tx = cmf.NewDb().Updates(&u)
+		u.UpdateAt = time.Now().Unix()
+		tx = db.Updates(&u)
 	}
 
 	// 更新三方关联
-	tx = cmf.NewDb().Model(&resModel.ThirdPart{}).Where("open_id = ? AND mid = ?", openid, mid).Update("user_id", u.Id)
+	tx = db.Model(&resModel.ThirdPart{}).Where("open_id = ? AND mid = ?", openid, mid).Update("user_id", u.Id)
 	if tx.Error != nil {
 		rest.rc.Error(c, tx.Error.Error(), nil)
 		return

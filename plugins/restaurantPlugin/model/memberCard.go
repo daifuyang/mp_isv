@@ -18,20 +18,21 @@ import (
 
 // 用户vip表
 type MemberCard struct {
-	Id        int    `json:"id"`
-	Mid       int    `gorm:"type:bigint(20);comment:对应小程序id;not null" json:"mid"`
-	UserId    int    `gorm:"type:bigint(20);not null" json:"user_id"`
-	VipNum    string `gorm:"type:varchar(32);comment:会员号;not null" json:"vip_num"`
-	VipLevel  string `gorm:"type:varchar(10);comment:会员等级;not null" json:"vip_level"`
-	VipName   string `gorm:"type:varchar(40);comment:会员名称;not null" json:"vip_name"`
-	StartAt   int64  `gorm:"type:int(11);comment:起始时间;not null" json:"start_at"`
-	EndAt     int64  `gorm:"type:int(11);comment:截止时间;not null" json:"end_at"`
-	StartTime string `gorm:"-" json:"start_time"`
-	EndTime   string `gorm:"-" json:"end_time"`
-	CreateAt  int64  `gorm:"type:bigint(20);not null" json:"create_at"`
-	UpdateAt  int64  `gorm:"type:bigint(20);not null" json:"update_at"`
-	DeleteAt  int64  `gorm:"type:int(11);not null" json:"delete_at"`
-	Status    int    `gorm:"type:tinyint(3);default:1;not null" json:"status"`
+	Id        int      `json:"id"`
+	Mid       int      `gorm:"type:bigint(20);comment:对应小程序id;not null" json:"mid"`
+	UserId    int      `gorm:"type:bigint(20);not null" json:"user_id"`
+	VipNum    string   `gorm:"type:varchar(32);comment:会员号;not null" json:"vip_num"`
+	VipLevel  string   `gorm:"type:varchar(10);comment:会员等级;not null" json:"vip_level"`
+	VipName   string   `gorm:"type:varchar(40);comment:会员名称;not null" json:"vip_name"`
+	StartAt   int64    `gorm:"type:int(11);comment:起始时间;not null" json:"start_at"`
+	EndAt     int64    `gorm:"type:int(11);comment:截止时间;not null" json:"end_at"`
+	StartTime string   `gorm:"-" json:"start_time"`
+	EndTime   string   `gorm:"-" json:"end_time"`
+	CreateAt  int64    `gorm:"type:bigint(20);not null" json:"create_at"`
+	UpdateAt  int64    `gorm:"type:bigint(20);not null" json:"update_at"`
+	DeleteAt  int64    `gorm:"type:int(11);not null" json:"delete_at"`
+	Status    int      `gorm:"type:tinyint(3);default:1;not null" json:"status"`
+	Db        *gorm.DB `gorm:"-" json:"-"`
 }
 
 type MemberCardOrder struct {
@@ -55,13 +56,15 @@ type MemberCardOrder struct {
 	UserNickname   string                     `gorm:"->" json:"user_nickname"`
 	UserRealName   string                     `gorm:"->" json:"user_realname"`
 	RequestPayment wechatModel.RequestPayment `gorm:"-" json:"request_payment"`
+	Db             *gorm.DB                   `gorm:"-" json:"-"`
 }
 
 func (model *MemberCard) Show(query []string, queryArgs []interface{}) (MemberCard, error) {
 
+	db := model.Db
 	mc := MemberCard{}
 	queryStr := strings.Join(query, " AND ")
-	tx := cmf.NewDb().Where(queryStr, queryArgs...).First(&mc)
+	tx := db.Where(queryStr, queryArgs...).First(&mc)
 
 	if tx.Error != nil {
 		return mc, tx.Error
@@ -80,6 +83,8 @@ func (model *MemberCard) Show(query []string, queryArgs []interface{}) (MemberCa
 
 func (model *MemberCardOrder) Index(c *gin.Context, query []string, queryArgs []interface{}) (cmfModel.Paginate, error) {
 
+	db := model.Db
+
 	// 获取默认的系统分页
 	current, pageSize, err := new(cmfModel.Paginate).Default(c)
 
@@ -95,13 +100,13 @@ func (model *MemberCardOrder) Index(c *gin.Context, query []string, queryArgs []
 
 	prefix := cmf.Conf().Database.Prefix
 
-	cmf.NewDb().Table(prefix+"member_card_order co").Select("co.*").
+	db.Table(prefix+"member_card_order co").
 		Joins("INNER JOIN "+prefix+"user u ON co.user_id = u.id").
 		Where(queryStr, queryArgs...).
 		Order("co.id desc").
 		Scan(&mco).Count(&total)
 
-	tx := cmf.NewDb().Debug().Table(prefix+"member_card_order co").
+	tx := db.Table(prefix+"member_card_order co").
 		Select("co.*,u.id as user_id,u.user_login,u.user_nickname,u.user_realname").
 		Joins("INNER JOIN "+prefix+"user u ON co.user_id = u.id").
 		Where(queryStr, queryArgs...).Limit(pageSize).Offset((current - 1) * pageSize).Order("co.id desc").Scan(&mco)

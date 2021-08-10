@@ -7,9 +7,11 @@ package model
 
 import (
 	"encoding/json"
+	"gincmf/app/util"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	cmf "github.com/gincmf/cmf/bootstrap"
+	"github.com/gincmf/cmf/controller"
 	"strconv"
 	"strings"
 	"time"
@@ -17,7 +19,7 @@ import (
 
 func SiteSettings() map[string]interface{} {
 	option := Option{}
-	cmf.NewDb().First(&option, "option_name = ?", "site_info") // 查询
+	cmf.Db().First(&option, "option_name = ?", "site_info") // 查询
 
 	m := make(map[string]interface{}, 5)
 	err := json.Unmarshal([]byte([]byte(option.OptionValue)), &m) //第二个参数要地址传递
@@ -49,8 +51,15 @@ func GetUploadSetting(c *gin.Context) *UploadSetting {
 
 //添加用户操作日志
 func SetLog(c *gin.Context, module string, controller string, action string, message string) {
+
 	currentUser := CurrentUser(c)
-	cmf.NewDb().Create(&Log{
+
+	db, err := util.NewDb(c)
+	if err != nil {
+		return
+	}
+
+	db.Create(&Log{
 		ModuleName:     module,
 		ControllerName: controller,
 		ActionName:     action,
@@ -71,7 +80,7 @@ func GetAuthAccess(c *gin.Context) []AuthAccessRule {
 
 		user := CurrentUser(c)
 		// 获取当前用户全部的权限列表
-		role := GetRoleById(user.Id)
+		role := GetRoleById(c, user.Id)
 		var roleIds []string
 		for _, v := range role {
 			roleIds = append(roleIds, strconv.Itoa(v.Id))
@@ -91,7 +100,7 @@ func GetAuthAccess(c *gin.Context) []AuthAccessRule {
 
 		var authAccessRule []AuthAccessRule
 		prefix := cmf.Conf().Database.Prefix
-		cmf.NewDb().Table(prefix+"auth_access access").Select("access.*,r.name").
+		cmf.Db().Table(prefix+"auth_access access").Select("access.*,r.name").
 			Joins("INNER JOIN "+prefix+"auth_rule r ON access.rule_id = r.id").Where(queryStr, queryArgs...).Scan(&authAccessRule)
 		session.Set("authAccessRule", authAccessRule)
 		session.Save()
@@ -113,14 +122,22 @@ type role struct {
 func CurrentRole(c *gin.Context) []role {
 	userId, _ := c.Get("user_id")
 	userIdInt, _ := userId.(int)
-	return GetRoleById(userIdInt)
+	return GetRoleById(c, userIdInt)
 }
 
 // 根据用户id获取所有角色
-func GetRoleById(userId int) []role {
+func GetRoleById(c *gin.Context, userId int) []role {
+
+	db, err := util.NewDb(c)
+	if err != nil {
+		new(controller.Rest).Error(c, err.Error(), nil)
+		c.Abort()
+		return []role{}
+	}
+
 	var result []role
 	prefix := cmf.Conf().Database.Prefix
-	cmf.NewDb().Table(prefix+"role_user ru").Select("r.id,r.name").
+	db.Table(prefix+"role_user ru").Select("r.id,r.name").
 		Joins("INNER JOIN "+prefix+"role r ON ru.role_id = r.id").
 		Where("user_id = ?", userId).
 		Scan(&result)
@@ -145,7 +162,7 @@ func SuperRole(c *gin.Context, userId int) bool {
 	}
 
 	prefix := cmf.Conf().Database.Prefix
-	cmf.NewDb().Table(prefix+"role_user ru").Select("r.id,r.name").
+	cmf.Db().Table(prefix+"role_user ru").Select("r.id,r.name").
 		Joins("INNER JOIN "+prefix+"role r ON ru.role_id = r.id").
 		Where("ru.user_id = ?", userId).
 		Scan(&result)
@@ -165,8 +182,13 @@ func CurrentUser(c *gin.Context) User {
 	userId, _ := c.Get("user_id")
 	userIdInt, _ := userId.(int)
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		return u
+	}
+
 	if user == nil {
-		cmf.Db().First(&u, "id = ?", userId)
+		db.First(&u, "id = ?", userId)
 		jsonBytes, _ := json.Marshal(u)
 		session.Set("user", string(jsonBytes))
 		session.Save()
@@ -175,7 +197,7 @@ func CurrentUser(c *gin.Context) User {
 		json.Unmarshal([]byte(jsonBytes), &u)
 		if u.Id == 0 || u.Id != userIdInt {
 			u = User{}
-			cmf.Db().Where("id = ?", userId).First(&u)
+			db.Where("id = ?", userId).First(&u)
 			jsonBytes, _ := json.Marshal(u)
 			session.Set("user", string(jsonBytes))
 			session.Save()
@@ -192,8 +214,13 @@ func CurrentMpUser(c *gin.Context) User {
 	userId, _ := c.Get("mp_user_id")
 	userIdInt, _ := userId.(int)
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		return u
+	}
+
 	if user == nil {
-		cmf.NewDb().First(&u, "id = ?", userId)
+		db.First(&u, "id = ?", userId)
 		jsonBytes, _ := json.Marshal(u)
 		session.Set("mp_user", string(jsonBytes))
 		session.Save()
@@ -202,7 +229,7 @@ func CurrentMpUser(c *gin.Context) User {
 		json.Unmarshal([]byte(jsonBytes), &u)
 		if u.Id == 0 || u.Id != userIdInt {
 			u = User{}
-			cmf.NewDb().Where("id = ?", userId).First(&u)
+			db.Where("id = ?", userId).First(&u)
 			jsonBytes, _ := json.Marshal(u)
 			session.Set("mp_user", string(jsonBytes))
 			session.Save()

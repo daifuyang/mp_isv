@@ -12,6 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 	cmf "github.com/gincmf/cmf/bootstrap"
 	cmfModel "github.com/gincmf/cmf/model"
+	"gorm.io/gorm"
 	"strings"
 	"time"
 )
@@ -51,6 +52,7 @@ type PortalPost struct {
 	Category            []PortalCategory  `gorm:"-" json:"category"`
 	MoreJson            More              `gorm:"-" json:"more_json"`
 	paginate            cmfModel.Paginate `gorm:"-"`
+	Db                  *gorm.DB          `gorm:"-" json:"-"`
 }
 
 type More struct {
@@ -76,14 +78,17 @@ type Other struct {
 
 // 分类关系表
 type PortalCategoryPost struct {
-	Id         int     `json:"id"`
-	PostId     int     `gorm:"type:int(11);comment:文章id;not null" json:"post_id"`
-	CategoryId int     `gorm:"type:int(11);comment:分类id;not null" json:"category_id"`
-	ListOrder  float64 `gorm:"type:float(0);comment:排序;default:10000;not null" json:"list_order"`
-	Status     int     `gorm:"type:tinyint(3);comment:状态,1:发布;0:不发布;default:1;not null" json:"status"`
+	Id         int      `json:"id"`
+	PostId     int      `gorm:"type:int(11);comment:文章id;not null" json:"post_id"`
+	CategoryId int      `gorm:"type:int(11);comment:分类id;not null" json:"category_id"`
+	ListOrder  float64  `gorm:"type:float(0);comment:排序;default:10000;not null" json:"list_order"`
+	Status     int      `gorm:"type:tinyint(3);comment:状态,1:发布;0:不发布;default:1;not null" json:"status"`
+	Db         *gorm.DB `gorm:"-" json:"-"`
 }
 
 func (model PortalPost) PortalList(query []string, queryArgs []interface{}) ([]PortalPost, error) {
+
+	db := model.Db
 
 	postType := model.PostType
 
@@ -98,7 +103,7 @@ func (model PortalPost) PortalList(query []string, queryArgs []interface{}) ([]P
 	queryStr := strings.Join(query, " AND ")
 	var post []PortalPost
 
-	tx := cmf.NewDb().Where(queryStr, queryArgs...).Find(&post)
+	tx := db.Where(queryStr, queryArgs...).Find(&post)
 
 	if tx.Error != nil {
 		return []PortalPost{}, tx.Error
@@ -118,6 +123,7 @@ func (model PortalPost) PortalList(query []string, queryArgs []interface{}) ([]P
 
 func (model PortalPost) IndexByCategory(c *gin.Context, query []string, queryArgs []interface{}) (cmfModel.Paginate, error) {
 
+	db := model.Db
 	// 获取默认的系统分页
 	current, pageSize, err := model.paginate.Default(c)
 
@@ -132,7 +138,7 @@ func (model PortalPost) IndexByCategory(c *gin.Context, query []string, queryArg
 
 	prefix := cmf.Conf().Database.Prefix
 
-	cmf.NewDb().Table(prefix+"portal_post p").Distinct("p.id").
+	db.Table(prefix+"portal_post p").Distinct("p.id").
 		Joins("LEFT JOIN "+prefix+"portal_category_post cp ON p.id = cp.post_id").
 		Joins("LEFT JOIN "+prefix+"portal_category pc ON pc.id = cp.category_id").
 		Joins("LEFT JOIN "+prefix+"user u ON u.id = p.user_id").
@@ -150,7 +156,7 @@ func (model PortalPost) IndexByCategory(c *gin.Context, query []string, queryArg
 
 	var tempArr []temp
 
-	result := cmf.NewDb().Table(prefix+"portal_post p").Select("p.*,pc.name,u.user_login").
+	result := db.Table(prefix+"portal_post p").Select("p.*,pc.name,u.user_login").
 		Joins("LEFT JOIN "+prefix+"portal_category_post cp ON p.id = cp.post_id").
 		Joins("LEFT JOIN "+prefix+"portal_category pc ON pc.id = cp.category_id").
 		Joins("LEFT JOIN "+prefix+"user u ON u.id = p.user_id").
@@ -162,7 +168,9 @@ func (model PortalPost) IndexByCategory(c *gin.Context, query []string, queryArg
 	}
 
 	for k, v := range tempArr {
-		category := PortalCategory{}
+		category := PortalCategory{
+			Db: db,
+		}
 		categoryItem, _ := category.ListWithPost([]string{"p.id = ?"}, []interface{}{v.Id})
 		tempArr[k].Category = categoryItem
 
@@ -198,8 +206,10 @@ func (model PortalPost) IndexByCategory(c *gin.Context, query []string, queryArg
 
 func (model PortalPost) Show(query []string, queryArgs []interface{}) (post PortalPost, err error) {
 
+	db := model.Db
+
 	queryStr := strings.Join(query, " AND ")
-	tx := cmf.NewDb().Debug().Where(queryStr, queryArgs...).Find(&post)
+	tx := db.Debug().Where(queryStr, queryArgs...).Find(&post)
 
 	if tx.Error != nil {
 		return post, tx.Error
@@ -209,7 +219,9 @@ func (model PortalPost) Show(query []string, queryArgs []interface{}) (post Port
 		return post, errors.New("该文章不存在！")
 	}
 
-	category := PortalCategory{}
+	category := PortalCategory{
+		Db: db,
+	}
 	categoryItem, _ := category.ListWithPost([]string{"p.id = ?"}, []interface{}{post.Id})
 	post.Category = categoryItem
 
@@ -240,8 +252,10 @@ func (model PortalPost) Show(query []string, queryArgs []interface{}) (post Port
 
 func (model PortalPost) Store() (PortalPost, error) {
 
+	db := model.Db
+
 	portal := PortalPost{}
-	result := cmf.NewDb().Create(&model)
+	result := db.Create(&model)
 
 	if result.Error != nil {
 		return portal, nil
@@ -259,8 +273,10 @@ func (model PortalPost) Store() (PortalPost, error) {
  **/
 func (model PortalPost) Update() (PortalPost, error) {
 
+	db := model.Db
+
 	portal := PortalPost{}
-	result := cmf.NewDb().Save(&model)
+	result := db.Save(&model)
 
 	if result.Error != nil {
 		return portal, result.Error
@@ -271,8 +287,10 @@ func (model PortalPost) Update() (PortalPost, error) {
 
 func (model PortalCategoryPost) Store(pcpPost []PortalCategoryPost) ([]PortalCategoryPost, error) {
 
+	db := model.Db
+
 	var pcp []PortalCategoryPost
-	result := cmf.NewDb().Where("post_id  = ?", model.PostId).Find(&pcp)
+	result := db.Where("post_id  = ?", model.PostId).Find(&pcp)
 	if result.Error != nil {
 		return pcp, nil
 	}
@@ -309,19 +327,19 @@ func (model PortalCategoryPost) Store(pcpPost []PortalCategoryPost) ([]PortalCat
 	// 删除要删除的
 	delQueryStr := strings.Join(delQuery, " OR ")
 	if delQueryStr != "" {
-		cmf.NewDb().Debug().Where(delQueryStr, delQueryArgs...).Delete(&PortalCategoryPost{})
+		db.Debug().Where(delQueryStr, delQueryArgs...).Delete(&PortalCategoryPost{})
 	}
 
 	//添加要添加的
 	if len(toAddPcp) > 0 {
-		result = cmf.NewDb().Create(&toAddPcp)
+		result = db.Create(&toAddPcp)
 		if result.Error != nil {
 			return []PortalCategoryPost{}, nil
 		}
 	}
 
 	// 查询最后的结果
-	result = cmf.NewDb().Where("post_id  = ?", model.Id).Find(&pcp)
+	result = db.Where("post_id  = ?", model.Id).Find(&pcp)
 	if result.Error != nil {
 		return pcp, nil
 	}

@@ -52,13 +52,11 @@ type tempAttrPost struct {
  **/
 func (model FoodAttrPost) attrPost() ([]tempAttrPost, error) {
 
-	if model.Db == nil {
-		model.Db = cmf.NewDb()
-	}
+	db := model.Db
 
 	var tempAttr []tempAttrPost
 	prefix := cmf.Conf().Database.Prefix
-	result := cmf.NewDb().Select("ap.food_id,ap.attr_post_id,v.attr_value_id,v.attr_value,k.attr_id,k.name").Table(prefix+"food_attr_post ap").
+	result := db.Select("ap.food_id,ap.attr_post_id,v.attr_value_id,v.attr_value,k.attr_id,k.name").Table(prefix+"food_attr_post ap").
 		Joins("INNER JOIN "+prefix+"food_attr_value v ON ap.attr_value_id = v.attr_value_id").
 		Joins("INNER JOIN "+prefix+"food_attr_key k ON k.attr_id = v.attr_id").
 		Where("ap.food_id = ?", model.FoodId).Order("ap.attr_post_id asc").Scan(&tempAttr)
@@ -78,10 +76,6 @@ func (model FoodAttrPost) attrPost() ([]tempAttrPost, error) {
  * @return
  **/
 func (model FoodAttrValue) AddAttrValue() (FoodAttrValue, error) {
-
-	if model.Db == nil {
-		model.Db = cmf.NewDb()
-	}
 
 	attrId := model.AttrId
 	attrVal := model.AttrValue
@@ -108,10 +102,6 @@ func (model FoodAttrValue) AddAttrValue() (FoodAttrValue, error) {
  * @return
  **/
 func (model FoodAttrPost) AddAttrPost() (FoodAttrPost, error) {
-
-	if model.Db == nil {
-		model.Db = cmf.NewDb()
-	}
 
 	result := model.Db.Where("food_id =? AND attr_value_id=?", model.FoodId, model.AttrValueId).First(&model)
 	if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {

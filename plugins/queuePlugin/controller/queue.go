@@ -142,11 +142,14 @@ func foodInit() {
 
 		if t.TenantId > 0 {
 			mid := strconv.Itoa(t.TenantId)
-			cmf.ManualDb("tenant_" + mid)
+
 
 			// 获取堂食配置
 			var store []resModel.Store
-			cmf.NewDb().Find(&store)
+
+			dbName := "tenant_" + mid
+
+			cmf.ManualDb(dbName).Find(&store)
 
 			for _, v := range store {
 				if v.EnabledSellClear == 1 {
@@ -167,7 +170,7 @@ func foodInit() {
 							scSecond := h*3600 + m*60
 
 							if nowSecond >= scSecond {
-								SellClear()
+								SellClear(dbName)
 								cmf.NewRedisDb().Set(insertKey, "1", 0)
 								year, month, day := time.Now().Date()
 								today := time.Date(year, month, day, 23, 59, 59, 59, time.Local)
@@ -187,9 +190,9 @@ func foodInit() {
 
 }
 
-func SellClear() error {
+func SellClear(dbName string) error {
 	var food []resModel.Food
-	tx := cmf.NewDb().Find(&food)
+	tx := cmf.ManualDb(dbName).Find(&food)
 	if tx.Error != nil {
 		return tx.Error
 	}
@@ -197,7 +200,7 @@ func SellClear() error {
 	for _, f := range food {
 		foodItem := f
 		foodItem.Inventory = f.DefaultInventory
-		tx := cmf.NewDb().Updates(foodItem)
+		tx := cmf.ManualDb(dbName).Updates(foodItem)
 		if tx.Error != nil {
 			return tx.Error
 		}

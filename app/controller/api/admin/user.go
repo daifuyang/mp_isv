@@ -75,7 +75,7 @@ func (rest *User) Show(c *gin.Context) {
 	queryArgs := []interface{}{rewrite.Id, "1", mid}
 
 	user := resModel.User{}
-	tx := cmf.NewDb().Where(query, queryArgs...).First(&user)
+	tx := cmf.Db().Where(query, queryArgs...).First(&user)
 	if tx.Error != nil {
 		if errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 			rest.rc.Error(c, "该管理员不存在！", nil)
@@ -91,7 +91,7 @@ func (rest *User) Show(c *gin.Context) {
 	}
 
 	var roleUser []model.RoleUser
-	cmf.NewDb().Where("user_id = ?", user.Id).Find(&roleUser)
+	cmf.Db().Where("user_id = ?", user.Id).Find(&roleUser)
 
 	var role []int
 	for _, v := range roleUser {
@@ -147,7 +147,7 @@ func (rest *User) Edit(c *gin.Context) {
 
 	user := resModel.User{}
 
-	result := cmf.NewDb().Where("user_login = ?", userLogin).First(&user)
+	result := cmf.Db().Where("user_login = ?", userLogin).First(&user)
 	if result.RowsAffected == 0 {
 		rest.rc.Error(c, "用户不存在！", nil)
 		return
@@ -166,14 +166,14 @@ func (rest *User) Edit(c *gin.Context) {
 		user.UserPass = util.GetMd5(password)
 	}
 
-	err := cmf.NewDb().Save(&user).Error
+	err := cmf.Db().Save(&user).Error
 	if err != nil {
 		rest.rc.Error(c, "更新用户出错，请联系管理员！！", nil)
 		return
 	}
 
 	// 删除原来角色
-	cmf.NewDb().Where("user_id = ?", rewrite.Id).Delete(&model.RoleUser{})
+	cmf.Db().Where("user_id = ?", rewrite.Id).Delete(&model.RoleUser{})
 
 	// 存入用户角色
 	for _, v := range roleIds {
@@ -182,7 +182,7 @@ func (rest *User) Edit(c *gin.Context) {
 			RoleId: roleId,
 			UserId: rewrite.Id,
 		}
-		cmf.NewDb().Create(&roleUser)
+		cmf.Db().Create(&roleUser)
 	}
 
 	rest.rc.Success(c, "更新成功！", nil)
@@ -236,14 +236,14 @@ func (rest *User) Store(c *gin.Context) {
 		},
 	}
 
-	result := cmf.NewDb().Where("user_login = ?", userLogin).First(&model.User{})
+	result := cmf.Db().Where("user_login = ?", userLogin).First(&model.User{})
 
 	if result.RowsAffected > 0 {
 		rest.rc.Error(c, "用户已存在！", nil)
 		return
 	}
 
-	err := cmf.NewDb().Create(&user).Error
+	err := cmf.Db().Create(&user).Error
 	if err != nil {
 		rest.rc.Error(c, "创建用户出错，请联系管理员！！", nil)
 		return
@@ -260,7 +260,7 @@ func (rest *User) Store(c *gin.Context) {
 			RoleId: roleId,
 			UserId: userId,
 		}
-		cmf.NewDb().Create(&roleUser)
+		cmf.Db().Create(&roleUser)
 	}
 
 	rest.rc.Success(c, "操作成功！", user)

@@ -5,10 +5,9 @@
 package tenant
 
 import (
-	"fmt"
+	"gincmf/app/util"
 	saasModel "gincmf/plugins/saasPlugin/model"
 	"github.com/gin-gonic/gin"
-	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
 )
 
@@ -18,16 +17,25 @@ type Menu struct {
 
 func (rest *Menu) Get(c *gin.Context) {
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	var adminMenu []saasModel.AdminMenu
-	result := cmf.NewDb().Where("path <> ?", "").Order("list_order,id").Find(&adminMenu)
+	result := db.Where("path <> ?", "").Order("list_order,id").Find(&adminMenu)
 
 	if result.RowsAffected == 0 {
 		rest.rc.Error(c, "暂无菜单,请联系管理员添加！", nil)
 		return
 	}
 
-	authAccessRule := saasModel.GetAuthAccess(c)
-	fmt.Println("authAccessRule", authAccessRule)
+	authAccessRule,err := saasModel.GetAuthAccess(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
 
 	// 获取当前用户类型
 
@@ -43,7 +51,7 @@ func (rest *Menu) Get(c *gin.Context) {
 	}
 
 	results := rest.recursionMenu(c, showMenu, 0)
-	controller.Rest{}.Success(c, "获取成功！", results)
+	rest.rc.Success(c, "获取成功！", results)
 
 }
 

@@ -16,8 +16,7 @@ func Test_Region(t *testing.T) {
 	// 第一步查询出全部的省市区
 	cmf.Initialize("../../data/conf/config.json")
 	var region []Region
-	cmf.NewDb().Find(&region)
-
+	cmf.Db().Find(&region)
 	result := recursionAddRegion(region, 0)
 
 	fmt.Println(result)

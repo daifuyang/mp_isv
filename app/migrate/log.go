@@ -2,13 +2,14 @@ package migrate
 
 import (
 	"gincmf/app/model"
-	cmf "github.com/gincmf/cmf/bootstrap"
+	"gorm.io/gorm"
 )
 
 type log struct {
 	Migrate
+	Db *gorm.DB
 }
 
-func (_ *log) AutoMigrate() {
-	cmf.NewDb().AutoMigrate(&model.Log{})
+func (migrate *log) AutoMigrate() {
+	migrate.Db.AutoMigrate(&model.Log{})
 }

@@ -8,19 +8,21 @@ package migrate
 import (
 	"gincmf/app/model"
 	cmf "github.com/gincmf/cmf/bootstrap"
+	"gorm.io/gorm"
 )
 
 type mpIsvAuth struct {
 	Migrate
+	Db *gorm.DB
 }
 
-func (_ *mpIsvAuth) AutoMigrate() {
+func (migrate *mpIsvAuth) AutoMigrate() {
 	cmf.Db().AutoMigrate(&model.MpIsvAuth{})
 
 	// 检查索引
-	b := cmf.NewDb().Migrator().HasIndex(&model.MpIsvAuth{}, "idx_id")
+	b := migrate.Db.Migrator().HasIndex(&model.MpIsvAuth{}, "idx_id")
 	if !b {
 		// 新建索引
-		cmf.NewDb().Migrator().CreateIndex(&model.MpIsvAuth{}, "idx_id")
+		migrate.Db.Migrator().CreateIndex(&model.MpIsvAuth{}, "idx_id")
 	}
 }

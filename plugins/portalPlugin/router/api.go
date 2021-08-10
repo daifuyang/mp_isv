@@ -14,7 +14,7 @@ import (
 
 func ApiListenRouter() {
 
-	adminGroup := cmf.Group("api/v1/admin", middleware.ValidationBearerToken, middleware.ValidationAdmin, middleware.TenantDb, middleware.AllowCors, middleware.ValidationMerchant)
+	adminGroup := cmf.Group("api/v1/admin", middleware.ValidationBearerToken, middleware.TenantDb, middleware.ValidationAdmin, middleware.AllowCors, middleware.ValidationMerchant)
 	{
 		adminGroup.Rest("/portal/category", new(admin.Category))
 		adminGroup.Get("/portal/category_list", new(admin.Category).List)

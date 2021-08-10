@@ -8,15 +8,16 @@ package migrate
 import (
 	"gincmf/app/model"
 	resModel "gincmf/plugins/restaurantPlugin/model"
-	cmf "github.com/gincmf/cmf/bootstrap"
+	"gorm.io/gorm"
 )
 
 type user struct {
 	model.User
-	Mid int `gorm:"type:bigint(20);comment:对应小程序id;not null" json:"mid"`
+	Mid int      `gorm:"type:bigint(20);comment:对应小程序id;not null" json:"mid"`
+	Db  *gorm.DB `gorm:"-" json:"-"`
 }
 
 func (migrate *user) AutoMigrate() {
-	cmf.NewDb().AutoMigrate(&user{})
-	cmf.NewDb().AutoMigrate(&resModel.ThirdPart{})
+	migrate.Db.AutoMigrate(&user{})
+	migrate.Db.AutoMigrate(&resModel.ThirdPart{})
 }

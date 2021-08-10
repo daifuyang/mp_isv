@@ -78,14 +78,17 @@ func RegisterTenantRouter(handlers ...gin.HandlerFunc) {
 
 	cmf.Post("api/tenant/token", func(c *gin.Context) {
 
+		var tenantId int = 0
+
 		common.Srv.SetPasswordAuthorizationHandler(func(username, password string) (userID string, err error) {
 
 			nameArr := strings.Split(username, "@")
 
+			fmt.Println("nameArr",nameArr)
+
 			var (
 				tx       *gorm.DB
 				userPass string
-				tenantId int    = 0
 				typ      string = ""
 				userId   int    = 0
 			)
@@ -95,7 +98,7 @@ func RegisterTenantRouter(handlers ...gin.HandlerFunc) {
 				userLogin := nameArr[0]
 				typ = "main"
 				t := saasModel.Tenant{}
-				tx = cmf.Db().First(&t, "user_login = ?", userLogin) // 查询
+				tx = cmf.Db().Debug().First(&t, "user_login = ?", userLogin) // 查询
 				if tx.RowsAffected > 0 {
 					userId = 1
 					tenantId = t.TenantId
@@ -117,10 +120,9 @@ func RegisterTenantRouter(handlers ...gin.HandlerFunc) {
 				}
 
 				tenantId = t.TenantId
-				cmf.ManualDb("tenant_" + strconv.Itoa(tenantId))
 
 				u := saasModel.AdminUser{}
-				tx = cmf.NewDb().Debug().First(&u, "user_login = ? AND user_status = 1 AND delete_at = 0", nameArr[0]) // 查询
+				tx = cmf.ManualDb("tenant_"+strconv.Itoa(tenantId)).Debug().First(&u, "user_login = ? AND user_status = 1 AND delete_at = 0", nameArr[0]) // 查询
 				if tx.RowsAffected > 0 {
 					userId = u.Id
 					userPass = u.UserPass
@@ -195,13 +197,16 @@ func RegisterTenantRouter(handlers ...gin.HandlerFunc) {
 		if err != nil {
 			rc.Error(c, err.Error(), nil)
 			return
-		} else {
-			// 更新最后登录记录
-			u := model.User{
-				LastLoginIp: c.ClientIP(),
-				LastLoginAt: time.Now().Unix(),
-			}
-			cmf.NewDb().Where("id = ?", userID).Updates(u)
+		}
+
+		// 更新最后登录记录
+		u := model.User{
+			LastLoginIp: c.ClientIP(),
+			LastLoginAt: time.Now().Unix(),
+		}
+
+		if tenantId > 0 {
+			cmf.ManualDb("tenant_"+strconv.Itoa(tenantId)).Where("id = ?", userID).Updates(u)
 		}
 
 		duration := time.Duration(exp) * time.Hour

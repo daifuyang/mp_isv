@@ -6,6 +6,7 @@
 package dishes
 
 import (
+	"gincmf/app/util"
 	"gincmf/plugins/restaurantPlugin/model"
 	"github.com/gin-gonic/gin"
 	"github.com/gincmf/cmf/controller"
@@ -35,7 +36,15 @@ func (rest *Category) List(c *gin.Context) {
 		return
 	}
 
-	category := model.FoodCategory{}
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
+	category := model.FoodCategory{
+		Db: db,
+	}
 
 	var query []string
 	var queryArgs []interface{}

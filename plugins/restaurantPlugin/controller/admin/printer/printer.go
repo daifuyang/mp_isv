@@ -8,9 +8,9 @@ package printer
 import (
 	"errors"
 	"fmt"
+	"gincmf/app/util"
 	"gincmf/plugins/restaurantPlugin/model"
 	"github.com/gin-gonic/gin"
-	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
 	"github.com/gincmf/feieSdk/base"
 	xpyunYun "github.com/gincmf/xpyunSdk/base"
@@ -39,7 +39,17 @@ func (rest *Printer) Get(c *gin.Context) {
 	var query = []string{"mid = ?"}
 	var queryArgs = []interface{}{mid}
 
-	data, err := new(model.Printer).Index(c, query, queryArgs)
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
+	printer := model.Printer{
+		Db: db,
+	}
+
+	data, err := printer.Index(c, query, queryArgs)
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, err.Error(), data)
 		return
@@ -60,7 +70,18 @@ func (rest *Printer) Show(c *gin.Context) {
 	}
 
 	mid, _ := c.Get("mid")
-	data, err := new(model.Printer).Show([]string{"id = ? AND mid = ?"}, []interface{}{rewrite.Id, mid})
+
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
+	printer := model.Printer{
+		Db: db,
+	}
+
+	data, err := printer.Show([]string{"id = ? AND mid = ?"}, []interface{}{rewrite.Id, mid})
 
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, err.Error(), data)
@@ -152,10 +173,18 @@ func (rest *Printer) Save(id int, c *gin.Context) {
 		status = 0
 	}
 
-	printer := model.Printer{}
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
+	printer := model.Printer{
+		Db: db,
+	}
 
 	if id > 0 {
-		data, err := new(model.Printer).Show([]string{"id = ? AND mid = ?"}, []interface{}{id, mid})
+		data, err := printer.Show([]string{"id = ? AND mid = ?"}, []interface{}{id, mid})
 		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 			rest.rc.Error(c, err.Error(), data)
 			return
@@ -222,6 +251,8 @@ func (rest *Printer) Save(id int, c *gin.Context) {
 	printer.Key = key
 	printer.CreateAt = time.Now().Unix()
 	printer.UpdateAt = time.Now().Unix()
+
+	printer.Db = db
 	result, err := printer.Save()
 
 	if err != nil {
@@ -252,19 +283,25 @@ func (rest *Printer) Delete(c *gin.Context) {
 
 	id := rewrite.Id
 
-	printer := model.Printer{}
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
 
-	var err error
+	printer := model.Printer{
+		Db: db,
+	}
 
 	if id > 0 {
-		printer, err = new(model.Printer).Show([]string{"id = ? AND mid = ?"}, []interface{}{id, mid})
+		printer, err = printer.Show([]string{"id = ? AND mid = ?"}, []interface{}{id, mid})
 		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 			rest.rc.Error(c, err.Error(), printer)
 			return
 		}
 	}
 
-	tx := cmf.NewDb().Where("mid = ? AND id = ?", mid, id).Delete(&model.Printer{})
+	tx := db.Where("mid = ? AND id = ?", mid, id).Delete(&model.Printer{})
 
 	if tx.Error != nil {
 		rest.rc.Error(c, tx.Error.Error(), nil)

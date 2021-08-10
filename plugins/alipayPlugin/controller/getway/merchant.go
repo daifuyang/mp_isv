@@ -8,8 +8,9 @@ package getway
 import (
 	"encoding/json"
 	"errors"
+	"gincmf/app/util"
 	"gincmf/plugins/restaurantPlugin/model"
-	cmf "github.com/gincmf/cmf/bootstrap"
+	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 	"net/url"
 	"strings"
@@ -17,7 +18,7 @@ import (
 
 type Merchant struct{}
 
-func (rest *Merchant) Passed(param url.Values) error {
+func (rest *Merchant) Passed(c *gin.Context, param url.Values) error {
 
 	bizContent := strings.Join(param["biz_content"], "")
 	reason := strings.Join(param["reason"], "")
@@ -31,15 +32,22 @@ func (rest *Merchant) Passed(param url.Values) error {
 
 	_ = json.Unmarshal([]byte(bizContent), &biz)
 
-	store := model.Store{}
-	tx := cmf.NewDb().Where("id = ?", biz.StoreId).First(&store)
+	db, err := util.NewDb(c)
+	if err != nil {
+		return err
+	}
+
+	store := model.Store{
+		Db: db,
+	}
+	tx := db.Where("id = ?", biz.StoreId).First(&store)
 
 	if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 		return tx.Error
 	}
 
 	// 更新门店状态
-	tx = cmf.NewDb().Where("id = ?", biz.StoreId).Updates(map[string]string{"audit_status": "passed", "reason": reason})
+	tx = db.Where("id = ?", biz.StoreId).Updates(map[string]string{"audit_status": "passed", "reason": reason})
 	if tx.Error != nil {
 		return tx.Error
 	}
@@ -48,7 +56,7 @@ func (rest *Merchant) Passed(param url.Values) error {
 
 }
 
-func (rest *Merchant) Rejected(param url.Values) error {
+func (rest *Merchant) Rejected(c *gin.Context, param url.Values) error {
 
 	bizContent := strings.Join(param["biz_content"], "")
 	reason := strings.Join(param["reason"], "")
@@ -62,15 +70,22 @@ func (rest *Merchant) Rejected(param url.Values) error {
 
 	_ = json.Unmarshal([]byte(bizContent), &biz)
 
-	store := model.Store{}
-	tx := cmf.NewDb().Where("id = ?", biz.StoreId).First(&store)
+	db, err := util.NewDb(c)
+	if err != nil {
+		return err
+	}
+
+	store := model.Store{
+		Db: db,
+	}
+	tx := db.Where("id = ?", biz.StoreId).First(&store)
 
 	if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 		return tx.Error
 	}
 
 	// 更新门店状态
-	tx = cmf.NewDb().Where("id = ?", biz.StoreId).Updates(map[string]string{"audit_status": "passed", "reason": reason})
+	tx = db.Where("id = ?", biz.StoreId).Updates(map[string]string{"audit_status": "passed", "reason": reason})
 	if tx.Error != nil {
 		return tx.Error
 	}

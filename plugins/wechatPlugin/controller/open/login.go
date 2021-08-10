@@ -7,6 +7,7 @@ package open
 
 import (
 	"errors"
+	"gincmf/app/util"
 	"gincmf/plugins/restaurantPlugin/model"
 	"github.com/gin-gonic/gin"
 	cmf "github.com/gincmf/cmf/bootstrap"
@@ -21,6 +22,12 @@ type Login struct {
 }
 
 func (rest *Login) Login(c *gin.Context) {
+
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
 
 	mid, _ := c.Get("mid")
 	accessToken, exist := c.Get("accessToken")
@@ -56,8 +63,9 @@ func (rest *Login) Login(c *gin.Context) {
 	queryArgs := []interface{}{openId, mid}
 
 	// 查询当前用户是否存在
-	var err error
-	userPart := model.UserPart{}
+	userPart := model.UserPart{
+		Db: db,
+	}
 	userPart, err = userPart.Show(query, queryArgs)
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, err.Error(), nil)
@@ -66,7 +74,7 @@ func (rest *Login) Login(c *gin.Context) {
 
 	// 当前三方关系不存在 新建第三方用户
 	if userPart.OpenId == "" {
-		cmf.NewDb().Where("open_id = ?", openId).FirstOrCreate(&model.ThirdPart{
+		db.Where("open_id = ?", openId).FirstOrCreate(&model.ThirdPart{
 			Mid:        mid.(int),
 			Type:       "wechat-mp",
 			UserId:     0,
@@ -74,7 +82,7 @@ func (rest *Login) Login(c *gin.Context) {
 			SessionKey: sessionKey,
 		})
 	} else {
-		cmf.NewDb().Where("open_id = ?", openId).Updates(&model.ThirdPart{
+		db.Where("open_id = ?", openId).Updates(&model.ThirdPart{
 			SessionKey: sessionKey,
 		})
 	}

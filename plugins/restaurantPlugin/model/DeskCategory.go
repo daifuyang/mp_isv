@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/gin-gonic/gin"
-	cmf "github.com/gincmf/cmf/bootstrap"
 	cmfModel "github.com/gincmf/cmf/model"
 	"gorm.io/gorm"
 	"strings"
@@ -23,13 +22,14 @@ type DeskCategory struct {
 	LeastSeats   int               `gorm:"type:int(2);comment:最少人数;not null" json:"least_seats"`
 	MaximumSeats int               `gorm:"type:int(2);comment:最多人数;not null" json:"maximum_seats"`
 	paginate     cmfModel.Paginate `gorm:"-"`
+	Db           *gorm.DB          `gorm:"-" json:"-"`
 }
 
 type DeskCategoryStorePost struct{}
 
 func (model DeskCategory) AutoMigrate() {
-	cmf.NewDb().AutoMigrate(&model)
-	cmf.NewDb().AutoMigrate(&DeskCategoryStorePost{})
+	model.Db.AutoMigrate(&model)
+	model.Db.AutoMigrate(&DeskCategoryStorePost{})
 }
 
 /**
@@ -55,9 +55,9 @@ func (model DeskCategory) Index(c *gin.Context, query []string, queryArgs []inte
 	var deskCategory []DeskCategory
 
 	var total int64 = 0
-	cmf.NewDb().Model(deskCategory).Select("id").Where(queryStr, queryArgs...).Count(&total)
+	model.Db.Model(deskCategory).Select("id").Where(queryStr, queryArgs...).Count(&total)
 
-	result := cmf.NewDb().Where(queryStr, queryArgs...).Limit(pageSize).Offset((current - 1) * pageSize).Order("id desc").Find(&deskCategory)
+	result := model.Db.Where(queryStr, queryArgs...).Limit(pageSize).Offset((current - 1) * pageSize).Order("id desc").Find(&deskCategory)
 	if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return cmfModel.Paginate{}, result.Error
 	}
@@ -79,9 +79,10 @@ func (model DeskCategory) Index(c *gin.Context, query []string, queryArgs []inte
  **/
 func (model DeskCategory) Show(query []string, queryArgs []interface{}) (DeskCategory, error) {
 
+	db := model.Db
 	category := DeskCategory{}
 	queryStr := strings.Join(query, " AND ")
-	result := cmf.NewDb().Where(queryStr, queryArgs...).First(&category)
+	result := db.Where(queryStr, queryArgs...).First(&category)
 	if result.Error != nil {
 		return category, result.Error
 	}
@@ -99,6 +100,8 @@ func (model DeskCategory) Show(query []string, queryArgs []interface{}) (DeskCat
 
 func (model DeskCategory) Store() (DeskCategory, error) {
 
+	db := model.Db
+
 	category := DeskCategory{}
 
 	var err error
@@ -111,7 +114,7 @@ func (model DeskCategory) Store() (DeskCategory, error) {
 	}
 
 	if category.Id == 0 {
-		result := cmf.NewDb().Create(&model)
+		result := db.Create(&model)
 		if result.Error != nil {
 			fmt.Println("err", result.Error)
 			return category, result.Error
@@ -132,6 +135,9 @@ func (model DeskCategory) Store() (DeskCategory, error) {
  **/
 
 func (model DeskCategory) Update() (DeskCategory, error) {
+
+	db := model.Db
+
 	query := []string{"mid = ?", "id = ?"}
 	queryArgs := []interface{}{model.Mid, model.Id}
 
@@ -144,7 +150,7 @@ func (model DeskCategory) Update() (DeskCategory, error) {
 		return category, errors.New("该分类不存在！")
 	}
 
-	result := cmf.NewDb().Save(&model)
+	result := db.Save(&model)
 	if result.Error != nil {
 		return category, result.Error
 	}

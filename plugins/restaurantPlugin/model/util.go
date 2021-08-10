@@ -10,7 +10,6 @@ import (
 	"gincmf/app/util"
 	cmf "github.com/gincmf/cmf/bootstrap"
 	cmfUtil "github.com/gincmf/cmf/util"
-	"math"
 	"strconv"
 	"time"
 )
@@ -33,7 +32,7 @@ type geoCodes struct {
 	Location         string `json:"location"`
 }
 
-func QueueNo(appId string, appointmentAt int64) string {
+/*func QueueNo(mid string, appointmentAt int64) string {
 
 	appUnix := time.Unix(appointmentAt, 0)
 
@@ -59,7 +58,7 @@ func QueueNo(appId string, appointmentAt int64) string {
 
 	date := yearStr + monthStr + dayStr
 
-	insertKey := "mp_isv" + appId + ":order_queue:" + date
+	insertKey := "mp_isv" + mid + ":order_queue:" + date
 
 	uuNumber := util.SetIncr(insertKey)
 
@@ -73,6 +72,38 @@ func QueueNo(appId string, appointmentAt int64) string {
 	// 获取当天自增的值
 	return queueNo
 }
+*/
+
+func QueueNo(mid string, appointmentAt int64) string {
+
+	appUnix := time.Unix(appointmentAt, 0)
+
+	year := appUnix.Year()
+	month := appUnix.Month()
+	day := appUnix.Day()
+
+	dayTime := time.Date(year, month, day, 23, 59, 59, 59, time.Local)
+
+	// 生成取餐号
+
+	// 获取redis自增队列
+	yearStr := strconv.Itoa(year)
+	monthStr := strconv.Itoa(int(month))
+	dayStr := strconv.Itoa(day)
+
+	date := yearStr + monthStr + dayStr
+
+	insertKey := "mp_isv" + mid + ":order_queue:" + date
+
+	queueNo := util.SetIncr(insertKey)
+
+	// 设置当天失效时间
+	cmf.NewRedisDb().ExpireAt(insertKey, dayTime)
+
+	// 获取当天自增的值
+	return strconv.FormatInt(queueNo,10)
+}
+
 
 func GeoAddress(address string) GeoResult {
 	url := "https://restapi.amap.com/v3/geocode/geo?address=" + address + "&key=76ac3510ca6d38aac23ddd8ba6d92aab"

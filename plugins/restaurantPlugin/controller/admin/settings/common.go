@@ -12,7 +12,6 @@ import (
 	"gincmf/plugins/restaurantPlugin/model"
 	saasModel "gincmf/plugins/saasPlugin/model"
 	"github.com/gin-gonic/gin"
-	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
 	"gorm.io/gorm"
 )
@@ -31,9 +30,15 @@ type Common struct {
 // @Router /admin/settings/business_info [get]
 func (rest *Common) Show(c *gin.Context) {
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	mid, _ := c.Get("mid")
 	op := model.Option{}
-	result := cmf.NewDb().Where("option_name = ? AND mid = ?", "business_info", mid).First(&op)
+	result := db.Where("option_name = ? AND mid = ?", "business_info", mid).First(&op)
 	if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, result.Error.Error(), nil)
 		return
@@ -61,9 +66,15 @@ func (rest *Common) Show(c *gin.Context) {
 
 func (rest *Common) MobileShow(c *gin.Context) {
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	mid, _ := c.Get("mid")
 	op := model.Option{}
-	result := cmf.NewDb().Where("option_name = ? AND mid = ?", "business_info", mid).First(&op)
+	result := db.Where("option_name = ? AND mid = ?", "business_info", mid).First(&op)
 	if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, result.Error.Error(), nil)
 		return
@@ -110,6 +121,12 @@ func (rest *Common) MobileShow(c *gin.Context) {
 // @Router /admin/settings/business_info [post]
 func (rest *Common) Edit(c *gin.Context) {
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	mid, _ := c.Get("mid")
 	_, exist := c.Get("user_id")
 
@@ -130,7 +147,6 @@ func (rest *Common) Edit(c *gin.Context) {
 	var (
 		businessInfo model.BusinessInfo
 		imageId      string
-		err          error
 	)
 
 	if exist {
@@ -176,6 +192,7 @@ func (rest *Common) Edit(c *gin.Context) {
 
 	op := model.Option{
 		Mid: mid.(int),
+		Db: db,
 	}
 
 	_, err = op.Updates(businessInfo)
@@ -187,7 +204,7 @@ func (rest *Common) Edit(c *gin.Context) {
 
 	// 存入主题logo
 	theme := saasModel.MpTheme{}
-	tx := cmf.NewDb().Where("mid = ?", mid).First(&theme)
+	tx := db.Where("mid = ?", mid).First(&theme)
 	if tx.Error != nil {
 		if errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 			rest.rc.Error(c, "主题不存在！", nil)
@@ -198,7 +215,7 @@ func (rest *Common) Edit(c *gin.Context) {
 	}
 
 	theme.AppLogo = brandLogo
-	tx = cmf.NewDb().Where("mid = ?", mid).Updates(&theme)
+	tx = db.Where("mid = ?", mid).Updates(&theme)
 	if tx.Error != nil {
 		rest.rc.Error(c, tx.Error.Error(), nil)
 		return

@@ -268,6 +268,12 @@ func (rest *Qrcode) BindAqrfid(c *gin.Context) {
 		rc  *zip.ReadCloser
 	)
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	for _, fileItem := range files {
 
 		file, _ := fileItem.Open()
@@ -364,14 +370,14 @@ func (rest *Qrcode) BindAqrfid(c *gin.Context) {
 				aqrfid := paramMap["aqrfid"]
 
 				q := model.Qrcode{}
-				tx := cmf.NewDb().Debug().Where("code = ? AND status < ?", code, 2).First(&q)
+				tx := db.Where("code = ? AND status < ?", code, 2).First(&q)
 				if tx.Error != nil {
 					continue
 				}
 
 				q.Aqrfid = aqrfid
 
-				cmf.NewDb().Where("code = ? AND  status != ?", code, 2).Updates(&q)
+				db.Where("code = ? AND  status != ?", code, 2).Updates(&q)
 			}
 
 			_ = rFile.Close()

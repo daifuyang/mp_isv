@@ -17,7 +17,7 @@ type Menu struct {
 
 func (rest *Menu) Get(c *gin.Context) {
 	var adminMenu []model.AdminMenu
-	result := cmf.NewDb().Where("path <> ?", "").Order("list_order,id").Find(&adminMenu)
+	result := cmf.Db().Where("path <> ?", "").Order("list_order,id").Find(&adminMenu)
 
 	if result.RowsAffected == 0 {
 		rest.rc.Error(c, "暂无菜单,请联系管理员添加！", nil)

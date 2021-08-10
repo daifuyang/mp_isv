@@ -8,6 +8,7 @@ package tenant
 import (
 	"encoding/json"
 	"errors"
+	"gincmf/app/util"
 	saasModel "gincmf/plugins/saasPlugin/model"
 	"github.com/gin-gonic/gin"
 	cmf "github.com/gincmf/cmf/bootstrap"
@@ -25,9 +26,16 @@ type Notice struct {
 
 func (rest *Notice) Get(c *gin.Context) {
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	mid, _ := c.Get("mid")
 	notice := saasModel.AdminNotice{
 		Mid: mid.(int),
+		Db: db,
 	}
 	noticeData, err := notice.Index(c)
 	if err != nil {
@@ -49,11 +57,17 @@ func (rest *Notice) Show(c *gin.Context) {
 		return
 	}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	mid, _ := c.Get("mid")
 	notice := saasModel.AdminNotice{
 		Mid: mid.(int),
 	}
-	tx := cmf.NewDb().Where("id = ?", rewrite.Id).First(&notice)
+	tx := db.Where("id = ?", rewrite.Id).First(&notice)
 	if tx.Error != nil {
 		if errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 			rest.rc.Error(c, "该通知不存在！", nil)
@@ -64,7 +78,7 @@ func (rest *Notice) Show(c *gin.Context) {
 	}
 
 	notice.Status = 1
-	tx = cmf.NewDb().Save(&notice)
+	tx = db.Save(&notice)
 	if tx.Error != nil {
 		rest.rc.Error(c, tx.Error.Error(), nil)
 		return
@@ -83,10 +97,16 @@ func (rest *Notice) Show(c *gin.Context) {
  **/
 func (rest *Notice) ReadAll(c *gin.Context) {
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	notice := saasModel.AdminNotice{}
 
 	notice.Status = 1
-	tx := cmf.NewDb().Session(&gorm.Session{AllowGlobalUpdate: true}).Updates(&notice)
+	tx := db.Session(&gorm.Session{AllowGlobalUpdate: true}).Updates(&notice)
 	if tx.Error != nil {
 		rest.rc.Error(c, tx.Error.Error(), nil)
 		return
@@ -113,11 +133,17 @@ func (rest *Notice) IsPlay(c *gin.Context) {
 		return
 	}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	mid, _ := c.Get("mid")
 	notice := saasModel.AdminNotice{
 		Mid: mid.(int),
 	}
-	tx := cmf.NewDb().Where("id = ?", rewrite.Id).First(&notice)
+	tx := db.Where("id = ?", rewrite.Id).First(&notice)
 	if tx.Error != nil {
 		if errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 			rest.rc.Error(c, "该通知不存在！", nil)
@@ -128,7 +154,7 @@ func (rest *Notice) IsPlay(c *gin.Context) {
 	}
 
 	notice.IsPlay = 1
-	tx = cmf.NewDb().Save(&notice)
+	tx = db.Save(&notice)
 	if tx.Error != nil {
 		rest.rc.Error(c, tx.Error.Error(), nil)
 		return
@@ -155,6 +181,8 @@ func (rest Notice) SocketGet(c *gin.Context) {
 	tenantIdInt := tenantId.(int)
 	tenantIdStr := strconv.Itoa(tenantIdInt)
 
+	db := cmf.ManualDb("tenant_" + tenantIdStr)
+
 	mid, _ := c.Get("mid")
 
 	conn = new(cmfWebsocket.Client).GetClient(userIdStr).Conn
@@ -162,7 +190,7 @@ func (rest Notice) SocketGet(c *gin.Context) {
 	for {
 		// 查询当前用户订单
 		notice := saasModel.AdminNotice{}
-		tx := cmf.NewDb().Where("mid = ?", mid).Order("id desc").First(&notice)
+		tx := db.Where("mid = ?", mid).Order("id desc").First(&notice)
 		if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 			cmfLog.Error(tx.Error.Error())
 			conn.Error(tx.Error.Error(), nil)
@@ -182,7 +210,7 @@ func (rest Notice) SocketGet(c *gin.Context) {
 			}
 
 			var noticeMap []saasModel.AdminNotice
-			tx := cmf.NewDb().Where("mid = ?", mid).Order("id desc").Limit(10).Find(&noticeMap)
+			tx := db.Where("mid = ?", mid).Order("id desc").Limit(10).Find(&noticeMap)
 			if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 				conn.Error(tx.Error.Error(), nil)
 				return
@@ -195,7 +223,7 @@ func (rest Notice) SocketGet(c *gin.Context) {
 			first = false
 		}
 
-		time.Sleep(time.Second * 5)
+		time.Sleep(time.Second * 10)
 
 	}
 

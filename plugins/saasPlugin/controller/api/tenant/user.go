@@ -83,26 +83,21 @@ func (rest *User) FastRegister(c *gin.Context) {
 
 	if result.RowsAffected > 0 {
 
-		go func() {
-			dbName := "tenant_" + strconv.Itoa(tenantId)
+		dbName := "tenant_" + strconv.Itoa(tenantId)
 
-			cmfModel.CreateTable(dbName, cmf.Conf())
+		cmfModel.CreateTable(dbName, cmf.Conf())
 
-			cmf.ManualDb(dbName)
+		// 调用saas初始化
+		migrate.AutoMigrate(dbName)
 
-			// 调用saas初始化
-			migrate.AutoMigrate()
+		adminUser := saasModel.AdminUser{
+			UserLogin: mobile,
+			Mobile:    mobile,
+			UserPass:  password,
+			CreateAt:  time.Now().Unix(),
+		}
 
-			adminUser := saasModel.AdminUser{
-				UserLogin: mobile,
-				Mobile:    mobile,
-				UserPass:  password,
-				CreateAt:  time.Now().Unix(),
-			}
-
-			adminUser.Init()
-
-		}()
+		adminUser.Init()
 
 		rest.rc.Success(c, "注册成功！", nil)
 
@@ -191,26 +186,21 @@ func (rest *User) Register(c *gin.Context) {
 
 	if result.RowsAffected > 0 {
 
-		go func() {
-			dbName := "tenant_" + strconv.Itoa(tenantId)
+		dbName := "tenant_" + strconv.Itoa(tenantId)
 
-			cmfModel.CreateTable(dbName, cmf.Conf())
+		cmfModel.CreateTable(dbName, cmf.Conf())
 
-			cmf.ManualDb(dbName)
+		// 调用saas初始化
+		migrate.AutoMigrate(dbName)
 
-			// 调用saas初始化
-			migrate.AutoMigrate()
+		adminUser := saasModel.AdminUser{
+			UserLogin: mobile,
+			Mobile:    mobile,
+			UserPass:  password,
+			CreateAt:  time.Now().Unix(),
+		}
 
-			adminUser := saasModel.AdminUser{
-				UserLogin: mobile,
-				Mobile:    mobile,
-				UserPass:  password,
-				CreateAt:  time.Now().Unix(),
-			}
-
-			adminUser.Init()
-
-		}()
+		adminUser.Init()
 
 		rest.rc.Success(c, "注册成功！", nil)
 
@@ -293,10 +283,9 @@ func (rest *User) Forget(c *gin.Context) {
 
 		//
 		tenantId := tenant.TenantId
-		cmf.ManualDb("tenant_" + strconv.Itoa(tenantId))
 
 		u := saasModel.AdminUser{}
-		tx = cmf.NewDb().First(&u, "mobile = ? AND user_status = 1 AND delete_at = 0", nameArr[0]) // 查询
+		tx = cmf.ManualDb("tenant_"+strconv.Itoa(tenantId)).First(&u, "mobile = ? AND user_status = 1 AND delete_at = 0", nameArr[0]) // 查询
 		if tx.Error != nil {
 			rest.rc.Error(c, tx.Error.Error(), nil)
 			return
@@ -304,7 +293,7 @@ func (rest *User) Forget(c *gin.Context) {
 
 		u.UserPass = password
 		u.UpdateAt = time.Now().Unix()
-		cmf.NewDb().Updates(&u)
+		cmf.ManualDb("tenant_" + strconv.Itoa(tenantId)).Updates(&u)
 
 		if tx.Error != nil {
 			rest.rc.Error(c, tx.Error.Error(), nil)
@@ -328,10 +317,9 @@ func (rest *User) Forget(c *gin.Context) {
 		}
 
 		tenantId := t.TenantId
-		cmf.ManualDb("tenant_" + strconv.Itoa(tenantId))
 
 		u := saasModel.AdminUser{}
-		tx = cmf.NewDb().First(&u, "mobile = ? AND user_status = 1 AND delete_at = 0", nameArr[0]) // 查询
+		tx = cmf.ManualDb("tenant_"+strconv.Itoa(tenantId)).First(&u, "mobile = ? AND user_status = 1 AND delete_at = 0", nameArr[0]) // 查询
 		if tx.RowsAffected == 0 {
 			rest.rc.Error(c, "该用户不存在！", nil)
 			return
@@ -377,7 +365,7 @@ func (rest *User) Forget(c *gin.Context) {
 
 		u.UserPass = password
 		u.UpdateAt = time.Now().Unix()
-		tx = cmf.NewDb().Updates(&u)
+		tx = cmf.ManualDb("tenant_" + strconv.Itoa(tenantId)).Updates(&u)
 
 		if tx.Error != nil {
 			rest.rc.Error(c, tx.Error.Error(), nil)
@@ -428,7 +416,7 @@ func (rest *User) Edit(c *gin.Context) {
 
 	tenant := saasModel.Tenant{}
 
-	result := cmf.NewDb().Where("user_login = ?", userLogin).First(&tenant)
+	result := cmf.Db().Where("user_login = ?", userLogin).First(&tenant)
 	if result.RowsAffected == 0 {
 		rest.rc.Error(c, "用户不存在！", nil)
 		return
@@ -501,5 +489,5 @@ func (rest *User) CurrentUser(c *gin.Context) {
 	result.TenantId = strconv.Itoa(tenantId.(int))
 	result.AliasName = aliasName.(string)
 
-	controller.Rest{}.Success(c, "获取成功", result)
+	new(controller.Rest).Success(c, "获取成功", result)
 }

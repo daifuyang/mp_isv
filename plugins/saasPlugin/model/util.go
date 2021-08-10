@@ -9,9 +9,11 @@ import (
 	"encoding/json"
 	"errors"
 	"gincmf/app/model"
+	"gincmf/app/util"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	cmf "github.com/gincmf/cmf/bootstrap"
+	"gorm.io/gorm"
 	"strconv"
 	"strings"
 )
@@ -49,19 +51,23 @@ func CurrentTenant(c *gin.Context) (Tenant, error) {
 }
 
 // 获取系统配置项
-func Options(key string, mid int) string {
+func Options(db *gorm.DB, key string, mid int) (string, error) {
 	option := model.Option{}
 	var optionJson string
-	uploadResult := cmf.NewDb().First(&option, "option_name = ? AND  mid = ?", key, mid) // 查询
+	uploadResult := db.First(&option, "option_name = ? AND  mid = ?", key, mid) // 查询
 	if uploadResult.RowsAffected > 0 {
 		optionJson = option.OptionValue
 	}
-	return optionJson
+	return optionJson, nil
 }
 
-func GetAuthAccess(c *gin.Context) []AuthAccessRule {
+func GetAuthAccess(c *gin.Context) ([]AuthAccessRule, error) {
 
-	adminUser := new(AdminUser).CurrentUser(c)
+	adminUser, err := new(AdminUser).CurrentUser(c)
+
+	if err != nil {
+		return []AuthAccessRule{}, err
+	}
 
 	mid, _ := c.Get("mid")
 
@@ -72,11 +78,11 @@ func GetAuthAccess(c *gin.Context) []AuthAccessRule {
 	queryArgs = append(queryArgs, mid)
 
 	if SuperRole(c, adminUser.Id) {
-		return []AuthAccessRule{}
+		return []AuthAccessRule{}, nil
 	}
 
 	// 获取当前用户全部的权限列表
-	role, _ := GetRoleById(adminUser.Id, mid.(int))
+	role, _ := GetRoleById(c, adminUser.Id, mid.(int))
 	var roleIds []string
 	for _, v := range role {
 		roleIds = append(roleIds, strconv.Itoa(v.Id))
@@ -89,16 +95,21 @@ func GetAuthAccess(c *gin.Context) []AuthAccessRule {
 		queryArgs = append(queryArgs, roleIdsStr)
 	}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		return []AuthAccessRule{}, err
+	}
+
 	queryStr := strings.Join(query, " AND ")
 
 	var authAccessRule []AuthAccessRule
 	prefix := cmf.Conf().Database.Prefix
-	cmf.NewDb().Table(prefix+"auth_access access").Select("access.*,r.name").
+	db.Table(prefix+"auth_access access").Select("access.*,r.name").
 		Joins("INNER JOIN "+prefix+"auth_rule r ON access.rule_name = r.name").
 		Where(queryStr, queryArgs...).
 		Scan(&authAccessRule)
 
-	return authAccessRule
+	return authAccessRule, nil
 }
 
 type role struct {
@@ -117,16 +128,22 @@ func CurrentRole(c *gin.Context) ([]role, error) {
 	}
 
 	userIdInt, _ := strconv.Atoi(userId.(string))
-	role, err := GetRoleById(userIdInt, midInt)
+	role, err := GetRoleById(c, userIdInt, midInt)
 
 	return role, err
 }
 
 // 根据用户id获取所有角色
-func GetRoleById(userId int, mid int) ([]role, error) {
+func GetRoleById(c *gin.Context, userId int, mid int) ([]role, error) {
+
+	db, err := util.NewDb(c)
+	if err != nil {
+		return []role{}, err
+	}
+
 	var result []role
 	prefix := cmf.Conf().Database.Prefix
-	tx := cmf.NewDb().Table(prefix+"role_user ru").Select("r.id,r.name").
+	tx := db.Table(prefix+"role_user ru").Select("r.id,r.name").
 		Joins("INNER JOIN "+prefix+"role r ON ru.role_id = r.id").
 		Where("user_id = ? AND mid = ?", userId, mid).
 		Scan(&result)
@@ -159,7 +176,7 @@ func SuperRole(c *gin.Context, uid ...int) bool {
 
 	userIdInt, _ := userId.(int)
 
-	role, err := GetRoleById(userIdInt, midInt)
+	role, err := GetRoleById(c, userIdInt, midInt)
 
 	if err != nil {
 		return false

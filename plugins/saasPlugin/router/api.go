@@ -80,7 +80,12 @@ func ApiListenRouter() {
 	cmf.Get("api/tenant/sync", func(c *gin.Context) {
 
 		mid, _ := c.Get("mid")
-		saasMigrate.AutoMigrate()
+
+		db,_ := c.Get("DB")
+
+		dbName := db.(string)
+
+		saasMigrate.AutoMigrate(dbName)
 		new(saasModel.Role).Init(mid.(int))
 
 		// 地址

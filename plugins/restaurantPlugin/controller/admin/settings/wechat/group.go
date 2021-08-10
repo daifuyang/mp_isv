@@ -6,6 +6,7 @@
 package wechat
 
 import (
+	"gincmf/app/util"
 	resModel "gincmf/plugins/restaurantPlugin/model"
 	"github.com/gin-gonic/gin"
 	"github.com/gincmf/cmf/controller"
@@ -24,8 +25,17 @@ type Group struct {
  * @return
  **/
 func (rest *Group) Get(c *gin.Context) {
+
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	mid, _ := c.Get("mid")
-	group := resModel.Group{}
+	group := resModel.Group{
+		Db: db,
+	}
 	data, err := group.Show(mid.(int))
 
 	if err != nil {

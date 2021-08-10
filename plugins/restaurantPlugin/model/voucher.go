@@ -44,14 +44,16 @@ type Voucher struct {
 	SyncToAlipay         int       `gorm:"type:tinyint(2);default:0;comment:同步到支付宝卡包;not null" json:"sync_to_alipay"`
 	Status               int       `gorm:"type:tinyint(2);default:1;comment:状态;not null" json:"status"`
 	paginate             cmfModel.Paginate
+	Db                   *gorm.DB `gorm:"-" json:"-"`
 }
 
 // 优惠券所属门店列表
 type VoucherStorePost struct {
-	Id        int   `json:"id"`
-	VoucherId int   `gorm:"type:int(11);comment:魔板id;not null" json:"voucher_id"`
-	StoreId   int   `gorm:"type:int(11);comment:门店id;not null" json:"store_id"`
-	CreateAt  int64 `gorm:"type:bigint(20);comment:创建时间;not null" json:"create_at"`
+	Id        int      `json:"id"`
+	VoucherId int      `gorm:"type:int(11);comment:魔板id;not null" json:"voucher_id"`
+	StoreId   int      `gorm:"type:int(11);comment:门店id;not null" json:"store_id"`
+	CreateAt  int64    `gorm:"type:bigint(20);comment:创建时间;not null" json:"create_at"`
+	Db        *gorm.DB `gorm:"-" json:"-"`
 }
 
 // 优惠券发放表
@@ -74,6 +76,7 @@ type VoucherPost struct {
 	UpdateTime      string `gorm:"-" json:"update_time,omitempty"`
 	Status          int    `gorm:"type:tinyint(2);default:0;comment:状态（0：待使用,1：已使用，2：已过期）;not null" json:"status"`
 	paginate        cmfModel.Paginate
+	Db              *gorm.DB `gorm:"-" json:"-"`
 }
 
 type VoucherResult struct {
@@ -101,19 +104,22 @@ type VoucherResult struct {
  * @return
  **/
 func (model *Voucher) AutoMigrate() {
-	cmf.NewDb().AutoMigrate(&model)
-	cmf.NewDb().AutoMigrate(&VoucherStorePost{})
-	cmf.NewDb().AutoMigrate(&VoucherPost{})
+
+	db := model.Db
+
+	db.AutoMigrate(&model)
+	db.AutoMigrate(&VoucherStorePost{})
+	db.AutoMigrate(&VoucherPost{})
 
 	prefix := cmf.Conf().Database.Prefix
 
 	// 设置优惠券魔板为失效状态
-	cmf.NewDb().Exec("drop event if exists voucher")
-	cmf.NewDb().Exec("CREATE EVENT voucher ON SCHEDULE EVERY 1 SECOND DO UPDATE " + prefix + "voucher SET status = 2 WHERE UNIX_TIMESTAMP(publish_end_time) < UNIX_TIMESTAMP(NOW())")
+	db.Exec("drop event if exists voucher")
+	db.Exec("CREATE EVENT voucher ON SCHEDULE EVERY 1 SECOND DO UPDATE " + prefix + "voucher SET status = 2 WHERE UNIX_TIMESTAMP(publish_end_time) < UNIX_TIMESTAMP(NOW())")
 	// 设置优惠券状态为失效
 
-	cmf.NewDb().Exec("drop event if exists voucherPost")
-	cmf.NewDb().Exec("CREATE EVENT voucherPost ON SCHEDULE EVERY 1 SECOND DO UPDATE " + prefix + "voucher_post SET status = 2 WHERE valid_end_at < UNIX_TIMESTAMP(NOW())")
+	db.Exec("drop event if exists voucherPost")
+	db.Exec("CREATE EVENT voucherPost ON SCHEDULE EVERY 1 SECOND DO UPDATE " + prefix + "voucher_post SET status = 2 WHERE valid_end_at < UNIX_TIMESTAMP(NOW())")
 }
 
 /**
@@ -125,6 +131,7 @@ func (model *Voucher) AutoMigrate() {
  **/
 func (model *Voucher) Index(c *gin.Context, query []string, queryArgs []interface{}) (cmfModel.Paginate, error) {
 
+	db := model.Db
 	// 获取默认的系统分页
 	current, pageSize, err := model.paginate.Default(c)
 
@@ -139,8 +146,8 @@ func (model *Voucher) Index(c *gin.Context, query []string, queryArgs []interfac
 	var total int64 = 0
 
 	var voucher []Voucher
-	cmf.NewDb().Where(queryStr, queryArgs...).Find(&voucher).Order("id desc").Count(&total)
-	result := cmf.NewDb().Where(queryStr, queryArgs...).Limit(pageSize).Offset((current - 1) * pageSize).Order("id desc").Find(&voucher)
+	db.Where(queryStr, queryArgs...).Find(&voucher).Order("id desc").Count(&total)
+	result := db.Where(queryStr, queryArgs...).Limit(pageSize).Offset((current - 1) * pageSize).Order("id desc").Find(&voucher)
 
 	const layout = "2006-01-02 15:04:05"
 	for k, v := range voucher {
@@ -167,6 +174,7 @@ func (model *Voucher) Index(c *gin.Context, query []string, queryArgs []interfac
 
 func (model *Voucher) List(query []string, queryArgs []interface{}) ([]Voucher, error) {
 
+	db := model.Db
 	// 获取默认的系统分页
 	query = append(query, "delete_at = ?")
 	queryArgs = append(queryArgs, 0)
@@ -175,8 +183,8 @@ func (model *Voucher) List(query []string, queryArgs []interface{}) ([]Voucher, 
 	var total int64 = 0
 
 	var voucher []Voucher
-	cmf.NewDb().Where(queryStr, queryArgs...).Find(&voucher).Order("id desc").Count(&total)
-	result := cmf.NewDb().Where(queryStr, queryArgs...).Order("id desc").Find(&voucher)
+	db.Where(queryStr, queryArgs...).Find(&voucher).Order("id desc").Count(&total)
+	result := db.Where(queryStr, queryArgs...).Order("id desc").Find(&voucher)
 
 	const layout = "2006-01-02 15:04:05"
 	for k, v := range voucher {
@@ -206,10 +214,11 @@ func (model *Voucher) List(query []string, queryArgs []interface{}) ([]Voucher, 
 
 func (model *Voucher) Show(query []string, queryArgs []interface{}) (Voucher, error) {
 
+	db := model.Db
 	v := Voucher{}
 	queryStr := strings.Join(query, " AND ")
 
-	result := cmf.NewDb().Where(queryStr, queryArgs...).First(&v)
+	result := db.Where(queryStr, queryArgs...).First(&v)
 
 	v.CreateTime = time.Unix(v.CreateAt, 0).Format("2006-01-02 15:04:05")
 	v.UpdateTime = time.Unix(v.UpdateAt, 0).Format("2006-01-02 15:04:05")
@@ -225,6 +234,7 @@ func (model *Voucher) Show(query []string, queryArgs []interface{}) (Voucher, er
 // app用户优惠券列表
 func (model *VoucherPost) Index(c *gin.Context, query []string, queryArgs []interface{}) (cmfModel.Paginate, error) {
 
+	db := model.Db
 	// 获取默认的系统分页
 	current, pageSize, err := model.paginate.Default(c)
 
@@ -240,11 +250,11 @@ func (model *VoucherPost) Index(c *gin.Context, query []string, queryArgs []inte
 
 	prefix := cmf.Conf().Database.Prefix
 
-	cmf.NewDb().Table(prefix+"voucher_post p").Select("p.*,v.voucher_name,v.voucher_description,v.type,v.amount,v.total_amount,v.floor_amount,v.sync_to_alipay").
+	db.Table(prefix+"voucher_post p").Select("p.*,v.voucher_name,v.voucher_description,v.type,v.amount,v.total_amount,v.floor_amount,v.sync_to_alipay").
 		Joins("INNER JOIN "+prefix+"voucher v ON v.id = p.voucher_id").
 		Where(queryStr, queryArgs...).Order("p.id desc").Count(&total)
 
-	tx := cmf.NewDb().Table(prefix+"voucher_post p").Select("p.*,v.voucher_name,v.voucher_description,v.type,v.amount,v.total_amount,v.floor_amount,v.sync_to_alipay").
+	tx := db.Table(prefix+"voucher_post p").Select("p.*,v.voucher_name,v.voucher_description,v.type,v.amount,v.total_amount,v.floor_amount,v.sync_to_alipay").
 		Joins("INNER JOIN "+prefix+"voucher v ON v.id = p.voucher_id").
 		Where(queryStr, queryArgs...).Limit(pageSize).Offset((current - 1) * pageSize).Order("p.id desc").Scan(&voucherResult)
 
@@ -277,6 +287,7 @@ func (model *VoucherPost) Index(c *gin.Context, query []string, queryArgs []inte
 // app用户全部列表
 func (model *VoucherPost) List(query []string, queryArgs []interface{}) ([]VoucherResult, error) {
 
+	db := model.Db
 	// 合并参数合计
 	queryStr := strings.Join(query, " AND ")
 	var total int64 = 0
@@ -285,11 +296,11 @@ func (model *VoucherPost) List(query []string, queryArgs []interface{}) ([]Vouch
 
 	prefix := cmf.Conf().Database.Prefix
 
-	cmf.NewDb().Table(prefix+"voucher_post p").Select("p.*,v.voucher_name,v.voucher_description,v.type,v.amount,v.total_amount,v.floor_amount,v.sync_to_alipay").
+	db.Table(prefix+"voucher_post p").Select("p.*,v.voucher_name,v.voucher_description,v.type,v.amount,v.total_amount,v.floor_amount,v.sync_to_alipay").
 		Joins("INNER JOIN "+prefix+"voucher v ON v.id = p.voucher_id").
 		Where(queryStr, queryArgs...).Order("p.id desc").Count(&total)
 
-	tx := cmf.NewDb().Table(prefix+"voucher_post p").Select("p.*,v.voucher_name,v.voucher_description,v.type,v.amount,v.total_amount,v.floor_amount,v.sync_to_alipay").
+	tx := db.Table(prefix+"voucher_post p").Select("p.*,v.voucher_name,v.voucher_description,v.type,v.amount,v.total_amount,v.floor_amount,v.sync_to_alipay").
 		Joins("INNER JOIN "+prefix+"voucher v ON v.id = p.voucher_id").
 		Where(queryStr, queryArgs...).Order("p.id desc").Scan(&voucherResult)
 
@@ -316,11 +327,12 @@ func (model *VoucherPost) List(query []string, queryArgs []interface{}) ([]Vouch
 // 获取个人优惠券详情
 func (model *VoucherPost) Show(query []string, queryArgs []interface{}) (VoucherResult, error) {
 
+	db := model.Db
 	queryStr := strings.Join(query, " AND ")
 
 	var voucherResult VoucherResult
 	prefix := cmf.Conf().Database.Prefix
-	tx := cmf.NewDb().Table(prefix+"voucher_post p").Select("p.*,v.voucher_name,v.type,v.amount,v.total_amount,v.floor_amount,v.sync_to_alipay").
+	tx := db.Table(prefix+"voucher_post p").Select("p.*,v.voucher_name,v.type,v.amount,v.total_amount,v.floor_amount,v.sync_to_alipay").
 		Joins("INNER JOIN "+prefix+"voucher v ON v.id = p.voucher_id").
 		Where(queryStr, queryArgs...).Scan(&voucherResult)
 
@@ -333,6 +345,7 @@ func (model *VoucherPost) Show(query []string, queryArgs []interface{}) (Voucher
 }
 
 func (model *Voucher) Send(templateId string, openId string, voucherName string) marketing.VoucherSendResponse {
+
 	nowUnix := time.Now().Unix()
 	outNo := strconv.FormatInt(nowUnix, 10)
 	bizContent := make(map[string]interface{}, 0)
@@ -346,11 +359,12 @@ func (model *Voucher) Send(templateId string, openId string, voucherName string)
 
 func (model *VoucherStorePost) Store(storeIds []string) error {
 
+	db := model.Db
 	// 1,2,3 => 4,5
 	voucherId := model.VoucherId
 	// 获取源库拥有的
 	var storePost []VoucherStorePost
-	tx := cmf.NewDb().Where("voucher_id = ?", voucherId).Find(&storePost)
+	tx := db.Where("voucher_id = ?", voucherId).Find(&storePost)
 
 	if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 		return tx.Error
@@ -371,7 +385,7 @@ func (model *VoucherStorePost) Store(storeIds []string) error {
 
 	// 添加待添加的
 	if len(addPost) > 0 {
-		tx = cmf.NewDb().Create(&addPost)
+		tx = db.Create(&addPost)
 		if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 			return tx.Error
 		}

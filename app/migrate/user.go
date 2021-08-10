@@ -4,10 +4,12 @@ import (
 	"gincmf/app/model"
 	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/util"
+	"gorm.io/gorm"
 	"time"
 )
 
 type user struct {
+	Db *gorm.DB
 	Migrate
 }
 
@@ -23,6 +25,6 @@ func (u *user) AutoMigrate() {
 }
 
 func (u *user) AutoTenantMigrate() {
-	cmf.NewDb().AutoMigrate(&model.User{})
-	cmf.NewDb().AutoMigrate(&model.ThirdPart{})
+	u.Db.AutoMigrate(&model.User{})
+	u.Db.AutoMigrate(&model.ThirdPart{})
 }

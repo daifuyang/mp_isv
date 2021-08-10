@@ -39,7 +39,8 @@ type sSkuTemp struct {
 
 type Food struct {
 	FoodStoreHouse
-	StoreId int `gorm:"type:int(11);comment:门店id;not null" json:"store_id"`
+	StoreId int      `gorm:"type:int(11);comment:门店id;not null" json:"store_id"`
+	Db      *gorm.DB `gorm:"-" json:"-"`
 }
 
 // 商品仓库
@@ -154,9 +155,9 @@ type SpecPost struct {
  * @return
  **/
 func (model Food) AutoMigrate() {
-	cmf.NewDb().AutoMigrate(&model)
-	cmf.NewDb().AutoMigrate(&FoodCategoryPost{})
-	cmf.NewDb().AutoMigrate(&FoodMaterialPost{})
+	model.Db.AutoMigrate(&model)
+	model.Db.AutoMigrate(&FoodCategoryPost{})
+	model.Db.AutoMigrate(&FoodMaterialPost{})
 }
 
 /**
@@ -168,6 +169,7 @@ func (model Food) AutoMigrate() {
  **/
 func (model Food) Index(c *gin.Context, query []string, queryArgs []interface{}) (cmfModel.Paginate, error) {
 
+	db := model.Db
 	// 获取默认的系统分页
 	current, pageSize, err := model.paginate.Default(c)
 
@@ -183,12 +185,12 @@ func (model Food) Index(c *gin.Context, query []string, queryArgs []interface{})
 	var prefix = cmf.Conf().Database.Prefix
 
 	var food []Food
-	cmf.NewDb().Table(prefix+"food f").
+	db.Table(prefix+"food f").
 		Joins("left join "+prefix+"food_category_post cp ON cp.food_id = f.id").
 		Group("f.id").
 		Where(queryStr, queryArgs...).Count(&total)
 
-	result := cmf.NewDb().Table(prefix+"food f").Select("f.*").
+	result := db.Table(prefix+"food f").Select("f.*").
 		Joins("left join "+prefix+"food_category_post cp ON cp.food_id = f.id").
 		Group("f.id").
 		Where(queryStr, queryArgs...).Limit(pageSize).Offset((current - 1) * pageSize).Order("list_order desc, id desc").Scan(&food)
@@ -271,11 +273,13 @@ type FoodCate struct {
 
 func (model Food) ListByCategory(query []string, queryArgs []interface{}) ([]FoodCate, error) {
 
+	db := model.Db
+
 	var foodCate []FoodCate
 
 	queryStr := strings.Join(query, " AND ")
 	prefix := cmf.Conf().Database.Prefix
-	result := cmf.NewDb().Table(prefix+"food f").Select("f.*,fc.id as category_id,fc.name as category_name").
+	result := db.Table(prefix+"food f").Select("f.*,fc.id as category_id,fc.name as category_name").
 		Joins("INNER JOIN "+prefix+"food_category_post fcp ON fcp.food_id = f.id").
 		Joins("INNER JOIN "+prefix+"food_category fc ON fcp.food_category_id = fc.id").
 		Where(queryStr, queryArgs...).Order("f.list_order desc,f.id desc").Scan(&foodCate)
@@ -308,6 +312,8 @@ func (model Food) ListByCategory(query []string, queryArgs []interface{}) ([]Foo
  **/
 func (model Food) Detail(query []string, queryArgs []interface{}) (Food, error) {
 
+	db := model.Db
+
 	food, err := model.Show(query, queryArgs)
 	if err != nil {
 		cmfLog.Error(err.Error())
@@ -322,6 +328,7 @@ func (model Food) Detail(query []string, queryArgs []interface{}) (Food, error) 
 
 		fap := FoodAttrPost{
 			FoodId: food.Id,
+			Db:     db,
 		}
 
 		var skuJson = make(map[string][]SpecPost, 0)
@@ -356,6 +363,7 @@ func (model Food) Detail(query []string, queryArgs []interface{}) (Food, error) 
 
 		sku := FoodSku{
 			FoodId: food.Id,
+			Db:     db,
 		}
 
 		skuData, err := sku.ListByFoodId(nil, nil)
@@ -403,13 +411,18 @@ func (model Food) Detail(query []string, queryArgs []interface{}) (Food, error) 
 	// 启用加料
 	if food.UseMaterial == 1 {
 		var material []FoodMaterialPost
-		cmf.NewDb().Where("food_id", food.Id).Find(&material)
+		db.Where("food_id", food.Id).Find(&material)
 		food.MaterialJson = material
 	}
 
 	fQuery := []string{"f.id = ? AND f.delete_at = ? AND fc.delete_at = ?"}
 	fQueryArgs := []interface{}{food.Id, 0, 0}
-	category, err := FoodCategory{}.ListByFood(fQuery, fQueryArgs)
+
+	foodCategory := FoodCategory{
+		Db: db,
+	}
+
+	category, err := foodCategory.ListByFood(fQuery, fQueryArgs)
 
 	if err != nil {
 		cmfLog.Error(err.Error())
@@ -445,10 +458,7 @@ func (model Food) inSpec(attrPost int, attrData []tempAttrPost) tempAttrPost {
 
 func (model Food) Show(query []string, queryArgs []interface{}) (Food, error) {
 
-	db := cmf.NewDb()
-	if model.Db != nil {
-		db = model.Db
-	}
+	db := model.Db
 
 	queryStr := strings.Join(query, " AND ")
 	food := Food{}
@@ -469,10 +479,6 @@ func (model Food) Show(query []string, queryArgs []interface{}) (Food, error) {
  **/
 
 func (model Food) Save() (Food, error) {
-
-	if model.Db == nil {
-		model.Db = cmf.NewDb()
-	}
 
 	food := Food{}
 
@@ -511,19 +517,14 @@ func (model Food) Save() (Food, error) {
  **/
 func (model Food) Update() (Food, error) {
 
-	if model.Db == nil {
-		model.Db = cmf.NewDb()
-	}
+	foodModel := Food{}
 
-	food := Food{
-		FoodStoreHouse: FoodStoreHouse{
-			Db: model.Db,
-		},
-	}
 	query := []string{"mid = ?", "store_id = ?", "id = ?"}
 	queryArgs := []interface{}{model.Mid, model.StoreId, model.Id}
 
-	food, err := food.Show(query, queryArgs)
+	foodModel.Db = model.Db
+
+	food, err := foodModel.Show(query, queryArgs)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return food, errors.New("该菜品不存在！")
@@ -548,6 +549,9 @@ func (model Food) Update() (Food, error) {
  * @return
  **/
 func (model Food) Delete() (Food, error) {
+
+	db := model.Db
+
 	food := Food{}
 	query := []string{"mid = ?", "store_id = ?", "id = ?"}
 	queryArgs := []interface{}{model.Mid, model.StoreId, model.Id}
@@ -559,7 +563,7 @@ func (model Food) Delete() (Food, error) {
 
 	if food.Id > 0 {
 		queryStr := strings.Join(query, " AND ")
-		result := cmf.NewDb().Model(&food).Where(queryStr, queryArgs...).Update("delete_at", time.Now().Unix())
+		result := db.Model(&food).Where(queryStr, queryArgs...).Update("delete_at", time.Now().Unix())
 
 		if result.Error != nil {
 			return food, result.Error
@@ -580,6 +584,8 @@ func (model Food) Delete() (Food, error) {
  **/
 func (model FoodCategoryPost) Save(mid int, categoryIds []int) ([]FoodCategoryPost, error) {
 
+	db := model.Db
+
 	// 查询当前存在的门店
 	var nAddCategory []FoodCategoryPost
 	for _, v := range categoryIds {
@@ -593,7 +599,9 @@ func (model FoodCategoryPost) Save(mid int, categoryIds []int) ([]FoodCategoryPo
 	var queryArgs []interface{}
 	query = append(query, "mid = ?")
 	queryArgs = append(queryArgs, mid)
-	category := FoodCategory{}
+	category := FoodCategory{
+		Db: db,
+	}
 	categoryResult, err := category.List(query, queryArgs)
 	if err != nil {
 		return nil, err
@@ -604,13 +612,9 @@ func (model FoodCategoryPost) Save(mid int, categoryIds []int) ([]FoodCategoryPo
 		existCategory = append(existCategory, strconv.Itoa(v.FoodCategory.Id))
 	}
 
-	if model.Db == nil {
-		model.Db = cmf.NewDb()
-	}
-
 	var foodCategoryPostArr []FoodCategoryPost
 	// 查询当前菜品所在的门店
-	model.Db.Where("food_id =?", model.FoodId).Find(&foodCategoryPostArr)
+	db.Where("food_id =?", model.FoodId).Find(&foodCategoryPostArr)
 
 	// 找出待添加的
 	var readyAddArr []FoodCategoryPost
@@ -647,7 +651,7 @@ func (model FoodCategoryPost) Save(mid int, categoryIds []int) ([]FoodCategoryPo
 	var readyDelQueryStr string
 	if len(readyDelArgs) > 0 {
 		readyDelQueryStr = strings.Join(readyDelQuery, " OR ")
-		result := model.Db.Where(readyDelQueryStr, readyDelArgs...).Delete(&model)
+		result := db.Where(readyDelQueryStr, readyDelArgs...).Delete(&model)
 		if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return foodCategoryPostArr, result.Error
 		}
@@ -655,7 +659,7 @@ func (model FoodCategoryPost) Save(mid int, categoryIds []int) ([]FoodCategoryPo
 
 	// 添加待添加的
 	if len(readyAddArr) > 0 {
-		result := model.Db.Create(&readyAddArr)
+		result := db.Create(&readyAddArr)
 		if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return foodCategoryPostArr, result.Error
 		}
@@ -686,10 +690,7 @@ func (model FoodCategoryPost) InCategoryPost(inFoodCategoryPost FoodCategoryPost
 
 func (model *FoodMaterialPost) Update(materials []FoodMaterialPost) error {
 
-	db := cmf.NewDb()
-	if model.Db != nil {
-		db = model.Db
-	}
+	db := model.Db
 
 	// 查出数据库中的
 	var fmp []FoodMaterialPost

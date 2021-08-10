@@ -11,7 +11,6 @@ import (
 	"gincmf/app/util"
 	"gincmf/plugins/portalPlugin/model"
 	"github.com/gin-gonic/gin"
-	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
 	"strings"
 )
@@ -40,8 +39,17 @@ func (rest *Post) Get(c *gin.Context) {
 		return
 	}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	categoryId := rewrite.Id
-	pc := model.PortalCategory{Id: categoryId}
+	pc := model.PortalCategory{
+		Id: categoryId,
+		Db: db,
+	}
 	ids, err := pc.ChildIds()
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)
@@ -66,7 +74,9 @@ func (rest *Post) Get(c *gin.Context) {
 		queryRes = append(queryRes, queryStr)
 	}
 
-	data, err := model.PortalPost{}.IndexByCategory(c, queryRes, queryArgs)
+	data, err := model.PortalPost{
+		Db: db,
+	}.IndexByCategory(c, queryRes, queryArgs)
 
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)
@@ -111,7 +121,15 @@ func (rest *Post) ListWithCid(c *gin.Context) {
 		queryRes = append(queryRes, queryStr)
 	}
 
-	data, err := model.PortalPost{}.IndexByCategory(c, queryRes, queryArgs)
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
+	data, err := model.PortalPost{
+		Db: db,
+	}.IndexByCategory(c, queryRes, queryArgs)
 
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)
@@ -137,10 +155,20 @@ func (rest *Post) Show(c *gin.Context) {
 
 	id := rewrite.Id
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	var query = []string{"mid = ?", "id = ?", "delete_at = ?"}
 	var queryArgs = []interface{}{mid, id, 0}
 
-	post, err := new(model.PortalPost).Show(query, queryArgs)
+	portalPost := model.PortalPost{
+		Db: db,
+	}
+
+	post, err := portalPost.Show(query, queryArgs)
 
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)
@@ -184,7 +212,7 @@ func (rest *Post) Show(c *gin.Context) {
 
 	// 更新点击率
 	post.PostHits = post.PostHits + 1
-	cmf.NewDb().Updates(&post)
+	db.Updates(&post)
 
 	rest.rc.Success(c, "获取成功！", result)
 }

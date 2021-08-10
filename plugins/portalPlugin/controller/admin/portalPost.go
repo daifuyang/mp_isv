@@ -12,7 +12,6 @@ import (
 	"gincmf/app/util"
 	"gincmf/plugins/portalPlugin/model"
 	"github.com/gin-gonic/gin"
-	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
 	"gorm.io/gorm"
 	"strconv"
@@ -65,7 +64,15 @@ func (rest *PortalPost) Get(c *gin.Context) {
 		queryArgs = append(queryArgs, startTimeStamp, endTimeStamp, startTimeStamp, endTimeStamp)
 	}
 
-	post := model.PortalPost{}
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
+	post := model.PortalPost{
+		Db: db,
+	}
 	data, err := post.IndexByCategory(c, query, queryArgs)
 
 	if err != nil {
@@ -77,6 +84,13 @@ func (rest *PortalPost) Get(c *gin.Context) {
 }
 
 func (rest *PortalPost) Show(c *gin.Context) {
+
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	var rewrite struct {
 		Id int `uri:"id"`
 	}
@@ -85,14 +99,15 @@ func (rest *PortalPost) Show(c *gin.Context) {
 		return
 	}
 
-	post := model.PortalPost{
+	postModel := model.PortalPost{
 		Id: rewrite.Id,
+		Db: db,
 	}
 
 	query := []string{"id = ? AND delete_at = ?"}
 	queryArgs := []interface{}{rewrite.Id, 0}
 
-	post, err := post.Show(query, queryArgs)
+	post, err := postModel.Show(query, queryArgs)
 
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)
@@ -139,7 +154,9 @@ func (rest *PortalPost) Show(c *gin.Context) {
 
 	pQuery := []string{"p.id = ? AND p.delete_at = ?"}
 	pQueryArgs := []interface{}{rewrite.Id, 0}
-	pc := model.PortalCategory{}
+	pc := model.PortalCategory{
+		Db: db,
+	}
 	category, err := pc.ListWithPost(pQuery, pQueryArgs)
 
 	result.Category = category
@@ -193,6 +210,12 @@ func (rest *PortalPost) Edit(c *gin.Context) {
 		return
 	}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	postType := 1
 	if form.PostType == 2 {
 		postType = 2
@@ -236,9 +259,11 @@ func (rest *PortalPost) Edit(c *gin.Context) {
 
 	userIdInt := util.CurrentAdminId(c)
 
-	portal := model.PortalPost{}
+	postModel := model.PortalPost{
+		Db: db,
+	}
 
-	portal, err = portal.Show([]string{"id = ?"}, []interface{}{rewrite.Id})
+	portal, err := postModel.Show([]string{"id = ?"}, []interface{}{rewrite.Id})
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)
 		return
@@ -280,6 +305,8 @@ func (rest *PortalPost) Edit(c *gin.Context) {
 		Category []model.PortalCategoryPost `json:"category"`
 	}
 
+	portal.Db = db
+
 	postData, err := portal.Update()
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)
@@ -288,15 +315,21 @@ func (rest *PortalPost) Edit(c *gin.Context) {
 
 	var tag []int
 
+	portalTag := model.PortalTag{
+		Db: db,
+	}
+
 	for _, v := range form.PostKeywords {
 		// 查询当前tag是否存在
-		portalTag, err := new(model.PortalTag).Show([]string{"name = ?"}, []interface{}{v})
+		portalTag, err := portalTag.Show([]string{"name = ?"}, []interface{}{v})
 		if err != nil {
 			rest.rc.Error(c, err.Error(), nil)
 			return
 		}
 
 		portalTag.Name = v
+
+		portalTag.Db = db
 
 		portalTag, err = portalTag.FirstOrSave()
 		if err != nil {
@@ -308,6 +341,7 @@ func (rest *PortalPost) Edit(c *gin.Context) {
 
 	tagPost := model.PortalTagPost{
 		PostId: postData.Id,
+		Db: db,
 	}
 	tagPost.FirstOrSave(tag)
 
@@ -315,10 +349,13 @@ func (rest *PortalPost) Edit(c *gin.Context) {
 
 	var pcpPost = make([]model.PortalCategoryPost, 0)
 
-	pcp := model.PortalCategoryPost{}
+	pcp := model.PortalCategoryPost{
+		Db: db,
+	}
 
 	category := model.PortalCategory{
 		Mid: midInt,
+		Db:  db,
 	}
 	existsCate, err := category.List()
 
@@ -402,6 +439,12 @@ func (rest *PortalPost) Store(c *gin.Context) {
 		return
 	}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	postType := 1
 	if form.PostType == 2 {
 		postType = 2
@@ -460,6 +503,7 @@ func (rest *PortalPost) Store(c *gin.Context) {
 		Recommended:  form.Recommended,
 		PostStatus:   form.Status,
 		More:         string(moreJson),
+		Db:           db,
 	}
 
 	var data struct {
@@ -473,9 +517,14 @@ func (rest *PortalPost) Store(c *gin.Context) {
 	}
 
 	var tag []int
+
+	portalTagModel := model.PortalTag{
+		Db: db,
+	}
+
 	for _, v := range form.PostKeywords {
 		// 查询当前tag是否存在
-		portalTag, err := new(model.PortalTag).Show([]string{"name = ?"}, []interface{}{v})
+		portalTag, err := portalTagModel.Show([]string{"name = ?"}, []interface{}{v})
 		if err != nil {
 			rest.rc.Error(c, err.Error(), nil)
 			return
@@ -494,6 +543,7 @@ func (rest *PortalPost) Store(c *gin.Context) {
 
 	tagPost := model.PortalTagPost{
 		Id: postData.Id,
+		Db: db,
 	}
 
 	tagPost.FirstOrSave(tag)
@@ -502,10 +552,13 @@ func (rest *PortalPost) Store(c *gin.Context) {
 
 	var pcpPost = make([]model.PortalCategoryPost, 0)
 
-	pcp := model.PortalCategoryPost{}
+	pcp := model.PortalCategoryPost{
+		Db: db,
+	}
 
 	category := model.PortalCategory{
 		Mid: midInt,
+		Db: db,
 	}
 
 	existsCate, err := category.List()
@@ -565,7 +618,17 @@ func (rest *PortalPost) Delete(c *gin.Context) {
 	ids := c.QueryArray("ids")
 
 	fmt.Println("first_ids", ids)
-	post := &model.PortalPost{}
+
+
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
+	post := &model.PortalPost{
+		Db: db,
+	}
 
 	if len(ids) == 0 {
 		if err := c.ShouldBindUri(&rewrite); err != nil {
@@ -575,7 +638,7 @@ func (rest *PortalPost) Delete(c *gin.Context) {
 
 		fmt.Println("Id", rewrite.Id)
 
-		result := cmf.NewDb().First(&post, rewrite.Id)
+		result := db.First(&post, rewrite.Id)
 		if result.RowsAffected == 0 {
 			rest.rc.Error(c, "该内容不存在！", nil)
 			return
@@ -584,13 +647,13 @@ func (rest *PortalPost) Delete(c *gin.Context) {
 		post.Id = rewrite.Id
 		post.DeleteAt = time.Now().Unix()
 
-		if err := cmf.NewDb().Save(post).Error; err != nil {
+		if err := db.Save(post).Error; err != nil {
 			rest.rc.Error(c, "删除失败！", nil)
 			return
 		}
 	} else {
 		fmt.Println("ids", ids)
-		if err := cmf.NewDb().Model(&post).Where("id IN (?)", ids).Updates(map[string]interface{}{"delete_at": time.Now().Unix()}).Error; err != nil {
+		if err := db.Model(&post).Where("id IN (?)", ids).Updates(map[string]interface{}{"delete_at": time.Now().Unix()}).Error; err != nil {
 			rest.rc.Error(c, "删除失败！", nil)
 			return
 		}

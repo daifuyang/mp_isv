@@ -6,6 +6,7 @@
 package action
 
 import (
+	"gincmf/app/util"
 	"gincmf/plugins/portalPlugin/model"
 	resModel "gincmf/plugins/restaurantPlugin/model"
 	"github.com/gin-gonic/gin"
@@ -25,7 +26,13 @@ type option struct {
 
 func (rest Page) Options(c *gin.Context) {
 
-	mid, _ := c.Get("mid")
+	mid, exist := c.Get("mid")
+
+	if !exist {
+		rest.rc.Error(c,"mid不存在！",nil)
+		return
+	}
+
 	midInt := mid.(int)
 
 	t := c.Query("type")
@@ -35,9 +42,18 @@ func (rest Page) Options(c *gin.Context) {
 		return
 	}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		c.Abort()
+		return
+	}
+
 	var options []option
 
-	scan := resModel.Scan{}
+	scan := resModel.Scan{
+		Db: db,
+	}
 	data, err := scan.Show(midInt)
 
 	var couponExtra struct {
@@ -119,6 +135,7 @@ func (rest Page) Options(c *gin.Context) {
 
 		category := model.PortalCategory{
 			Mid: midInt,
+			Db: db,
 		}
 
 		data, err := category.ListWithTree()

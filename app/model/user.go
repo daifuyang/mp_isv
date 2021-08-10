@@ -3,6 +3,7 @@ package model
 import (
 	"encoding/json"
 	"errors"
+	"gincmf/app/util"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	cmf "github.com/gincmf/cmf/bootstrap"
@@ -40,14 +41,16 @@ type User struct {
 	Mobile            string  `gorm:"type:varchar(20);not null" json:"mobile"`
 	More              string  `gorm:"type:text" json:"more"`
 	paginate          cmfModel.Paginate
+	Db                *gorm.DB `gorm:"-" json:"-"`
 }
 
 type ThirdPart struct {
-	Id         int    `json:"id"`
-	Type       string `gorm:"type:varchar(10);not null" json:"type"`
-	UserId     int    `gorm:"type:int(11);not null" json:"user_id"`
-	OpenId     string `gorm:"type:varchar(20);not null" json:"open_id"`
-	SessionKey string `json:"session_key"`
+	Id         int      `json:"id"`
+	Type       string   `gorm:"type:varchar(10);not null" json:"type"`
+	UserId     int      `gorm:"type:int(11);not null" json:"user_id"`
+	OpenId     string   `gorm:"type:varchar(20);not null" json:"open_id"`
+	SessionKey string   `json:"session_key"`
+	Db         *gorm.DB `gorm:"-" json:"-"`
 }
 
 /**
@@ -60,6 +63,7 @@ type ThirdPart struct {
 
 func (model *User) Get(c *gin.Context, query []string, queryArgs []interface{}) (cmfModel.Paginate, error) {
 
+	db := model.Db
 	var user []User
 	// 获取默认的系统分页
 	current, pageSize, err := model.paginate.Default(c)
@@ -73,8 +77,8 @@ func (model *User) Get(c *gin.Context, query []string, queryArgs []interface{}) 
 
 	var total int64 = 0
 
-	cmf.NewDb().Where(queryStr, queryArgs...).Find(&user).Count(&total)
-	tx := cmf.NewDb().Where(queryStr, queryArgs...).Limit(pageSize).Offset((current - 1) * pageSize).Find(&user)
+	db.Where(queryStr, queryArgs...).Find(&user).Count(&total)
+	tx := db.Where(queryStr, queryArgs...).Limit(pageSize).Offset((current - 1) * pageSize).Find(&user)
 
 	if tx.Error != nil && errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 		return cmfModel.Paginate{}, errors.New("该页码内容不存在！")
@@ -114,11 +118,14 @@ func (model *User) Get(c *gin.Context, query []string, queryArgs []interface{}) 
 }
 
 func (model *User) Show(query []string, queryArgs []interface{}) (User, error) {
+
+	db := model.Db
+
 	user := User{}
 
 	queryStr := strings.Join(query, " AND ")
 
-	result := cmf.NewDb().Where(queryStr, queryArgs...).First(&user)
+	result := db.Where(queryStr, queryArgs...).First(&user)
 	if result.Error != nil {
 		return user, result.Error
 	}
@@ -128,8 +135,9 @@ func (model *User) Show(query []string, queryArgs []interface{}) (User, error) {
 
 type UserPart struct {
 	User
-	Type   string `gorm:"->" json:"type"`
-	OpenId string `gorm:"->" json:"open_id"`
+	Type   string   `gorm:"->" json:"type"`
+	OpenId string   `gorm:"->" json:"open_id"`
+	Db     *gorm.DB `gorm:"-" json:"-"`
 }
 
 /**
@@ -149,13 +157,15 @@ type UserPart struct {
  **/
 func (model UserPart) Show(query []string, queryArgs []interface{}) (*UserPart, error) {
 
+	db := model.Db
+
 	up := UserPart{}
 
 	queryStr := strings.Join(query, " AND ")
 
 	prefix := cmf.Conf().Database.Prefix
 
-	result := cmf.NewDb().Debug().Table(prefix+"third_part tp").Select("u.*,tp.type,tp.open_id").
+	result := db.Debug().Table(prefix+"third_part tp").Select("u.*,tp.type,tp.open_id").
 		Joins("LEFT JOIN "+prefix+"user u ON tp.user_id = u.id").
 		Where(queryStr, queryArgs...).Order("tp.id desc").Scan(&up)
 	if result.Error != nil {
@@ -173,8 +183,13 @@ func (model *User) CurrentUser(c *gin.Context) (u User, err error) {
 	user := session.Get("user")
 	userId, _ := c.Get("user_id")
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		return u, err
+	}
+
 	if user == nil {
-		tx := cmf.NewDb().First(&u, "id = ? AND user_type = 1 AND user_status = 1 AND  delete_at = 0", userId)
+		tx := db.First(&u, "id = ? AND user_type = 1 AND user_status = 1 AND  delete_at = 0", userId)
 		if tx.Error != nil {
 			return u, tx.Error
 		}
@@ -186,7 +201,7 @@ func (model *User) CurrentUser(c *gin.Context) (u User, err error) {
 		json.Unmarshal([]byte(jsonBytes), &u)
 		if u.Id == 0 {
 
-			tx := cmf.NewDb().First(&u, "id = ? AND user_type = 1 AND user_status = 1 AND  delete_at = 0", userId)
+			tx := db.First(&u, "id = ? AND user_type = 1 AND user_status = 1 AND  delete_at = 0", userId)
 			if tx.Error != nil {
 				return u, tx.Error
 			}

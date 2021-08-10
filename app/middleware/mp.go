@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"gincmf/app/model"
+	"gincmf/app/util"
 	resModel "gincmf/plugins/restaurantPlugin/model"
 	"github.com/gin-gonic/gin"
 	cmf "github.com/gincmf/cmf/bootstrap"
@@ -68,8 +69,7 @@ func ValidationMp(c *gin.Context) {
 
 	// 设置访问数据库
 	db := "tenant_" + strconv.Itoa(mpAuth.TenantId)
-	newDb := cmf.ManualDb(db)
-	c.Set("DB", newDb)
+	c.Set("DB", db)
 
 	alipayJson, _ := json.Marshal(&mpAuth)
 
@@ -109,6 +109,8 @@ func UseMp(c *gin.Context) {
 
 	authAppId := strings.Join(param["auth_app_id"], "")
 
+	notifyType := strings.Join(param["notify_type"], "")
+
 	if authAppId != "" {
 		appId = authAppId
 	}
@@ -121,28 +123,33 @@ func UseMp(c *gin.Context) {
 	}
 
 	// 验证当前小程序是否存在
-	mpAuth := model.MpIsvAuth{}
-	result := cmf.Db().Where("auth_app_id = ?", appId).Order("id desc").First(&mpAuth)
+	if notifyType != "open_app_auth_notify" {
 
-	if result.RowsAffected == 0 {
-		fmt.Println("ValidationMp,小程序app_id不正确")
-		cmfLog.Error("小程序app_id不正确，appId：" + appId)
-		controller.Rest{}.Error(c, "小程序auth_app_id不正确！", nil)
-		c.Abort()
-		return
+		mpAuth := model.MpIsvAuth{}
+		result := cmf.Db().Where("auth_app_id = ?", appId).Order("id desc").First(&mpAuth)
+
+		if result.RowsAffected == 0 {
+			fmt.Println("ValidationMp,小程序app_id不正确")
+			cmfLog.Error("小程序app_id不正确，appId：" + appId)
+			new(controller.Rest).Error(c, "小程序auth_app_id不正确！", nil)
+			c.Abort()
+			return
+		}
+
+		// 设置访问数据库
+		db := "tenant_" + strconv.Itoa(mpAuth.TenantId)
+		c.Set("DB", db)
+
+		alipayJson, _ := json.Marshal(&mpAuth)
+		mid := mpAuth.MpId
+
+		c.Set("mid", mid)
+		c.Set("mp_type", mpAuth.Type)
+		c.Set("alipay_json", string(alipayJson))
+
 	}
 
-	// 设置访问数据库
-	db := "tenant_" + strconv.Itoa(mpAuth.TenantId)
-	cmf.ManualDb(db)
-
-	alipayJson, _ := json.Marshal(&mpAuth)
-	mid := mpAuth.MpId
-
-	c.Set("mid", mid)
 	c.Set("app_id", appId)
-	c.Set("mp_type", mpAuth.Type)
-	c.Set("alipay_json", string(alipayJson))
 	c.Next()
 }
 
@@ -153,15 +160,22 @@ func ValidationOpenId(c *gin.Context) {
 	openId := strings.Join(r.Form["open_id"], "")
 
 	if openId == "" || openId == "0" {
-		controller.Rest{}.Error(c, "小程序open_id不能为空！", nil)
+		new(controller.Rest).Error(c, "小程序open_id不能为空！", nil)
+		c.Abort()
+		return
+	}
+
+	db, err := util.NewDb(c)
+	if err != nil {
+		new(controller.Rest).Error(c, err.Error(), nil)
 		c.Abort()
 		return
 	}
 
 	tp := model.ThirdPart{}
-	result := cmf.NewDb().Where("open_id = ?", openId).First(&tp)
+	result := db.Where("open_id = ?", openId).First(&tp)
 	if result.RowsAffected == 0 {
-		controller.Rest{}.Error(c, "用户open_id不存在！", nil)
+		new(controller.Rest).Error(c, "用户open_id不存在！", nil)
 		c.Abort()
 		return
 	}
@@ -177,24 +191,33 @@ func ValidationBindMobile(c *gin.Context) {
 	openId := strings.Join(r.Form["open_id"], "")
 
 	if openId == "" || openId == "0" {
-		controller.Rest{}.Error(c, "小程序open_id不能为空！", nil)
+		new(controller.Rest).Error(c, "小程序open_id不能为空！", nil)
+		c.Abort()
+		return
+	}
+
+	db, err := util.NewDb(c)
+	if err != nil {
+		new(controller.Rest).Error(c, err.Error(), nil)
 		c.Abort()
 		return
 	}
 
 	mid, _ := c.Get("mid")
 
-	u := resModel.User{}
+	u := resModel.User{
+		Db: db,
+	}
 	// 查询当前手机号用户是否存在
 	prefix := cmf.Conf().Database.Prefix
 
-	tx := cmf.NewDb().Table(prefix+"user u").Select("u.*,part.open_id,part.user_id,part.type").
+	tx := db.Table(prefix+"user u").Select("u.*,part.open_id,part.user_id,part.type").
 		Joins("INNER JOIN "+prefix+"third_part part ON u.id = part.user_id").
 		Where("open_id = ? AND  u.mid = ?", openId, mid).
 		Scan(&u)
 
 	if tx.RowsAffected == 0 {
-		controller.Rest{}.Error(c, "用户open_id不存在！", nil)
+		new(controller.Rest).Error(c, "用户open_id不存在！", nil)
 		c.Abort()
 		return
 	}

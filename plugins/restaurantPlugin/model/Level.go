@@ -8,9 +8,11 @@ package model
 import (
 	"encoding/json"
 	saasModel "gincmf/plugins/saasPlugin/model"
+	"gorm.io/gorm"
 )
 
 type Level struct {
+	Db *gorm.DB `gorm:"-" json:"-"`
 }
 
 // 优惠券详情
@@ -59,19 +61,23 @@ type VipInfo struct {
 	Level           []SLevel `json:"level"`
 }
 
-func (model *Level) LevelDetail(vipLevel string, mid int) SLevel {
+func (model *Level) LevelDetail(vipLevel string, mid int) (SLevel, error) {
 
 	var vipInfo VipInfo
-	str := saasModel.Options("vip_info", mid)
+	str, err := saasModel.Options(model.Db, "vip_info", mid)
+
+	if err != nil {
+		return SLevel{}, err
+	}
 
 	_ = json.Unmarshal([]byte(str), &vipInfo)
 
 	for _, v := range vipInfo.Level {
 		if v.LevelId == vipLevel {
-			return v
+			return v, nil
 		}
 	}
 
-	return SLevel{}
+	return SLevel{}, nil
 
 }

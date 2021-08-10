@@ -8,7 +8,6 @@ package model
 import (
 	"errors"
 	"github.com/gin-gonic/gin"
-	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/data"
 	cmfModel "github.com/gincmf/cmf/model"
 	"gorm.io/gorm"
@@ -28,6 +27,7 @@ type RechargeLog struct {
 	CreateAt   int64  `gorm:"type:bigint(20);not nul" json:"create_at"`
 	CreateTime string `gorm:"-" json:"create_time"`
 	paginate   cmfModel.Paginate
+	Db         *gorm.DB `gorm:"-" json:"-"`
 }
 
 // 订单日志
@@ -37,7 +37,7 @@ func (model *RechargeLog) Save() error {
 		model.CreateAt = time.Now().Unix()
 	}
 
-	if tx := cmf.NewDb().Create(&model); tx.Error != nil {
+	if tx := model.Db.Create(&model); tx.Error != nil {
 		return tx.Error
 	}
 
@@ -59,8 +59,8 @@ func (model *RechargeLog) Index(c *gin.Context, query []string, queryArgs []inte
 	var total int64 = 0
 
 	var log []RechargeLog
-	cmf.NewDb().Where(queryStr, queryArgs...).Find(&log).Count(&total)
-	tx := cmf.NewDb().Where(queryStr, queryArgs...).Limit(pageSize).Offset((current - 1) * pageSize).Order("id desc").Find(&log)
+	model.Db.Where(queryStr, queryArgs...).Find(&log).Count(&total)
+	tx := model.Db.Where(queryStr, queryArgs...).Limit(pageSize).Offset((current - 1) * pageSize).Order("id desc").Find(&log)
 	if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 		return cmfModel.Paginate{}, tx.Error
 	}
@@ -79,5 +79,5 @@ func (model *RechargeLog) Index(c *gin.Context, query []string, queryArgs []inte
 }
 
 func (model *RechargeLog) AutoMigrate() {
-	cmf.NewDb().AutoMigrate(&model)
+	model.Db.AutoMigrate(&model)
 }

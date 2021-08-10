@@ -6,6 +6,7 @@
 package member
 
 import (
+	"gincmf/app/util"
 	"gincmf/plugins/restaurantPlugin/model"
 	"github.com/gin-gonic/gin"
 	"github.com/gincmf/cmf/controller"
@@ -25,12 +26,20 @@ type Index struct {
 // @Router /admin/member [get]
 func (rest *Index) Get(c *gin.Context) {
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	mid, _ := c.Get("mid")
 
 	var query = []string{"u.mid = ?", "u.delete_at = ?"}
 	var queryArgs = []interface{}{mid, 0}
 
-	u := model.User{}
+	u := model.User{
+		Db: db,
+	}
 	data, err := u.ThirdPartIndex(c, query, queryArgs)
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)

@@ -6,6 +6,7 @@
 package order
 
 import (
+	"gincmf/app/util"
 	"gincmf/plugins/restaurantPlugin/model"
 	"github.com/gin-gonic/gin"
 	"github.com/gincmf/cmf/controller"
@@ -42,7 +43,17 @@ func (rest *Vip) Get(c *gin.Context) {
 		query = append(query, querySubStr)
 	}
 
-	data, err := new(model.MemberCardOrder).Index(c, query, queryArgs)
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
+	memberCardOrder := model.MemberCardOrder{
+		Db: db,
+	}
+
+	data, err := memberCardOrder.Index(c, query, queryArgs)
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)
 		return

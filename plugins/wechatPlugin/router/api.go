@@ -40,7 +40,7 @@ func ApiListenRouter() {
 		wechatGroup.Post("/applyment/:id", new(partner.Applyment).Edit, middleware.ValidationBearerToken, middleware.TenantDb)
 		wechatGroup.Get("/applyment_state/:id", new(partner.Applyment).State, middleware.ValidationBearerToken, middleware.TenantDb)
 		wechatGroup.Post("/pay/bind", new(partner.Applyment).BindSubMchid, middleware.ValidationBearerToken, middleware.TenantDb, middleware.ValidationMerchant)
-		wechatGroup.Post("/pay_notify", new(rtOrder.Order).PayNotify, wechatMiddle.AccessToken)
+		wechatGroup.Post("/pay_notify", new(rtOrder.Order).PayNotify,  wechatMiddle.AccessToken)
 		// 测试token
 		wechatGroup.Get("/authorizer_access_token", new(open.Wxa).AccessToken, middleware.ValidationBearerToken, middleware.TenantDb, middleware.ValidationMerchant, wechatMiddle.AccessToken, wechatMiddle.AuthorizerAccessToken) // 授权回调
 		wechatGroup.Get("template/sync", new(admin.Sync).Template, middleware.MainDb, wechatMiddle.AccessToken)

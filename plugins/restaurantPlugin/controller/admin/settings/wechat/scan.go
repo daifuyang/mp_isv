@@ -6,11 +6,11 @@
 package wechat
 
 import (
+	"gincmf/app/util"
 	resModel "gincmf/plugins/restaurantPlugin/model"
 	"github.com/gin-gonic/gin"
 	"github.com/gincmf/cmf/controller"
 )
-
 
 type Scan struct {
 	rc controller.Rest
@@ -24,8 +24,17 @@ type Scan struct {
  * @return
  **/
 func (rest *Scan) Get(c *gin.Context) {
+
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	mid, _ := c.Get("mid")
-	scan := resModel.Scan{}
+	scan := resModel.Scan{
+		Db: db,
+	}
 	data, err := scan.Show(mid.(int))
 
 	if err != nil {
@@ -38,9 +47,17 @@ func (rest *Scan) Get(c *gin.Context) {
 
 func (rest *Scan) Edit(c *gin.Context) {
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	mid, _ := c.Get("mid")
 
-	var scan resModel.Scan
+	var scan = resModel.Scan{
+		Db: db,
+	}
 	if err := c.ShouldBindJSON(&scan); err != nil {
 		c.JSON(400, gin.H{"msg": err.Error()})
 		return
@@ -56,4 +73,3 @@ func (rest *Scan) Edit(c *gin.Context) {
 	rest.rc.Success(c, "修改成功！", data)
 
 }
-

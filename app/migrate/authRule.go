@@ -6,16 +6,17 @@ package migrate
 
 import (
 	"gincmf/app/model"
-	cmf "github.com/gincmf/cmf/bootstrap"
+	"gorm.io/gorm"
 )
 
 type authRule struct {
 	Migrate
+	Db *gorm.DB
 }
 
-func (_ *authRule) AutoMigrate() {
-	cmf.NewDb().Migrator().DropTable(&model.AuthRule{})
-	cmf.NewDb().AutoMigrate(model.AuthRule{})
-	cmf.NewDb().Migrator().DropTable(&model.AuthRuleApi{})
-	cmf.NewDb().AutoMigrate(model.AuthRuleApi{})
+func (migrate *authRule) AutoMigrate() {
+	migrate.Db.Migrator().DropTable(&model.AuthRule{})
+	migrate.Db.AutoMigrate(model.AuthRule{})
+	migrate.Db.Migrator().DropTable(&model.AuthRuleApi{})
+	migrate.Db.AutoMigrate(model.AuthRuleApi{})
 }

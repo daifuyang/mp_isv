@@ -11,19 +11,19 @@ import (
 	"gincmf/app/model"
 	"gincmf/app/util"
 	"github.com/gincmf/alipayEasySdk/base"
-	cmf "github.com/gincmf/cmf/bootstrap"
 	cmfLog "github.com/gincmf/cmf/log"
 	"gorm.io/gorm"
 )
 
 type Option struct {
 	model.Option
-	Mid     int `gorm:"type:bigint(20);comment:对应小程序id;not null" json:"mid"`
-	StoreId int `gorm:"type:int(11);comment:门店id;not null" json:"store_id"`
+	Mid     int      `gorm:"type:bigint(20);comment:对应小程序id;not null" json:"mid"`
+	StoreId int      `gorm:"type:int(11);comment:门店id;not null" json:"store_id"`
+	Db      *gorm.DB `gorm:"-" json:"-"`
 }
 
 func (model *Option) AutoMigrate() {
-	_ = cmf.NewDb().AutoMigrate(&model)
+	_ = model.Db.AutoMigrate(&model)
 }
 
 type EatIn struct {
@@ -32,6 +32,7 @@ type EatIn struct {
 	SellClear        string  `json:"sell_clear"`
 	SaleType         int     `json:"sale_type"`
 	EatType          int     `json:"eat_type"`       //堂食模式
+	OrderType        int     `json:"order_type"`     // 点餐模式
 	SurchargeType    int     `json:"surcharge_type"` // 附件费类型
 	Surcharge        float64 `json:"surcharge"`      // 附件费
 	CustomEnabled    int     `json:"custom_enabled"`
@@ -41,8 +42,9 @@ type EatIn struct {
 	BusinessEndHours   string  `json:"business_end_hours"`   // 截止时间
 	PickUpStartTime    string  `json:"pick_up_start_time"`   // 自提时间
 	PickUpEndTime      string  `json:"pick_up_end_time"`     // 自提时间*/
-	EnabledAppointment int `json:"enabled_appointment"` // 启用预约
-	Day                int `json:"day"`
+	EnabledAppointment int      `json:"enabled_appointment"` // 启用预约
+	Day                int      `json:"day"`
+	Db                 *gorm.DB `gorm:"-" json:"-"`
 }
 
 type deliveryTimes struct {
@@ -69,6 +71,7 @@ type TakeOut struct {
 	StepFee            float64         `json:"step_fee"`          // 阶梯价格
 	DeliveryPercent    float64         `json:"delivery_percent"`  // 最大承受运费比例
 	DeliveryTimes      []deliveryTimes `json:"delivery_times"`    // 自动配送时间段
+	Db                 *gorm.DB        `gorm:"-" json:"-"`
 }
 
 type Recharge struct {
@@ -92,8 +95,10 @@ type Score struct {
 
 func (model *EatIn) Show(storeId int, mid int) (EatIn, error) {
 
+	db := model.Db
+
 	op := Option{}
-	tx := cmf.NewDb().Where("option_name = ? AND store_id = ? AND mid = ?", "eatin", storeId, mid).First(&op)
+	tx := db.Where("option_name = ? AND store_id = ? AND mid = ?", "eatin", storeId, mid).First(&op)
 	if tx.Error != nil {
 		if errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 			return EatIn{}, errors.New("配置不存在！")
@@ -106,14 +111,20 @@ func (model *EatIn) Show(storeId int, mid int) (EatIn, error) {
 
 	_ = json.Unmarshal([]byte(val), &ei)
 
+	if ei.OrderType == 1 {
+		ei.EatType = 0
+	}
+
 	return ei, nil
 
 }
 
 func (model *TakeOut) Show(storeId int, mid int) (TakeOut, error) {
 
+	db := model.Db
+
 	op := Option{}
-	tx := cmf.NewDb().Where("option_name = ? AND store_id = ? AND mid = ?", "takeout", storeId, mid).First(&op)
+	tx := db.Where("option_name = ? AND store_id = ? AND mid = ?", "takeout", storeId, mid).First(&op)
 	if tx.Error != nil {
 		if errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 			return TakeOut{}, errors.New("配置不存在！")
@@ -197,7 +208,9 @@ func (model *Option) Updates(businessInfo BusinessInfo) (Option, error) {
 
 	op := Option{}
 
-	result := cmf.NewDb().Where("option_name = ? AND mid = ?", "business_info", model.Mid).First(&op)
+	db := model.Db
+
+	result := db.Where("option_name = ? AND mid = ?", "business_info", model.Mid).First(&op)
 	if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return op, result.Error
 	}
@@ -216,9 +229,9 @@ func (model *Option) Updates(businessInfo BusinessInfo) (Option, error) {
 
 	var tx *gorm.DB
 	if op.Id == 0 {
-		tx = cmf.NewDb().Create(&op)
+		tx = db.Create(&op)
 	} else {
-		tx = cmf.NewDb().Save(&op)
+		tx = db.Save(&op)
 	}
 
 	if tx.Error != nil {
@@ -238,16 +251,20 @@ func (model *Option) Updates(businessInfo BusinessInfo) (Option, error) {
  **/
 // 微信扫码领券
 type Scan struct {
-	AppId string `json:"app_id"`
-	Path string `json:"path"`
+	AppId string   `json:"app_id"`
+	Path  string   `json:"path"`
+	Db    *gorm.DB `gorm:"-" json:"-"`
 }
+
 func (model *Scan) Show(mid int) (Scan, error) {
 
 	op := Option{}
 
 	scan := Scan{}
 
-	tx := cmf.NewDb().Where("option_name = ? AND mid = ?", "wechat_cfav", mid).First(&op)
+	db := model.Db
+
+	tx := db.Where("option_name = ? AND mid = ?", "wechat_cfav", mid).First(&op)
 	if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 		return scan, tx.Error
 	}
@@ -262,11 +279,13 @@ func (model *Scan) Show(mid int) (Scan, error) {
 
 func (model *Scan) Edit(mid int) (Scan, error) {
 
+	db := model.Db
+
 	op := Option{}
 
 	scan := Scan{}
 
-	result := cmf.NewDb().Where("option_name = ? AND mid = ?", "wechat_cfav", mid).First(&op)
+	result := db.Where("option_name = ? AND mid = ?", "wechat_cfav", mid).First(&op)
 	if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return scan, result.Error
 	}
@@ -285,9 +304,9 @@ func (model *Scan) Edit(mid int) (Scan, error) {
 
 	var tx *gorm.DB
 	if op.Id == 0 {
-		tx = cmf.NewDb().Create(&op)
+		tx = db.Create(&op)
 	} else {
-		tx = cmf.NewDb().Save(&op)
+		tx = db.Save(&op)
 	}
 
 	if tx.Error != nil {
@@ -300,7 +319,8 @@ func (model *Scan) Edit(mid int) (Scan, error) {
 
 // 微信社群配置
 type Group struct {
-	PlugId string `json:"plugid"`
+	PlugId string   `json:"plugid"`
+	Db     *gorm.DB `gorm:"-" json:"-"`
 }
 
 func (model *Group) Show(mid int) (Group, error) {
@@ -309,7 +329,9 @@ func (model *Group) Show(mid int) (Group, error) {
 
 	group := Group{}
 
-	tx := cmf.NewDb().Where("option_name = ? AND mid = ?", "wechat_work_group", mid).First(&op)
+	db := model.Db
+
+	tx := db.Where("option_name = ? AND mid = ?", "wechat_work_group", mid).First(&op)
 	if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 		return group, tx.Error
 	}
@@ -328,7 +350,9 @@ func (model *Group) Edit(mid int) (Group, error) {
 
 	group := Group{}
 
-	result := cmf.NewDb().Where("option_name = ? AND mid = ?", "wechat_work_group", mid).First(&op)
+	db := model.Db
+
+	result := db.Where("option_name = ? AND mid = ?", "wechat_work_group", mid).First(&op)
 	if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return group, result.Error
 	}
@@ -347,9 +371,9 @@ func (model *Group) Edit(mid int) (Group, error) {
 
 	var tx *gorm.DB
 	if op.Id == 0 {
-		tx = cmf.NewDb().Create(&op)
+		tx = db.Create(&op)
 	} else {
-		tx = cmf.NewDb().Save(&op)
+		tx = db.Save(&op)
 	}
 
 	if tx.Error != nil {

@@ -13,7 +13,6 @@ import (
 	resModel "gincmf/plugins/restaurantPlugin/model"
 	saasModel "gincmf/plugins/saasPlugin/model"
 	"github.com/gin-gonic/gin"
-	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
 	"github.com/gincmf/wechatEasySdk/open"
 	"gorm.io/gorm"
@@ -67,7 +66,7 @@ func (rest *MpIsvAuth) Show(c *gin.Context) {
 		return
 	}
 
-	result, err := rest.GetAuth(mid, rewrite.Id, accessToken.(string))
+	result, err := rest.GetAuth(c, mid, rewrite.Id, accessToken.(string))
 
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)
@@ -78,12 +77,13 @@ func (rest *MpIsvAuth) Show(c *gin.Context) {
 
 }
 
-func (rest MpIsvAuth) GetAuth(mid interface{}, tenantId int, accessToken string) (result WechatAuthResult, err error) {
+func (rest MpIsvAuth) GetAuth(c *gin.Context, mid interface{}, tenantId int, accessToken string) (result WechatAuthResult, err error) {
 
 	query := []string{"mp_id = ?", "tenant_id = ?", "type = ?"}
 	queryArgs := []interface{}{mid, tenantId, "wechat"}
 
 	isvAuth := model.MpIsvAuth{}
+
 	data, err := isvAuth.Show(query, queryArgs)
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return result, err
@@ -96,10 +96,16 @@ func (rest MpIsvAuth) GetAuth(mid interface{}, tenantId int, accessToken string)
 
 	app, _ := new(model.WechatIsvApp).Show()
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	mpTheme := new(saasModel.MpTheme)
 
 	/*绑定小程序信息*/
-	tx := cmf.NewDb().Where("mid = ?", mid).Order("id desc").First(&mpTheme)
+	tx := db.Where("mid = ?", mid).Order("id desc").First(&mpTheme)
 	if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 		return result, err
 	}
@@ -111,7 +117,7 @@ func (rest MpIsvAuth) GetAuth(mid interface{}, tenantId int, accessToken string)
 
 	mpTheme.WechatExpQrCodeUrl = util.GetFileUrl(mpTheme.WechatExpQrCodeUrl)
 
-	businessJson := saasModel.Options("business_info", mid.(int))
+	businessJson, err := saasModel.Options(db, "business_info", mid.(int))
 	bi := resModel.BusinessInfo{}
 	json.Unmarshal([]byte(businessJson), &bi)
 	mpTheme.AlipayCategoryIds = bi.MiniCategoryIds
@@ -120,7 +126,10 @@ func (rest MpIsvAuth) GetAuth(mid interface{}, tenantId int, accessToken string)
 	result.BusinessInfo = &bi
 
 	/* 获取模板版本信息 */
-	version, err := new(saasModel.MpThemeVersion).Show([]string{"mid = ? AND type = ?"}, []interface{}{mid, "wechat"})
+	mpThemeVersion := saasModel.MpThemeVersion{
+		Db: db,
+	}
+	version, err := mpThemeVersion.Show([]string{"mid = ? AND type = ?"}, []interface{}{mid, "wechat"})
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return result, err
 	}
@@ -131,14 +140,14 @@ func (rest MpIsvAuth) GetAuth(mid interface{}, tenantId int, accessToken string)
 			version.IsAudit = 0
 			version.Status = "online"
 			version.UpdateAt = time.Now().Unix()
-			cmf.NewDb().Save(&version)
+			db.Save(&version)
 		}
 	}
 
 	result.MpThemeVersion = version
 
 	// 获取审核版本
-	auditVersion, err := new(saasModel.MpThemeVersion).Show([]string{"mid = ?", "type = ?", "is_audit = ?"}, []interface{}{mid, "wechat", 1})
+	auditVersion, err := mpThemeVersion.Show([]string{"mid = ?", "type = ?", "is_audit = ?"}, []interface{}{mid, "wechat", 1})
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return result, err
 	}
@@ -148,7 +157,7 @@ func (rest MpIsvAuth) GetAuth(mid interface{}, tenantId int, accessToken string)
 	}
 
 	// 获取线上
-	onlineVersion, err := new(saasModel.MpThemeVersion).Show([]string{"mid = ?", "type = ?", "status = ?"}, []interface{}{mid, "wechat", "online"})
+	onlineVersion, err := mpThemeVersion.Show([]string{"mid = ?", "type = ?", "status = ?"}, []interface{}{mid, "wechat", "online"})
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return result, err
 	}

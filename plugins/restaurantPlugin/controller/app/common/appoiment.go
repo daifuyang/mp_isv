@@ -12,7 +12,6 @@ import (
 	"gincmf/app/util"
 	"gincmf/plugins/restaurantPlugin/model"
 	"github.com/gin-gonic/gin"
-	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
 	"gorm.io/gorm"
 	"math"
@@ -32,6 +31,12 @@ type TimeMap struct {
 }
 
 func (rest *Appointment) Show(c *gin.Context) {
+
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
 
 	mid, _ := c.Get("mid")
 
@@ -56,7 +61,7 @@ func (rest *Appointment) Show(c *gin.Context) {
 
 	// 获取当前门店是否开启预约
 	op := model.Option{}
-	result := cmf.NewDb().Where("option_name = ? AND store_id = ? AND mid = ?", opName, storeId, mid).First(&op)
+	result := db.Where("option_name = ? AND store_id = ? AND mid = ?", opName, storeId, mid).First(&op)
 	if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, result.Error.Error(), nil)
 		return
@@ -87,7 +92,7 @@ func (rest *Appointment) Show(c *gin.Context) {
 	}
 
 	var sh []model.StoreHours
-	cmf.NewDb().Where("store_id = ? AND  mid = ?", storeId, mid).Find(&sh)
+	db.Where("store_id = ? AND  mid = ?", storeId, mid).Find(&sh)
 
 	t := time.Now()
 	wd := int(t.Weekday())
@@ -363,12 +368,18 @@ func (rest *Appointment) getMinutes(end bool, min int, endM int) []TimeMap {
 
 func (rest *Appointment) ShowBak(c *gin.Context) {
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	mid, _ := c.Get("mid")
 
 	storeId, _ := c.Get("store_id")
 	// 获取当前门店是否开启预约
 	op := model.Option{}
-	result := cmf.NewDb().Where("option_name = ? AND store_id = ? AND mid = ?", "eatin", storeId, mid).First(&op)
+	result := db.Where("option_name = ? AND store_id = ? AND mid = ?", "eatin", storeId, mid).First(&op)
 	if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, result.Error.Error(), nil)
 		return
@@ -378,7 +389,7 @@ func (rest *Appointment) ShowBak(c *gin.Context) {
 	json.Unmarshal([]byte(op.OptionValue), &ei)
 
 	var sh []model.StoreHours
-	cmf.NewDb().Where("store_id = ?", storeId).Find(&sh)
+	db.Where("store_id = ?", storeId).Find(&sh)
 
 	t := time.Now()
 	wd := int(t.Weekday())

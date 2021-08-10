@@ -10,9 +10,14 @@ import (
 	cmf "github.com/gincmf/cmf/bootstrap"
 )
 
-func AutoMigrate() {
-	cmf.NewDb().AutoMigrate(&model.PortalCategory{})
-	cmf.NewDb().AutoMigrate(&model.PortalPost{})
-	cmf.NewDb().AutoMigrate(&model.PortalCategoryPost{})
-	new(model.PortalTag).AutoMigrate()
+func AutoMigrate(dbName string) {
+	cmf.ManualDb(dbName).AutoMigrate(&model.PortalCategory{})
+	cmf.ManualDb(dbName).AutoMigrate(&model.PortalPost{})
+	cmf.ManualDb(dbName).AutoMigrate(&model.PortalCategoryPost{})
+
+	portalTag := model.PortalTag{
+		Db: cmf.ManualDb(dbName),
+	}
+
+	portalTag.AutoMigrate()
 }

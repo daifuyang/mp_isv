@@ -39,11 +39,11 @@ func TestFoodClearSell(t *testing.T) {
 
 		if t.TenantId > 0 {
 			mid := strconv.Itoa(t.TenantId)
-			cmf.ManualDb("tenant_" + mid)
 
+			dbName := "tenant_" + mid
 			// 获取堂食配置
 			var store []resModel.Store
-			cmf.NewDb().Find(&store)
+			cmf.ManualDb(dbName).Find(&store)
 
 			for _, v := range store {
 				if v.EnabledSellClear == 1 {
@@ -67,7 +67,7 @@ func TestFoodClearSell(t *testing.T) {
 							scSecond := h*3600 + m*60
 
 							if nowSecond >= scSecond {
-								controller.SellClear()
+								controller.SellClear(dbName)
 								cmf.NewRedisDb().Set(insertKey, "1", 0)
 								year, month, day := time.Now().Date()
 								today := time.Date(year, month, day, 23, 59, 59, 59, time.Local)

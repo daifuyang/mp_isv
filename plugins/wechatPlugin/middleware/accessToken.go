@@ -6,7 +6,6 @@
 package middleware
 
 import (
-	"fmt"
 	"github.com/gin-gonic/gin"
 	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/wechatEasySdk"
@@ -20,7 +19,13 @@ func AccessToken(c *gin.Context) {
 	// 获取accessToken
 	options := wechatEasySdk.OpenOptions()
 
-	fmt.Println(" options.ComponentVerifyTicket", options.ComponentVerifyTicket)
+	if options.ComponentVerifyTicket == "" {
+		redis := cmf.NewRedisDb()
+		ticket, err := redis.Get("componentVerifyTicket").Result()
+		if err == nil {
+			options.ComponentVerifyTicket = ticket
+		}
+	}
 
 	if options.ComponentVerifyTicket != "" {
 
@@ -34,12 +39,8 @@ func AccessToken(c *gin.Context) {
 
 		accessToken, err := redis.Get("accessToken").Result()
 
-		fmt.Println("accessToken", accessToken)
-
 		if accessToken == "" || err != nil {
 			token := new(open.Component).Token(bizContent)
-
-			fmt.Println("token token", token)
 
 			if token.Errcode == 0 {
 				accessToken = strings.TrimSpace(token.AccessToken)

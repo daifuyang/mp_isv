@@ -3,10 +3,8 @@ package middleware
 import (
 	"fmt"
 	"gincmf/app/controller/api/common"
-	"gincmf/app/model"
 	saasModel "gincmf/plugins/saasPlugin/model"
 	"github.com/gin-gonic/gin"
-	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
 	"gopkg.in/oauth2.v3"
 	"net/http"
@@ -62,23 +60,21 @@ func ValidationBearerToken(c *gin.Context) {
 
 //验证是否为管理员
 func ValidationAdmin(c *gin.Context) {
+
 	var userType int
 	scope, _ := c.Get("scope")
+
 	if scope == "tenant" {
-		currentUser := new(saasModel.AdminUser).CurrentUser(c)
-		if currentUser.Id > 0 {
-			userType = 1
-		}
-	} else {
-		cmf.ManualDb(cmf.Conf().Database.Name)
-		currentUser, err := new(model.User).CurrentUser(c)
+		currentUser, err := new(saasModel.AdminUser).CurrentUser(c)
 		if err != nil {
-			new(controller.Rest).Error(c, "该用户不存在！", nil)
+			new(controller.Rest).Error(c, err.Error(), nil)
 			c.Abort()
 			return
 		}
-		userType = currentUser.UserType
-		fmt.Println("currentUser", currentUser)
+
+		if currentUser.Id > 0 {
+			userType = 1
+		}
 	}
 
 	c.Set("userType", userType)

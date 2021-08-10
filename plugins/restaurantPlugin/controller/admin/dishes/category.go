@@ -8,9 +8,9 @@ package dishes
 import (
 	"errors"
 	"fmt"
+	"gincmf/app/util"
 	"gincmf/plugins/restaurantPlugin/model"
 	"github.com/gin-gonic/gin"
-	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
 	"gorm.io/gorm"
 	"strconv"
@@ -52,11 +52,19 @@ func (rest *Category) Get(c *gin.Context) {
 		return
 	}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	mid, _ := c.Get("mid")
 	query := []string{"mid = ? AND  store_id = ? AND delete_at = ?"}
 	queryArgs := []interface{}{mid, storeId, "0"}
 
-	foodCategory := model.FoodCategory{}
+	foodCategory := model.FoodCategory{
+		Db: db,
+	}
 	data, err := foodCategory.Index(c, query, queryArgs)
 
 	if err != nil {
@@ -73,7 +81,15 @@ func (rest *Category) List(c *gin.Context) {
 
 	storeId := c.Query("store_id")
 
-	category := model.FoodCategory{}
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
+	category := model.FoodCategory{
+		Db: db,
+	}
 
 	var query []string
 	var queryArgs []interface{}
@@ -119,7 +135,15 @@ func (rest *Category) Show(c *gin.Context) {
 		return
 	}
 
-	food := model.FoodCategory{}
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
+	food := model.FoodCategory{
+		Db: db,
+	}
 
 	mid, _ := c.Get("mid")
 	query := []string{"mid = ? AND id = ?"}
@@ -170,6 +194,12 @@ func (rest Category) Edit(c *gin.Context) {
 	}
 	if err := c.ShouldBindUri(&rewrite); err != nil {
 		c.JSON(400, gin.H{"msg": err.Error()})
+		return
+	}
+
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
 		return
 	}
 
@@ -233,7 +263,9 @@ func (rest Category) Edit(c *gin.Context) {
 		return
 	}
 
-	var data model.FoodCategory
+	var data = model.FoodCategory{
+		Db: db,
+	}
 
 	query := []string{"mid = ?", "id = ?"}
 	queryArgs := []interface{}{mid, rewrite.Id}
@@ -250,7 +282,7 @@ func (rest Category) Edit(c *gin.Context) {
 		listOrderFloat = foodCategory.ListOrder
 	}
 
-	txErr := cmf.NewDb().Transaction(func(tx *gorm.DB) error {
+	txErr := db.Transaction(func(tx *gorm.DB) error {
 
 		foodCategory = model.FoodCategory{
 			StoreId: storeIdInt,
@@ -309,6 +341,12 @@ func (rest Category) Edit(c *gin.Context) {
 // @Failure 400 {object} model.ReturnData "{"code":400,"msg":"登录状态已失效！"}"
 // @Router /admin/dishes/category [post]
 func (rest Category) Store(c *gin.Context) {
+
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
 
 	// 获取小程序mid
 	mid, _ := c.Get("mid")
@@ -369,7 +407,7 @@ func (rest Category) Store(c *gin.Context) {
 
 	var data model.FoodCategory
 
-	txErr := cmf.NewDb().Transaction(func(tx *gorm.DB) error {
+	txErr := db.Transaction(func(tx *gorm.DB) error {
 
 		foodCategory := model.FoodCategory{
 			StoreId: storeIdInt,
@@ -438,9 +476,15 @@ func (rest Category) Delete(c *gin.Context) {
 		return
 	}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	mid, _ := c.Get("mid")
 
-	result := cmf.NewDb().Model(&model.FoodCategory{}).Where("id = ? AND store_id = ? AND mid = ?", rewrite.Id, storeId, mid).Update("delete_at", time.Now().Unix())
+	result := db.Model(&model.FoodCategory{}).Where("id = ? AND store_id = ? AND mid = ?", rewrite.Id, storeId, mid).Update("delete_at", time.Now().Unix())
 
 	if result.Error != nil {
 		rest.rc.Error(c, result.Error.Error(), nil)
@@ -465,11 +509,17 @@ func (rest *Category) ListOrder(c *gin.Context) {
 		return
 	}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	mid, _ := c.Get("mid")
 	storeId := c.Query("store_id")
 
 	for _, item := range form {
-		cmf.NewDb().Model(&model.FoodCategory{}).Where("id = ? AND mid = ? AND store_id = ?", item.Id, mid, storeId).Update("list_order", item.ListOrder)
+		db.Model(&model.FoodCategory{}).Where("id = ? AND mid = ? AND store_id = ?", item.Id, mid, storeId).Update("list_order", item.ListOrder)
 	}
 
 	rest.rc.Success(c, "操作成功！", nil)

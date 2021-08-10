@@ -5,13 +5,16 @@
  */
 package model
 
-import cmf "github.com/gincmf/cmf/bootstrap"
+import (
+	"gorm.io/gorm"
+)
 
 type Demo struct {
-	Id   int    `json:"id"`
-	Name string `gorm:"varchar(100)" json:"name"`
+	Id   int      `json:"id"`
+	Name string   `gorm:"varchar(100)" json:"name"`
+	Db   *gorm.DB `gorm:"-" json:"-"`
 }
 
 func (model *Demo) AutoMigrate() {
-	cmf.NewDb().AutoMigrate(&model)
+	model.Db.AutoMigrate(&model)
 }

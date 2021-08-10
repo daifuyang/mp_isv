@@ -8,7 +8,6 @@ package model
 import (
 	"errors"
 	"github.com/gin-gonic/gin"
-	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/data"
 	cmfModel "github.com/gincmf/cmf/model"
 	"gorm.io/gorm"
@@ -17,25 +16,28 @@ import (
 )
 
 type ScoreLog struct {
-	Id         int    `json:"id"`
-	UserId     int    `gorm:"type:int(11);comment:所属用户id;not null" json:"user_id"`
-	Type       int    `gorm:"type:tinyint(3);comment:(类型：0：增加，1：扣除);not null" json:"type"`
-	Score      int    `gorm:"type:int(11);comment:增加积分;not null" json:"score"`
-	Fee        string `gorm:"type:varchar(11);comment:合计金额;default:0;not null" json:"fee"`
-	Remark     string `gorm:"type:varchar(255);comment:备注" json:"remark"`
-	CreateAt   int64  `gorm:"type:bigint(20);not nul" json:"create_at"`
-	CreateTime string `gorm:"-" json:"create_time"`
+	Id         int      `json:"id"`
+	UserId     int      `gorm:"type:int(11);comment:所属用户id;not null" json:"user_id"`
+	Type       int      `gorm:"type:tinyint(3);comment:(类型：0：增加，1：扣除);not null" json:"type"`
+	Score      int      `gorm:"type:int(11);comment:增加积分;not null" json:"score"`
+	Fee        string   `gorm:"type:varchar(11);comment:合计金额;default:0;not null" json:"fee"`
+	Remark     string   `gorm:"type:varchar(255);comment:备注" json:"remark"`
+	CreateAt   int64    `gorm:"type:bigint(20);not nul" json:"create_at"`
+	CreateTime string   `gorm:"-" json:"create_time"`
+	Db         *gorm.DB `gorm:"-" json:"-"`
 	paginate   cmfModel.Paginate
 }
 
 // 订单日志
 func (model *ScoreLog) Save() error {
 
+	db := model.Db
+
 	if model.CreateAt == 0 {
 		model.CreateAt = time.Now().Unix()
 	}
 
-	if tx := cmf.NewDb().Create(&model); tx.Error != nil {
+	if tx := db.Create(&model); tx.Error != nil {
 		return tx.Error
 	}
 
@@ -45,6 +47,7 @@ func (model *ScoreLog) Save() error {
 
 func (model *ScoreLog) Index(c *gin.Context, query []string, queryArgs []interface{}) (cmfModel.Paginate, error) {
 
+	db := model.Db
 	// 获取默认的系统分页
 	current, pageSize, err := model.paginate.Default(c)
 
@@ -57,8 +60,8 @@ func (model *ScoreLog) Index(c *gin.Context, query []string, queryArgs []interfa
 	var total int64 = 0
 
 	var log []ScoreLog
-	cmf.NewDb().Where(queryStr, queryArgs...).Find(&log).Count(&total)
-	tx := cmf.NewDb().Where(queryStr, queryArgs...).Limit(pageSize).Offset((current - 1) * pageSize).Order("id desc").Find(&log)
+	db.Where(queryStr, queryArgs...).Find(&log).Count(&total)
+	tx := db.Where(queryStr, queryArgs...).Limit(pageSize).Offset((current - 1) * pageSize).Order("id desc").Find(&log)
 	if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 		return cmfModel.Paginate{}, tx.Error
 	}
@@ -77,5 +80,5 @@ func (model *ScoreLog) Index(c *gin.Context, query []string, queryArgs []interfa
 }
 
 func (model *ScoreLog) AutoMigrate() {
-	cmf.NewDb().AutoMigrate(&model)
+	model.Db.AutoMigrate(&model)
 }

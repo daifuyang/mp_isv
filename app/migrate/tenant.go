@@ -6,7 +6,7 @@
 package migrate
 
 import (
-	model2 "gincmf/plugins/saasPlugin/model"
+	saasModel "gincmf/plugins/saasPlugin/model"
 	cmf "github.com/gincmf/cmf/bootstrap"
 )
 
@@ -15,12 +15,12 @@ type tenant struct {
 }
 
 func (u *tenant) AutoMigrate() {
-	cmf.Db().AutoMigrate(&model2.Tenant{})
+	cmf.Db().AutoMigrate(&saasModel.Tenant{})
 
 	// 创建索引
-	cmf.Db().Migrator().CreateIndex(&model2.Tenant{}, "TenantId")
-	cmf.Db().Migrator().CreateIndex(&model2.Tenant{}, "idx_tenant_id")
+	cmf.Db().Migrator().CreateIndex(&saasModel.Tenant{}, "TenantId")
+	cmf.Db().Migrator().CreateIndex(&saasModel.Tenant{}, "idx_tenant_id")
 
-	cmf.Db().Migrator().CreateIndex(&model2.Tenant{}, "UserLogin")
-	cmf.Db().Migrator().CreateIndex(&model2.Tenant{}, "idx_user_login")
+	cmf.Db().Migrator().CreateIndex(&saasModel.Tenant{}, "UserLogin")
+	cmf.Db().Migrator().CreateIndex(&saasModel.Tenant{}, "idx_user_login")
 }

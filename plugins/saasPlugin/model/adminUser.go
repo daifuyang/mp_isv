@@ -8,6 +8,8 @@ package model
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
+	"gincmf/app/util"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	cmf "github.com/gincmf/cmf/bootstrap"
@@ -19,27 +21,28 @@ import (
 
 // 管理员账号
 type AdminUser struct {
-	Id           int    `json:"id"`
-	Gender       int    `gorm:"type:tinyint(2);comment:性别;0:保密,1:男,2:女;default:0" json:"gender"`
-	LastLoginAt  int64  `gorm:"type:int(11)" json:"last_login_at"`
-	CreateAt     int64  `gorm:"type:bigint(20)" json:"create_at"`
-	UpdateAt     int64  `gorm:"type:bigint(20)" json:"update_at"`
-	DeleteAt     int64  `gorm:"type:bigint(20)" json:"delete_at"`
-	UserStatus   int    `gorm:"type:tinyint(3);not null;default:1" json:"user_status"`
-	UserLogin    string `gorm:"type:varchar(60)" json:"user_login"`
-	UserPass     string `gorm:"type:varchar(64)" json:"-"`
-	UserNickname string `gorm:"type:varchar(50)" json:"user_nickname"`
-	UserRealName string `gorm:"type:varchar(50)" json:"user_realname"`
-	UserEmail    string `gorm:"type:varchar(100)" json:"user_email"`
-	Avatar       string `gorm:"type:varchar(255)" json:"avatar"`
-	LastLoginIp  string `gorm:"type:varchar(100)" json:"last_loginip"`
-	Mobile       string `gorm:"type:varchar(20);not null" json:"mobile"`
-	More         string `gorm:"type:text" json:"more"`
+	Id           int      `json:"id"`
+	Gender       int      `gorm:"type:tinyint(2);comment:性别;0:保密,1:男,2:女;default:0" json:"gender"`
+	LastLoginAt  int64    `gorm:"type:int(11)" json:"last_login_at"`
+	CreateAt     int64    `gorm:"type:bigint(20)" json:"create_at"`
+	UpdateAt     int64    `gorm:"type:bigint(20)" json:"update_at"`
+	DeleteAt     int64    `gorm:"type:bigint(20)" json:"delete_at"`
+	UserStatus   int      `gorm:"type:tinyint(3);not null;default:1" json:"user_status"`
+	UserLogin    string   `gorm:"type:varchar(60)" json:"user_login"`
+	UserPass     string   `gorm:"type:varchar(64)" json:"-"`
+	UserNickname string   `gorm:"type:varchar(50)" json:"user_nickname"`
+	UserRealName string   `gorm:"type:varchar(50)" json:"user_realname"`
+	UserEmail    string   `gorm:"type:varchar(100)" json:"user_email"`
+	Avatar       string   `gorm:"type:varchar(255)" json:"avatar"`
+	LastLoginIp  string   `gorm:"type:varchar(100)" json:"last_loginip"`
+	Mobile       string   `gorm:"type:varchar(20);not null" json:"mobile"`
+	More         string   `gorm:"type:text" json:"more"`
+	Db           *gorm.DB `gorm:"-" json:"-"`
 }
 
 // 自动迁移
 func (model *AdminUser) AutoMigrate() {
-	cmf.NewDb().AutoMigrate(&model)
+	model.Db.AutoMigrate(&model)
 }
 
 func (model *AdminUser) Init() {
@@ -52,18 +55,26 @@ func (model *AdminUser) Init() {
 		UserPass:     model.UserPass,
 		CreateAt:     time.Now().Unix(),
 	}
-	cmf.NewDb().FirstOrCreate(&user)
+	model.Db.FirstOrCreate(&user)
 }
 
-func (model *AdminUser) CurrentUser(c *gin.Context) AdminUser {
+func (model *AdminUser) CurrentUser(c *gin.Context) (AdminUser, error) {
 	u := AdminUser{}
 	session := sessions.Default(c)
 	user := session.Get("user")
 	userId, _ := c.Get("user_id")
 	userIdInt, _ := userId.(int)
 
+	fmt.Println("user", user)
+	fmt.Println("userId", userId)
+
+	db, err := util.NewDb(c)
+	if err != nil {
+		return u, err
+	}
+
 	if user == nil {
-		cmf.NewDb().First(&u, "id = ? AND user_status = 1 AND  delete_at = 0", userId)
+		db.Debug().First(&u, "id = ? AND user_status = 1 AND delete_at = 0", userId)
 		jsonBytes, _ := json.Marshal(u)
 		session.Set("user", string(jsonBytes))
 		session.Save()
@@ -72,14 +83,14 @@ func (model *AdminUser) CurrentUser(c *gin.Context) AdminUser {
 		json.Unmarshal([]byte(jsonBytes), &u)
 		if u.Id == 0 || u.Id != userIdInt {
 			u = AdminUser{}
-			cmf.NewDb().First(&u, "id = ? AND user_type = 1 AND user_status = 1 AND  delete_at = 0", userId)
+			db.First(&u, "id = ? AND user_type = 1 AND user_status = 1 AND  delete_at = 0", userId)
 			jsonBytes, _ := json.Marshal(u)
 			session.Set("user", string(jsonBytes))
 			session.Save()
-			return u
+			return u, nil
 		}
 	}
-	return u
+	return u, nil
 }
 
 /**
@@ -92,6 +103,8 @@ func (model *AdminUser) CurrentUser(c *gin.Context) AdminUser {
 
 func (model *AdminUser) Get(c *gin.Context, query []string, queryArgs []interface{}) (cmfModel.Paginate, error) {
 
+	db := model.Db
+	
 	var adminUser []AdminUser
 	// 获取默认的系统分页
 	current, pageSize, err := new(cmfModel.Paginate).Default(c)
@@ -107,11 +120,11 @@ func (model *AdminUser) Get(c *gin.Context, query []string, queryArgs []interfac
 
 	prefix := cmf.Conf().Database.Prefix
 
-	cmf.NewDb().Debug().Table(prefix+"admin_user as au").
+	db.Debug().Table(prefix+"admin_user as au").
 		Joins("INNER JOIN "+prefix+"mp_theme_admin_user_post p ON au.id = p.admin_user_id").
 		Where(query, queryArgs...).Find(&adminUser).Count(&total)
 
-	tx := cmf.NewDb().Debug().Table(prefix+"admin_user as au").
+	tx := db.Debug().Table(prefix+"admin_user as au").
 		Joins("INNER JOIN "+prefix+"mp_theme_admin_user_post p ON au.id = p.admin_user_id").
 		Where(queryStr, queryArgs...).Limit(pageSize).Offset((current - 1) * pageSize).Find(&adminUser)
 
@@ -153,11 +166,14 @@ func (model *AdminUser) Get(c *gin.Context, query []string, queryArgs []interfac
 }
 
 func (model *AdminUser) Show(query []string, queryArgs []interface{}) (AdminUser, error) {
+
+	db := model.Db
+
 	adminUser := AdminUser{}
 
 	queryStr := strings.Join(query, " AND ")
 
-	result := cmf.NewDb().Where(queryStr, queryArgs...).First(&adminUser)
+	result := db.Where(queryStr, queryArgs...).First(&adminUser)
 	if result.Error != nil {
 		return adminUser, result.Error
 	}

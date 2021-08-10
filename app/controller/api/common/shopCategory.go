@@ -47,7 +47,7 @@ func (rest *ShopCategory) Last(c *gin.Context) {
 	}
 	shopCategoryId := rewrite.Id
 	var shopCategory = make([]model.ShopCategory, 0)
-	cmf.Db().Debug().Where("top_id = ? AND  category_type = 2", shopCategoryId).Find(&shopCategory)
+	cmf.Db().Where("top_id = ? AND  category_type = 2", shopCategoryId).Find(&shopCategory)
 	rest.rc.Success(c, "获取成功！", shopCategory)
 
 }

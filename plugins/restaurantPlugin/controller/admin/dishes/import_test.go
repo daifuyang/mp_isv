@@ -291,6 +291,7 @@ func TestFood_Import(t *testing.T) {
 					attrValue := model.FoodAttrValue{
 						AttrId:    attrKey.AttrId,
 						AttrValue: attrVal,
+						Db: tx,
 					}
 
 					// 获取规格值id
@@ -303,6 +304,7 @@ func TestFood_Import(t *testing.T) {
 					attrPost := model.FoodAttrPost{
 						FoodId:      food.Id,
 						AttrValueId: attrValue.AttrValueId,
+						Db: tx,
 					}
 
 					attrPost, err = attrPost.AddAttrPost()

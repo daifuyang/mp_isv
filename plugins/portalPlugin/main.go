@@ -14,8 +14,8 @@ func Router() {
 	router.ApiListenRouter()
 }
 
-func AutoMigrate() {
-	migrate.AutoMigrate()
+func AutoMigrate(dbName string) {
+	migrate.AutoMigrate(dbName)
 }
 
 func Init() {

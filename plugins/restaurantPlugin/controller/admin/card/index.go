@@ -14,7 +14,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gincmf/alipayEasySdk/base"
 	"github.com/gincmf/alipayEasySdk/marketing"
-	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
 	"github.com/gincmf/cmf/data"
 	"gorm.io/gorm"
@@ -28,10 +27,16 @@ type Index struct {
 
 func (rest *Index) Show(c *gin.Context) {
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	mid, _ := c.Get("mid")
 
 	card := model.CardTemplate{}
-	tx := cmf.NewDb().Where("id = ? AND mid = ?", "1", mid).First(&card)
+	tx := db.Where("id = ? AND mid = ?", "1", mid).First(&card)
 
 	if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, tx.Error.Error(), nil)
@@ -77,6 +82,11 @@ func (rest *Index) Edit(c *gin.Context) {
 	appId, _ := c.Get("app_id")
 	mid, _ := c.Get("mid")
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, "数据库索引异常！", nil)
+	}
+
 	cardName := c.PostForm("card_name")
 	if cardName == "" {
 		rest.rc.Error(c, "会员卡名称不能为空！", nil)
@@ -84,7 +94,7 @@ func (rest *Index) Edit(c *gin.Context) {
 	}
 
 	card := model.CardTemplate{}
-	tx := cmf.NewDb().Where("id = ?", "1").First(&card)
+	tx := db.Where("id = ?", "1").First(&card)
 
 	cardBackground := c.PostForm("card_background")
 	if cardBackground == "" {
@@ -97,7 +107,12 @@ func (rest *Index) Edit(c *gin.Context) {
 		syncToAlipayInt = 1
 	}
 
-	businessJson := saasModel.Options("business_info", mid.(int))
+	businessJson, err := saasModel.Options(db, "business_info", mid.(int))
+
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
 
 	bi := model.BusinessInfo{}
 
@@ -310,9 +325,9 @@ func (rest *Index) Edit(c *gin.Context) {
 	}
 
 	if tx.RowsAffected == 0 {
-		tx = cmf.NewDb().Create(&card)
+		tx = db.Create(&card)
 	} else {
-		tx = cmf.NewDb().Save(&card)
+		tx = db.Save(&card)
 	}
 
 	if tx.Error != nil {

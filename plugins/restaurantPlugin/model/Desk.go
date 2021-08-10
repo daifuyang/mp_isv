@@ -27,17 +27,19 @@ type Desk struct {
 	ListOrder    float64           `gorm:"type:float;comment:排序;default:10000;not null" json:"list_order"`
 	Qrcode       string            `gorm:"-" json:"qrcode"`
 	paginate     cmfModel.Paginate `gorm:"-"`
+	Db           *gorm.DB          `gorm:"-" json:"-"`
 }
 
 type resultDesk struct {
 	Desk
-	StoreName    string `json:"store_name"`
-	LeastSeats   int    `json:"least_seats"`
-	MaximumSeats int    `json:"maximum_seats"`
+	StoreName    string   `json:"store_name"`
+	LeastSeats   int      `json:"least_seats"`
+	MaximumSeats int      `json:"maximum_seats"`
+	Db           *gorm.DB `gorm:"-" json:"-"`
 }
 
 func (model Desk) AutoMigrate() {
-	cmf.NewDb().AutoMigrate(&model)
+	model.Db.AutoMigrate(&model)
 }
 
 /**
@@ -49,6 +51,7 @@ func (model Desk) AutoMigrate() {
  **/
 func (model *Desk) Index(c *gin.Context, query []string, queryArgs []interface{}) (cmfModel.Paginate, error) {
 
+	db := model.Db
 	// 获取默认的系统分页
 	current, pageSize, err := model.paginate.Default(c)
 
@@ -63,12 +66,12 @@ func (model *Desk) Index(c *gin.Context, query []string, queryArgs []interface{}
 	prefix := cmf.Conf().Database.Prefix
 
 	var desk []resultDesk
-	cmf.NewDb().Table(prefix+"desk d").Select("d.id").
+	db.Table(prefix+"desk d").Select("d.id").
 		Joins("INNER JOIN "+prefix+"desk_category dc ON d.category_id = dc.id").
 		Joins("INNER JOIN "+prefix+"store s ON s.id = d.store_id").
 		Where(queryStr, queryArgs...).Scan(&desk).Count(&total)
 
-	result := cmf.NewDb().Table(prefix+"desk d").Select("d.*,s.store_name,dc.least_seats,dc.maximum_seats").
+	result := db.Table(prefix+"desk d").Select("d.*,s.store_name,dc.least_seats,dc.maximum_seats").
 		Joins("INNER JOIN "+prefix+"desk_category dc ON d.category_id = dc.id").
 		Joins("INNER JOIN "+prefix+"store s ON s.id = d.store_id").
 		Where(queryStr, queryArgs...).
@@ -96,13 +99,15 @@ func (model *Desk) Index(c *gin.Context, query []string, queryArgs []interface{}
  **/
 func (model *Desk) List(query []string, queryArgs []interface{}) (desk []resultDesk, err error) {
 
+	db := model.Db
+
 	// 合并参数合计
 	queryStr := strings.Join(query, " AND ")
 
 	prefix := cmf.Conf().Database.Prefix
 	desk = make([]resultDesk, 0)
 
-	result := cmf.NewDb().Table(prefix+"desk d").Select("d.*,s.store_name,dc.least_seats,dc.maximum_seats").
+	result := db.Table(prefix+"desk d").Select("d.*,s.store_name,dc.least_seats,dc.maximum_seats").
 		Joins("INNER JOIN "+prefix+"desk_category dc ON d.category_id = dc.id").
 		Joins("INNER JOIN "+prefix+"store s ON s.id = d.store_id").
 		Where(queryStr, queryArgs...).Scan(&desk)
@@ -124,12 +129,14 @@ func (model *Desk) List(query []string, queryArgs []interface{}) (desk []resultD
  **/
 func (model Desk) Show(query []string, queryArgs []interface{}) (resultDesk, error) {
 
+	db := model.Db
+
 	desk := resultDesk{}
 	queryStr := strings.Join(query, " AND ")
 
 	prefix := cmf.Conf().Database.Prefix
 
-	result := cmf.NewDb().Table(prefix+"desk d").Select("d.*,dc.least_seats,dc.maximum_seats").
+	result := db.Table(prefix+"desk d").Select("d.*,dc.least_seats,dc.maximum_seats").
 		Joins("INNER JOIN "+prefix+"desk_category dc ON d.category_id = dc.id").
 		Where(queryStr, queryArgs...).
 		Scan(&desk)
@@ -156,6 +163,8 @@ func (model Desk) Show(query []string, queryArgs []interface{}) (resultDesk, err
 
 func (model Desk) Store() (Desk, error) {
 
+	db := model.Db
+
 	desk := Desk{}
 
 	query := []string{"d.mid = ? AND d.name = ?"}
@@ -167,7 +176,9 @@ func (model Desk) Store() (Desk, error) {
 		return desk, err
 	}
 
-	category := DeskCategory{}
+	category := DeskCategory{
+		Db: db,
+	}
 	cateData, err := category.Show([]string{"id = ?"}, []interface{}{model.CategoryId})
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return desk, err
@@ -181,7 +192,7 @@ func (model Desk) Store() (Desk, error) {
 
 	desk = resultDesk.Desk
 	if desk.Id == 0 {
-		result := cmf.NewDb().Create(&model)
+		result := db.Create(&model)
 		if result.Error != nil {
 			fmt.Println("err", result.Error)
 			return desk, result.Error
@@ -202,6 +213,9 @@ func (model Desk) Store() (Desk, error) {
  **/
 
 func (model Desk) Update() (Desk, error) {
+
+	db := model.Db
+
 	query := []string{"d.mid = ?", "d.id = ?"}
 	queryArgs := []interface{}{model.Mid, model.Id}
 
@@ -212,7 +226,9 @@ func (model Desk) Update() (Desk, error) {
 		return desk, err
 	}
 
-	category := DeskCategory{}
+	category := DeskCategory{
+		Db: db,
+	}
 	cateData, err := category.Show([]string{"id = ?"}, []interface{}{model.CategoryId})
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return desk, err
@@ -226,7 +242,7 @@ func (model Desk) Update() (Desk, error) {
 	model.Status = desk.Status
 	model.ListOrder = desk.ListOrder
 	model.CategoryName = cateData.CategoryName
-	result := cmf.NewDb().Save(&model)
+	result := db.Save(&model)
 	if result.Error != nil {
 		return desk, result.Error
 	}

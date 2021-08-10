@@ -7,6 +7,7 @@ package middleware
 
 import (
 	"gincmf/app/model"
+	appUtil "gincmf/app/util"
 	saasModel "gincmf/plugins/saasPlugin/model"
 	"github.com/gin-gonic/gin"
 	cmf "github.com/gincmf/cmf/bootstrap"
@@ -22,8 +23,14 @@ func UseWechat(c *gin.Context) {
 		return
 	}
 
+	db, err := appUtil.NewDb(c)
+	if err != nil {
+		new(controller.Rest).Error(c, err.Error(), nil)
+		return
+	}
+
 	// 验证当前小程序是否存在
-	result := cmf.NewDb().Where("mid = ?", mid).First(&saasModel.MpTheme{})
+	result := db.Where("mid = ?", mid).First(&saasModel.MpTheme{})
 
 	if result.RowsAffected == 0 {
 		controller.Rest{}.ErrorCode(c, 20001, "小程序编号不正确！", nil)

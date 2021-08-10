@@ -9,6 +9,6 @@ type asset struct {
 	Migrate
 }
 
-func (_ *asset) AutoMigrate() {
-	cmf.NewDb().AutoMigrate(&model.Asset{})
+func (migrate *asset) AutoMigrate() {
+	cmf.Db().AutoMigrate(&model.Asset{})
 }

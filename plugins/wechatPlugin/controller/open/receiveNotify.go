@@ -85,17 +85,20 @@ func (rest *ReceiveNotify) Notify(c *gin.Context) {
 
 	switch requestForm.InfoType {
 	case "component_verify_ticket":
-		if requestForm.ComponentVerifyTicket != "" {
-			fmt.Println("tickets.ComponentVerifyTicket", requestForm.ComponentVerifyTicket)
+
+		tickets := strings.TrimSpace(requestForm.ComponentVerifyTicket)
+
+		if tickets != "" {
+			fmt.Println("tickets.ComponentVerifyTicket", tickets)
 			cmfLog.Save(requestForm.ComponentVerifyTicket, "tickets.log")
-			wechatEasySdk.SetOpenOption("ComponentVerifyTicket", requestForm.ComponentVerifyTicket)
+			wechatEasySdk.SetOpenOption("ComponentVerifyTicket", tickets)
 			redis := cmf.NewRedisDb()
-			redis.Set("componentVerifyTicket", requestForm.ComponentVerifyTicket, time.Hour*12)
+			redis.Set("componentVerifyTicket", tickets, time.Hour*12)
 
 			if cmf.Conf().App.Evn == "release" {
 				redisDb, err := cmf.RedisDb("52.130.144.34", "codecloud2020")
 				if err == nil {
-					redisDb.Set("componentVerifyTicket", requestForm.ComponentVerifyTicket, time.Hour*12)
+					redisDb.Set("componentVerifyTicket", tickets, time.Hour*12)
 				}
 			}
 
@@ -158,8 +161,8 @@ func (rest *ReceiveNotify) AppIdNotify(c *gin.Context) {
 
 	c.Set("tenant_id", mpAuth.TenantId)
 	// 设置访问数据库
-	db := "tenant_" + strconv.Itoa(mpAuth.TenantId)
-	cmf.ManualDb(db)
+	dbName := "tenant_" + strconv.Itoa(mpAuth.TenantId)
+	db := cmf.ManualDb(dbName)
 
 	mid := mpAuth.MpId
 
@@ -226,7 +229,11 @@ func (rest *ReceiveNotify) AppIdNotify(c *gin.Context) {
 
 	xml.Unmarshal(result, &messageRequest)
 
-	version, err := new(saasModel.MpThemeVersion).Show([]string{"mid = ?", "type = ?"}, []interface{}{mid, "wechat"})
+	mpThemeVersion := saasModel.MpThemeVersion{
+		Db: db,
+	}
+
+	version, err := mpThemeVersion.Show([]string{"mid = ?", "type = ?"}, []interface{}{mid, "wechat"})
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)
 		return
@@ -238,7 +245,7 @@ func (rest *ReceiveNotify) AppIdNotify(c *gin.Context) {
 		version.RejectReason = messageRequest.Reason
 		version.IsAudit = 0
 
-		tx := cmf.NewDb().Debug().Save(&version)
+		tx := db.Debug().Save(&version)
 
 		if tx.Error != nil {
 			rest.rc.Error(c, err.Error(), nil)
@@ -258,7 +265,7 @@ func (rest *ReceiveNotify) AppIdNotify(c *gin.Context) {
 			version.IsAudit = 0
 		}
 
-		tx := cmf.NewDb().Save(&version)
+		tx := db.Save(&version)
 
 		if tx.Error != nil {
 			rest.rc.Error(c, err.Error(), nil)
@@ -275,7 +282,7 @@ func (rest *ReceiveNotify) AppIdNotify(c *gin.Context) {
 
 		// 更新配送状态
 		prefix := cmf.Conf().Database.Prefix
-		tx := cmf.NewDb().Debug().Table(prefix+"immediate_delivery_order ido").Select("fo.*,ido.id as ido_id").
+		tx := db.Debug().Table(prefix+"immediate_delivery_order ido").Select("fo.*,ido.id as ido_id").
 			Joins("INNER JOIN  "+prefix+"food_order fo ON ido.order_id = fo.order_id").
 			Where("ido.shop_order_id = ?", messageRequest.ShopOrderId).
 			Scan(&result)
@@ -289,7 +296,7 @@ func (rest *ReceiveNotify) AppIdNotify(c *gin.Context) {
 		ido := resModel.ImmediateDeliveryOrder{
 			OrderStatus: messageRequest.OrderStatus,
 		}
-		cmf.NewDb().Where("id = ?", result.IdoId).Updates(&ido)
+		db.Where("id = ?", result.IdoId).Updates(&ido)
 	}
 
 	c.String(http.StatusOK, "success")

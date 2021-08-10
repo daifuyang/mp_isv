@@ -7,7 +7,7 @@ package model
 
 import (
 	"github.com/gincmf/alipayEasySdk/marketing"
-	cmf "github.com/gincmf/cmf/bootstrap"
+	"gorm.io/gorm"
 	"strings"
 )
 
@@ -30,17 +30,20 @@ type CardTemplate struct {
 	TemplateId         string                          `gorm:"type:varchar(32);comment:模板ID;" json:"template_id"`
 	SyncToAlipay       int                             `gorm:"type:tinyint(2);default:0;comment:同步到支付宝卡包;not null" json:"sync_to_alipay"`
 	Status             int                             `gorm:"type:tinyint(2);default:1;comment:状态;not null" json:"status"`
+	Db                 *gorm.DB                        `gorm:"-" json:"-"`
 }
 
 func (model *CardTemplate) AutoMigrate() {
-	cmf.NewDb().AutoMigrate(&model)
+	model.Db.AutoMigrate(&model)
 }
 
 func (model *CardTemplate) Show(query []string, queryArgs []interface{}) (CardTemplate, error) {
 
+	db := model.Db
+
 	ct := CardTemplate{}
 	queryStr := strings.Join(query, " AND ")
-	tx := cmf.NewDb().Where(queryStr, queryArgs...).First(&ct)
+	tx := db.Where(queryStr, queryArgs...).First(&ct)
 
 	if tx.Error != nil {
 		return ct, tx.Error

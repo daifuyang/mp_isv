@@ -11,7 +11,6 @@ import (
 	"gincmf/app/util"
 	"gincmf/plugins/nsqPlugin/Producer"
 	"github.com/gin-gonic/gin"
-	cmf "github.com/gincmf/cmf/bootstrap"
 	cmfData "github.com/gincmf/cmf/data"
 	cmfModel "github.com/gincmf/cmf/model"
 	"gorm.io/gorm"
@@ -37,10 +36,11 @@ type Printer struct {
 	CreateTime string `gorm:"-" json:"create_time"`
 	UpdateTime string `gorm:"-" json:"update_time"`
 	paginate   cmfModel.Paginate
+	Db         *gorm.DB `gorm:"-" json:"-"`
 }
 
 func (model *Printer) AutoMigrate() {
-	cmf.NewDb().AutoMigrate(&model)
+	model.Db.AutoMigrate(&model)
 }
 
 // 获取打印机列表
@@ -53,13 +53,18 @@ func (model *Printer) Index(c *gin.Context, query []string, queryArgs []interfac
 		return cmfModel.Paginate{}, err
 	}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		return cmfModel.Paginate{}, err
+	}
+
 	// 合并参数合计
 	queryStr := strings.Join(query, " AND ")
 
 	var total int64 = 0
 	var printer []Printer
-	cmf.NewDb().Where(queryStr, queryArgs...).Find(&printer).Count(&total)
-	tx := cmf.NewDb().Where(queryStr, queryArgs...).Limit(pageSize).Offset((current - 1) * pageSize).Order("id desc").Find(&printer)
+	db.Where(queryStr, queryArgs...).Find(&printer).Count(&total)
+	tx := db.Where(queryStr, queryArgs...).Limit(pageSize).Offset((current - 1) * pageSize).Order("id desc").Find(&printer)
 
 	for k, v := range printer {
 		printer[k].CreateTime = time.Unix(v.CreateAt, 0).Format(cmfData.TimeLayout)
@@ -82,9 +87,11 @@ func (model *Printer) Index(c *gin.Context, query []string, queryArgs []interfac
 // 查看单个打印机配置
 func (model *Printer) Show(query []string, queryArgs []interface{}) (Printer, error) {
 
+	db := model.Db
+
 	queryStr := strings.Join(query, " AND ")
 	printer := Printer{}
-	tx := cmf.NewDb().Where(queryStr, queryArgs...).First(&printer)
+	tx := db.Where(queryStr, queryArgs...).First(&printer)
 
 	if tx.Error != nil {
 		return Printer{}, tx.Error
@@ -102,15 +109,21 @@ func (model *Printer) Save() (Printer, error) {
 	id := model.Id
 	mid := model.Mid
 
+	db := model.Db
+
 	query := []string{"id = ? AND mid = ?"}
 	queryArgs := []interface{}{id, mid}
 
-	tempPrinter, err := new(Printer).Show(query, queryArgs)
+	printerModel := Printer{
+		Db: db,
+	}
+
+	tempPrinter, err := printerModel.Show(query, queryArgs)
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return Printer{}, err
 	}
 
-	exist, err := new(Printer).Show([]string{"`sn` = ? AND `key` = ? AND mid = ?"}, []interface{}{model.Sn, model.Key, mid})
+	exist, err := printerModel.Show([]string{"`sn` = ? AND `key` = ? AND mid = ?"}, []interface{}{model.Sn, model.Key, mid})
 
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return Printer{}, err
@@ -122,7 +135,7 @@ func (model *Printer) Save() (Printer, error) {
 		if exist.Id > 0 {
 			return Printer{}, errors.New("该打印机已存在！")
 		}
-		tx := cmf.NewDb().Create(&printer)
+		tx := db.Create(&printer)
 		if tx.Error != nil {
 			return Printer{}, tx.Error
 		}
@@ -133,7 +146,7 @@ func (model *Printer) Save() (Printer, error) {
 			printer.DeleteAt = 0
 		}
 
-		tx := cmf.NewDb().Save(&printer)
+		tx := db.Save(&printer)
 		if tx.Error != nil {
 			return Printer{}, tx.Error
 		}
@@ -149,7 +162,12 @@ func (model *Printer) Send(mid int, foId int) error {
 	var query = []string{"fo.mid = ?", " fo.id = ? "}
 	var queryArgs = []interface{}{mid, foId, "TRADE_SUCCESS"}
 
-	data, err := new(FoodOrder).ShowByStore(query, queryArgs)
+	db := model.Db
+	fo := FoodOrder{
+		Db: db,
+	}
+
+	data, err := fo.ShowByStore(query, queryArgs)
 
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return err
@@ -160,7 +178,7 @@ func (model *Printer) Send(mid int, foId int) error {
 	}
 
 	var fod []FoodOrderDetail
-	tx := cmf.NewDb().Debug().Where("order_id = ?", data.OrderId).Find(&fod)
+	tx := db.Where("order_id = ?", data.OrderId).Find(&fod)
 	if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 		return tx.Error
 	}
@@ -188,8 +206,12 @@ func (model *Printer) Send(mid int, foId int) error {
 	// 打印机打印订单
 	appointmentTime := time.Unix(data.AppointmentAt, 0).Format(cmfData.TimeLayout)
 
+	foodOrder := FoodOrder{
+		Db: db,
+	}
+
 	// 获取门店打印机状态
-	_, err = new(FoodOrder).SendPrinter(data, printOrder, data.StoreName, appointmentTime, true)
+	_, err = foodOrder.SendPrinter(data, printOrder, data.StoreName, appointmentTime, true)
 	if err != nil {
 		return err
 	}
@@ -200,7 +222,7 @@ func (model *Printer) Send(mid int, foId int) error {
 func (model *Printer) NsqProducer(mid int, targetId int) {
 	p, err := new(Producer.Producer).NewProducer()
 	if err == nil {
-		database, err := util.Database()
+		database, err := util.Database(model.Db)
 		if err == nil {
 			messageJson := Producer.MessageJson{
 				Database: database,

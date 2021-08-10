@@ -51,9 +51,6 @@ func (v *Qrcode) Index(c *gin.Context) {
 		uaType = "wechat"
 	}
 
-	fmt.Println("ua", ua)
-	fmt.Println("uaType", uaType)
-
 	iTemplate, _ := c.Get("template")
 	v.Template = iTemplate.(view.Template)
 

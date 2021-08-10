@@ -7,6 +7,7 @@ package desk
 
 import (
 	"errors"
+	"gincmf/app/util"
 	"gincmf/plugins/restaurantPlugin/model"
 	"github.com/gin-gonic/gin"
 	"github.com/gincmf/cmf/controller"
@@ -30,7 +31,15 @@ func (rest *Desk) Show(c *gin.Context) {
 		return
 	}
 
-	desk := model.Desk{}
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
+	desk := model.Desk{
+		Db: db,
+	}
 
 	var query []string
 	var queryArgs []interface{}

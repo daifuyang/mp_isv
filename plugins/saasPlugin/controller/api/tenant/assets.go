@@ -39,6 +39,12 @@ func (rest *Assets) Get(c *gin.Context) {
 
 	userId := util.CurrentAdminId(c)
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	mid, _ := c.Get("mid")
 
 	query := []string{"mid = ?", "user_id = ?", "status = ?"}
@@ -49,7 +55,9 @@ func (rest *Assets) Get(c *gin.Context) {
 	query = append(query, "type = ?")
 	queryArgs = append(queryArgs, paramType)
 
-	assets := model.Asset{}
+	assets := appModel.Asset{
+		Db: db,
+	}
 
 	data, err := assets.Get(c, query, queryArgs)
 	if err != nil {
@@ -221,11 +229,17 @@ func (rest *Assets) Delete(c *gin.Context) {
 		return
 	}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	mid, _ := c.Get("mid")
 
 	ids := c.QueryArray("ids")
 
-	asset := &model.Asset{}
+	asset := model.Asset{}
 
 	if len(ids) == 0 {
 		if err := c.ShouldBindUri(&rewrite); err != nil {
@@ -233,7 +247,7 @@ func (rest *Assets) Delete(c *gin.Context) {
 			return
 		}
 
-		result := cmf.NewDb().Where("id = ? AND  mid = ?", rewrite.Id, mid).First(&asset)
+		result := db.Where("id = ? AND  mid = ?", rewrite.Id, mid).First(&asset)
 		if result.RowsAffected == 0 {
 			rest.rc.Error(c, "该内容不存在！", nil)
 			return
@@ -242,13 +256,13 @@ func (rest *Assets) Delete(c *gin.Context) {
 		asset.Id = rewrite.Id
 		asset.Status = 0
 
-		if err := cmf.NewDb().Save(asset).Error; err != nil {
+		if err := db.Save(asset).Error; err != nil {
 			rest.rc.Error(c, "删除失败！", nil)
 			return
 		}
 	} else {
 		fmt.Println("ids", ids)
-		if err := cmf.NewDb().Model(&asset).Where("id IN (?) AND mid = ?", ids, mid).Updates(map[string]interface{}{"status": 0}).Error; err != nil {
+		if err := db.Model(&asset).Where("id IN (?) AND mid = ?", ids, mid).Updates(map[string]interface{}{"status": 0}).Error; err != nil {
 			rest.rc.Error(c, "删除失败！", nil)
 			return
 		}
@@ -260,6 +274,11 @@ func (rest *Assets) Delete(c *gin.Context) {
 // 根据文件处理上传逻辑
 // 1.判断上传类型，验证后缀合理性 type [0 => "图片" 1 => "视频" 2 => "文件"]
 func handleUpload(c *gin.Context, file *multipart.FileHeader, fileType string) (map[string]string, error) {
+
+	db, err := util.NewDb(c)
+	if err != nil {
+		return map[string]string{}, err
+	}
 
 	mid, _ := c.Get("mid")
 
@@ -408,7 +427,7 @@ func handleUpload(c *gin.Context, file *multipart.FileHeader, fileType string) (
 			AssetType:  fileTypeInt,
 		},
 	}
-	result := cmf.NewDb().Create(&assets)
+	result := db.Create(&assets)
 
 	tempMap := make(map[string]string, 0)
 
@@ -457,7 +476,6 @@ func wechatUpload(c *gin.Context, file *multipart.FileHeader, fileType string) (
 
 	//获取后缀列表
 	uploadSetting := appModel.GetUploadSetting(c)
-	middleware.TenantDb(c)
 
 	switch fileType {
 	case "0":

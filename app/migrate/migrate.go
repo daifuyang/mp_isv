@@ -2,6 +2,7 @@ package migrate
 
 import (
 	"gincmf/app/model"
+	cmf "github.com/gincmf/cmf/bootstrap"
 	"os"
 )
 
@@ -47,6 +48,8 @@ func StartMigrate() {
 	// new(Bank).AutoMigrate()
 	new(model.WxpayCategory).AutoMigrate()
 
-	model.AutoAdminMenu()
+	dbName := cmf.Conf().Database.Name
+
+	model.AutoAdminMenu(dbName)
 
 }

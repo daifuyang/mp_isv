@@ -9,7 +9,6 @@ import (
 	"errors"
 	appModel "gincmf/app/model"
 	"github.com/gin-gonic/gin"
-	cmf "github.com/gincmf/cmf/bootstrap"
 	cmfModel "github.com/gincmf/cmf/model"
 	"gorm.io/gorm"
 	"time"
@@ -18,9 +17,12 @@ import (
 type AdminNotice struct {
 	Mid int `gorm:"type:bigint(20);comment:小程序加密编号;not null" json:"mid"`
 	appModel.AdminNotice
+	Db *gorm.DB `gorm:"-" json:"-"`
 }
 
 func (model *AdminNotice) Index(c *gin.Context) (cmfModel.Paginate, error) {
+
+	db := model.Db
 
 	// 获取默认的系统分页
 	current, pageSize, err := new(cmfModel.Paginate).Default(c)
@@ -33,12 +35,12 @@ func (model *AdminNotice) Index(c *gin.Context) (cmfModel.Paginate, error) {
 	var total int64 = 0
 
 	var noticeMap []AdminNotice
-	tx := cmf.NewDb().Where("mid = ?", model.Mid).Order("id desc").Find(&noticeMap).Count(&total)
+	tx := db.Where("mid = ?", model.Mid).Order("id desc").Find(&noticeMap).Count(&total)
 	if tx.Error != nil {
 		return cmfModel.Paginate{}, tx.Error
 	}
 
-	tx = cmf.NewDb().Where("mid = ?", model.Mid).Order("id desc").Limit(pageSize).Offset((current - 1) * pageSize).Find(&noticeMap)
+	tx = db.Where("mid = ?", model.Mid).Order("id desc").Limit(pageSize).Offset((current - 1) * pageSize).Find(&noticeMap)
 	if tx.Error != nil {
 		return cmfModel.Paginate{}, tx.Error
 	}
@@ -58,6 +60,8 @@ func (model *AdminNotice) Index(c *gin.Context) (cmfModel.Paginate, error) {
 
 func (model *AdminNotice) Save(mid int, title string, desc string, id int, t int, audio string) (AdminNotice, error) {
 
+	db := model.Db
+
 	notice := AdminNotice{
 		Mid: mid,
 		AdminNotice: appModel.AdminNotice{
@@ -71,7 +75,7 @@ func (model *AdminNotice) Save(mid int, title string, desc string, id int, t int
 		},
 	}
 
-	tx := cmf.NewDb().Create(&notice)
+	tx := db.Create(&notice)
 
 	if tx.Error != nil {
 		return AdminNotice{}, nil

@@ -91,7 +91,9 @@ func (rest *Auth) PreAuthCode(c *gin.Context) {
 		"component_appid":        options.AppId,
 	}
 
-	preAuthCode, err := cmf.NewRedisDb().Get("preAuthCode").Result()
+	key := tenantId + options.AppId + "preAuthCode"
+
+	preAuthCode, err := cmf.NewRedisDb().Get(key).Result()
 
 	if err != nil {
 		preResult := new(open.Component).PreAuthCode(accessToken.(string), bizContent)
@@ -105,7 +107,7 @@ func (rest *Auth) PreAuthCode(c *gin.Context) {
 		preAuthCode = preResult.PreAuthCode
 
 		if preAuthCode != "" {
-			cmf.NewRedisDb().Set("preAuthCode", preAuthCode, time.Second*1700)
+			cmf.NewRedisDb().Set(key, preAuthCode, time.Second*1700)
 		} else {
 			cmf.NewRedisDb().Del("accessToken")
 			rest.rc.Error(c, "获取失败！", nil)

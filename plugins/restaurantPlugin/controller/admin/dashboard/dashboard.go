@@ -11,7 +11,6 @@ import (
 	"gincmf/app/util"
 	resModel "gincmf/plugins/restaurantPlugin/model"
 	"github.com/gin-gonic/gin"
-	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
 	"github.com/shopspring/decimal"
 	"math"
@@ -54,6 +53,12 @@ type dashboardAnalysis struct {
 
 // 获取首页面板数据
 func (rest *Dashboard) DashboardCard(c *gin.Context) {
+
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
 
 	var whenMap = []string{"today", "yesterday", "week"}
 
@@ -117,7 +122,7 @@ func (rest *Dashboard) DashboardCard(c *gin.Context) {
 			actually_amount 今日实收金额
 			payLog 查询支付日志
 		*/
-		tx := cmf.NewDb().Model(&model.PayLog{}).Select("sum(receipt_amount) as actually_amount").Where(queryStr, actuallyQueryArgs...).Scan(&dashboard)
+		tx := db.Model(&model.PayLog{}).Select("sum(receipt_amount) as actually_amount").Where(queryStr, actuallyQueryArgs...).Scan(&dashboard)
 		if tx.Error != nil {
 			rest.rc.Error(c, tx.Error.Error(), nil)
 			return
@@ -128,19 +133,19 @@ func (rest *Dashboard) DashboardCard(c *gin.Context) {
 			订单营业额(堂食+外卖) + 会员订单 + 充值订单
 		*/
 		queryStr = strings.Join(salesQuery, " AND ")
-		tx = cmf.NewDb().Model(&resModel.FoodOrder{}).Select("sum(fee) as food_order_amount").Where(queryStr, salesQueryArgs...).Scan(&dashboard)
+		tx = db.Model(&resModel.FoodOrder{}).Select("sum(fee) as food_order_amount").Where(queryStr, salesQueryArgs...).Scan(&dashboard)
 		if tx.Error != nil {
 			rest.rc.Error(c, tx.Error.Error(), nil)
 			return
 		}
 
-		tx = cmf.NewDb().Model(&resModel.MemberCardOrder{}).Select("sum(fee) as member_amount").Where(queryStr, salesQueryArgs...).Scan(&dashboard)
+		tx = db.Model(&resModel.MemberCardOrder{}).Select("sum(fee) as member_amount").Where(queryStr, salesQueryArgs...).Scan(&dashboard)
 		if tx.Error != nil {
 			rest.rc.Error(c, tx.Error.Error(), nil)
 			return
 		}
 
-		tx = cmf.NewDb().Model(&resModel.RechargeOrder{}).Select("sum(fee) as recharge_amount").Where(queryStr, salesQueryArgs...).Scan(&dashboard)
+		tx = db.Model(&resModel.RechargeOrder{}).Select("sum(fee) as recharge_amount").Where(queryStr, salesQueryArgs...).Scan(&dashboard)
 		if tx.Error != nil {
 			rest.rc.Error(c, tx.Error.Error(), nil)
 			return
@@ -153,19 +158,19 @@ func (rest *Dashboard) DashboardCard(c *gin.Context) {
 			订单数(堂食+外卖) + 会员订单 + 充值订单
 		*/
 
-		tx = cmf.NewDb().Where(queryStr, salesQueryArgs...).Find(&resModel.FoodOrder{}).Count(&dashboard.FoodOrderCount)
+		tx = db.Where(queryStr, salesQueryArgs...).Find(&resModel.FoodOrder{}).Count(&dashboard.FoodOrderCount)
 		if tx.Error != nil {
 			rest.rc.Error(c, tx.Error.Error(), nil)
 			return
 		}
 
-		tx = cmf.NewDb().Where(queryStr, salesQueryArgs...).Find(&resModel.MemberCardOrder{}).Count(&dashboard.MemberCount)
+		tx = db.Where(queryStr, salesQueryArgs...).Find(&resModel.MemberCardOrder{}).Count(&dashboard.MemberCount)
 		if tx.Error != nil {
 			rest.rc.Error(c, tx.Error.Error(), nil)
 			return
 		}
 
-		tx = cmf.NewDb().Where(queryStr, salesQueryArgs...).Find(&resModel.RechargeOrder{}).Count(&dashboard.RechargeCount)
+		tx = db.Where(queryStr, salesQueryArgs...).Find(&resModel.RechargeOrder{}).Count(&dashboard.RechargeCount)
 		if tx.Error != nil {
 			rest.rc.Error(c, tx.Error.Error(), nil)
 			return
@@ -178,7 +183,7 @@ func (rest *Dashboard) DashboardCard(c *gin.Context) {
 		*/
 		userQueryStr := strings.Join(userQuery, " AND ")
 		var user []resModel.User
-		tx = cmf.NewDb().Where(userQueryStr, userQueryArgs...).Find(&user).Count(&dashboard.NewMembersCount)
+		tx = db.Where(userQueryStr, userQueryArgs...).Find(&user).Count(&dashboard.NewMembersCount)
 		if tx.Error != nil {
 			rest.rc.Error(c, tx.Error.Error(), nil)
 			return
@@ -304,6 +309,12 @@ func (rest *Dashboard) DashboardSales(c *gin.Context) {
 		return
 	}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	var analysis dashboardAnalysis
 
 	// 查询几天全部订单
@@ -356,19 +367,19 @@ func (rest *Dashboard) DashboardSales(c *gin.Context) {
 		ro  []resModel.RechargeOrder
 	)
 
-	tx := cmf.NewDb().Where(queryStr, salesQueryArgs...).Find(&fo)
+	tx := db.Where(queryStr, salesQueryArgs...).Find(&fo)
 	if tx.Error != nil {
 		rest.rc.Error(c, tx.Error.Error(), nil)
 		return
 	}
 
-	tx = cmf.NewDb().Where(queryStr, salesQueryArgs...).Find(&mco)
+	tx = db.Where(queryStr, salesQueryArgs...).Find(&mco)
 	if tx.Error != nil {
 		rest.rc.Error(c, tx.Error.Error(), nil)
 		return
 	}
 
-	tx = cmf.NewDb().Where(queryStr, salesQueryArgs...).Find(&ro)
+	tx = db.Where(queryStr, salesQueryArgs...).Find(&ro)
 	if tx.Error != nil {
 		rest.rc.Error(c, tx.Error.Error(), nil)
 		return
@@ -475,7 +486,7 @@ func (rest *Dashboard) DashboardSales(c *gin.Context) {
 
 	// 门店销售额统计
 	var store []resModel.Store
-	tx = cmf.NewDb().Where("delete_at = ?", 0).Find(&store)
+	tx = db.Where("delete_at = ?", 0).Find(&store)
 	if tx.Error != nil {
 		fmt.Println(tx.Error)
 		return
@@ -492,7 +503,7 @@ func (rest *Dashboard) DashboardSales(c *gin.Context) {
 
 		queryStr := strings.Join(temSalesQuery, " AND ")
 
-		row := cmf.NewDb().Model(&resModel.FoodOrder{}).Select("sum(fee) as salesAmount").Where(queryStr, temSalesQueryArgs...).Row()
+		row := db.Model(&resModel.FoodOrder{}).Select("sum(fee) as salesAmount").Where(queryStr, temSalesQueryArgs...).Row()
 
 		tx := row.Scan(&salesAmount)
 		if tx != nil {

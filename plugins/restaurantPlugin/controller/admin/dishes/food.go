@@ -15,7 +15,6 @@ import (
 	"github.com/360EntSecGroup-Skylar/excelize/v2"
 	"github.com/gin-gonic/gin"
 	"github.com/gincmf/alipayEasySdk/merchant"
-	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
 	cmfLog "github.com/gincmf/cmf/log"
 	"gorm.io/gorm"
@@ -117,8 +116,16 @@ func (rest *Food) Get(c *gin.Context) {
 		queryArgs = append(queryArgs, categoryId)
 	}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	// 菜品管理模型
-	food := model.Food{}
+	food := model.Food{
+		Db: db,
+	}
 	data, err := food.Index(c, query, queryArgs)
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)
@@ -140,8 +147,16 @@ func (rest *Food) List(c *gin.Context) {
 	mid, _ := c.Get("mid")
 	storeId := c.Query("store_id")
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	// 获取门店参数
-	category := model.FoodCategory{}
+	category := model.FoodCategory{
+		Db: db,
+	}
 
 	var query []string
 	var queryArgs []interface{}
@@ -162,7 +177,9 @@ func (rest *Food) List(c *gin.Context) {
 	foodQuery = append(foodQuery, "f.mid = ? AND fc.store_id = ? AND f.delete_at = ?")
 	foodQueryArgs = append(foodQueryArgs, mid, storeId, 0)
 
-	food := model.Food{}
+	food := model.Food{
+		Db: db,
+	}
 	foodData, err := food.ListByCategory(foodQuery, foodQueryArgs)
 
 	if err != nil {
@@ -228,6 +245,12 @@ func (rest Food) Show(c *gin.Context) {
 		return
 	}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	mid, _ := c.Get("mid")
 
 	query := []string{"mid = ? AND id = ? AND delete_at = ?"}
@@ -245,7 +268,9 @@ func (rest Food) Show(c *gin.Context) {
 	query = append(query, "delete_at = ?")
 	queryArgs = append(queryArgs, "0")
 
-	food := model.Food{}
+	food := model.Food{
+		Db: db,
+	}
 	data, err := food.Detail(query, queryArgs)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -305,6 +330,12 @@ func (rest Food) Edit(c *gin.Context) {
 	}
 	if err := c.ShouldBindUri(&rewrite); err != nil {
 		c.JSON(400, gin.H{"msg": err.Error()})
+		return
+	}
+
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
 		return
 	}
 
@@ -572,7 +603,7 @@ func (rest Food) Edit(c *gin.Context) {
 	nowAt := time.Now().Unix()
 
 	food := model.Food{}
-	tx := cmf.NewDb().Where("id = ?", rewrite.Id).First(&food)
+	tx := db.Where("id = ?", rewrite.Id).First(&food)
 	if tx.Error != nil {
 		if errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 			rest.rc.Error(c, "该菜品不存在！", nil)
@@ -638,7 +669,7 @@ func (rest Food) Edit(c *gin.Context) {
 		food.ListOrder = listOrderFloat
 	}
 
-	tx = cmf.NewDb().Begin()
+	tx = db.Begin()
 	tx.SavePoint("sp1")
 	defer func() {
 		if r := recover(); r != nil {
@@ -674,6 +705,7 @@ func (rest Food) Edit(c *gin.Context) {
 	}
 
 	if useMaterialInt == 1 {
+
 		// 加料逻辑
 		var materialMap []materialJson
 		json.Unmarshal(materialBytes, &materialMap)
@@ -688,10 +720,14 @@ func (rest Food) Edit(c *gin.Context) {
 			materialArr = append(materialArr, materialPost)
 		}
 
+		fmt.Println("1111")
+
 		fmp := model.FoodMaterialPost{
 			FoodId: food.Id,
 			Db:     tx,
 		}
+
+		fmt.Println("1111")
 
 		err := fmp.Update(materialArr)
 		if err != nil {
@@ -815,6 +851,9 @@ func (rest Food) Edit(c *gin.Context) {
 		tx.Where(attrQueryStr, attrQueryArgs...).Delete(&model.FoodAttrPost{})
 
 		for _, sku := range skus {
+
+			sku.Db = db
+
 			_, err := sku.FirstOrSave()
 			if err != nil {
 				tx.RollbackTo("sp1")
@@ -824,7 +863,6 @@ func (rest Food) Edit(c *gin.Context) {
 		}
 	}
 
-	food.Db = tx
 	food, err = food.Update()
 	if err != nil {
 		tx.RollbackTo("sp1")
@@ -887,6 +925,12 @@ func (rest Food) inAttrKeys(attrKeys []string, key int) bool {
 // @Failure 400 {object} model.ReturnData "{"code":400,"msg":"登录状态已失效！"}"
 // @Router /admin/dishes/food [post]
 func (rest Food) Store(c *gin.Context) {
+
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
 
 	// 获取小程序mid
 	mid, _ := c.Get("mid")
@@ -1218,7 +1262,7 @@ func (rest Food) Store(c *gin.Context) {
 		food.ListOrder = listOrderFloat
 	}
 
-	tx := cmf.NewDb().Begin()
+	tx := db.Begin()
 	tx.SavePoint("sp1")
 
 	food.Db = tx
@@ -1542,11 +1586,17 @@ func (rest *Food) ListOrder(c *gin.Context) {
 		return
 	}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	mid, _ := c.Get("mid")
 	storeId := c.Query("store_id")
 
 	for _, item := range form {
-		cmf.NewDb().Model(&model.Food{}).Where("id = ? AND mid = ? AND store_id = ?", item.Id, mid, storeId).Update("list_order", item.ListOrder)
+		db.Model(&model.Food{}).Where("id = ? AND mid = ? AND store_id = ?", item.Id, mid, storeId).Update("list_order", item.ListOrder)
 	}
 
 	rest.rc.Success(c, "操作成功！", nil)
@@ -1563,6 +1613,12 @@ func (rest *Food) ListOrder(c *gin.Context) {
 
 func (rest *Food) SetStatus(c *gin.Context) {
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	mid, _ := c.Get("mid")
 
 	var rewrite struct {
@@ -1574,7 +1630,7 @@ func (rest *Food) SetStatus(c *gin.Context) {
 	}
 
 	food := model.Food{}
-	tx := cmf.NewDb().Where("id = ?", rewrite.Id).First(&food)
+	tx := db.Where("id = ?", rewrite.Id).First(&food)
 
 	if tx.Error != nil {
 		if errors.Is(tx.Error, gorm.ErrRecordNotFound) {
@@ -1592,7 +1648,7 @@ func (rest *Food) SetStatus(c *gin.Context) {
 		rest.rc.Error(c, "状态错误!", nil)
 	}
 
-	tx = cmf.NewDb().Model(&Food{}).Where("id = ? AND mid = ? AND store_id = ?", rewrite.Id, mid, storeId).Update("status", status)
+	tx = db.Model(&Food{}).Where("id = ? AND mid = ? AND store_id = ?", rewrite.Id, mid, storeId).Update("status", status)
 	if tx.Error != nil {
 		rest.rc.Error(c, tx.Error.Error(), nil)
 		return
@@ -1610,6 +1666,12 @@ func (rest *Food) SetStatus(c *gin.Context) {
  * @return
  **/
 func (rest *Food) ImportMenus(c *gin.Context) {
+
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
 
 	iMid, _ := c.Get("mid")
 	mid := iMid.(int)
@@ -1658,8 +1720,13 @@ func (rest *Food) ImportMenus(c *gin.Context) {
 		allLen := len(categories)
 		for k, v := range categories {
 			if k > 0 {
+
+				if v[0] == "" {
+					continue
+				}
+
 				category := model.FoodCategory{}
-				tx := cmf.NewDb().Where("mid = ? AND name = ?", mid, v[0]).First(&category)
+				tx := db.Where("mid = ? AND name = ?", mid, v[0]).First(&category)
 				category.Name = v[0]
 				category.Mid = mid
 				category.StoreId = storeIdInt
@@ -1667,10 +1734,10 @@ func (rest *Food) ImportMenus(c *gin.Context) {
 				if tx.RowsAffected == 0 {
 					category.CreateAt = time.Now().Unix()
 					category.UpdateAt = time.Now().Unix()
-					cmf.NewDb().Create(&category)
+					db.Create(&category)
 				} else {
 					category.UpdateAt = time.Now().Unix()
-					cmf.NewDb().Save(&category)
+					db.Save(&category)
 				}
 
 			}
@@ -1699,8 +1766,17 @@ func (rest *Food) ImportMenus(c *gin.Context) {
 		for k, v := range rows {
 
 			if k > 1 {
+
+				if len(v) == 0 {
+					continue
+				}
+
+				if strings.TrimSpace(v[0]) == "" {
+					continue
+				}
+
 				food := model.Food{}
-				tx := cmf.NewDb().Where("name = ? AND mid = ?", v[0], mid).First(&food)
+				tx := db.Where("name = ? AND mid = ?", v[0], mid).First(&food)
 				food.StoreId = storeIdInt
 				food.Name = strings.TrimSpace(v[0])
 				food.Excerpt = strings.TrimSpace(v[2])
@@ -1708,81 +1784,91 @@ func (rest *Food) ImportMenus(c *gin.Context) {
 
 				food.ListOrder = float64(allLen) - float64(k)
 
-				food.Unit = v[3]
-
 				status := 1
-				if v[4] == "下架" {
-					status = 0
+				if len(v) > 4 {
+					food.Unit = v[3]
+					if v[4] == "下架" {
+						status = 0
+					}
 				}
 
 				scene := 0
 
-				if v[5] == "堂食" {
-					scene = 1
-				}
+				if len(v) > 5 {
+					if v[5] == "堂食" {
+						scene = 1
+					}
 
-				if v[5] == "外卖" {
-					scene = 2
+					if v[5] == "外卖" {
+						scene = 2
+					}
+					food.Status = status
+					food.Scene = scene
 				}
-
-				food.Status = status
-				food.Scene = scene
 
 				isRecommend := 0
 
-				if v[6] == "推荐" {
-					isRecommend = 1
+				if len(v) > 6 {
+					if v[6] == "推荐" {
+						isRecommend = 1
+					}
+					food.IsRecommend = isRecommend
 				}
-
-				food.IsRecommend = isRecommend
 
 				startSale := 1
 
-				// 起售
-				if v[8] != "" {
-					startSaleInt, err := strconv.Atoi(v[8])
-					if err != nil {
-						startSale = 1
-					} else {
-						startSale = startSaleInt
+				if len(v) > 8 {
+					// 起售
+					if v[8] != "" {
+						startSaleInt, err := strconv.Atoi(v[8])
+						if err != nil {
+							startSale = 1
+						} else {
+							startSale = startSaleInt
+						}
 					}
-				}
-				food.StartSale = startSale
-
-				// 餐盒费
-				var boxFee float64 = 0
-				bf, err := strconv.ParseFloat(v[9], 64)
-				if err != nil {
-					boxFee = 0
-				} else {
-					boxFee = bf
+					food.StartSale = startSale
 				}
 
-				food.BoxFee = boxFee
-
-				food.FoodCode = v[13]
+				if len(v) > 9 {
+					// 餐盒费
+					var boxFee float64 = 0
+					bf, err := strconv.ParseFloat(v[9], 64)
+					if err != nil {
+						boxFee = 0
+					} else {
+						boxFee = bf
+					}
+					food.BoxFee = boxFee
+					food.FoodCode = v[13]
+				}
 
 				// 重量
 				var weight float64 = 0
-				w, err := strconv.ParseFloat(v[14], 64)
-				if err != nil {
-					weight = 0
-				} else {
-					weight = w
-				}
-				food.Weight = weight
 
-				// 售价
+				if len(v) > 14 {
+					w, err := strconv.ParseFloat(v[14], 64)
+					if err != nil {
+						weight = 0
+					} else {
+						weight = w
+					}
+					food.Weight = weight
+				}
+
 				var price float64 = 0
-				priceFloat, err := strconv.ParseFloat(v[15], 64)
-				if err != nil {
-					price = 0
-				} else {
-					price = priceFloat
-				}
+				if len(v) > 15 {
+					// 售价
+					priceFloat, err := strconv.ParseFloat(v[15], 64)
+					if err != nil {
+						price = 0
+					} else {
+						price = priceFloat
+					}
 
-				if price >= food.Price {
-					food.Price = price
+					if price >= food.Price {
+						food.Price = price
+					}
 				}
 
 				var originalPrice float64 = 0
@@ -1914,24 +2000,24 @@ func (rest *Food) ImportMenus(c *gin.Context) {
 				if tx.RowsAffected == 0 {
 					food.CreateAt = time.Now().Unix()
 					food.UpdateAt = time.Now().Unix()
-					cmf.NewDb().Create(&food)
+					db.Create(&food)
 				} else {
 					food.UpdateAt = time.Now().Unix()
-					cmf.NewDb().Save(&food)
+					db.Save(&food)
 				}
 
 				// 分类
 				if v[7] != "" {
 					categoryName := strings.TrimSpace(v[7])
 					category := model.FoodCategory{}
-					tx := cmf.NewDb().Where("name = ? AND mid = ?", categoryName, mid).First(&category)
+					tx := db.Where("name = ? AND mid = ?", categoryName, mid).First(&category)
 
 					if tx.RowsAffected > 0 {
 						categoryPost := model.FoodCategoryPost{}
-						tx := cmf.NewDb().Where("food_id = ? AND  food_category_id = ?", food.Id, category.Id).First(&categoryPost)
+						tx := db.Where("food_id = ? AND  food_category_id = ?", food.Id, category.Id).First(&categoryPost)
 
 						if tx.RowsAffected == 0 {
-							cmf.NewDb().Create(&model.FoodCategoryPost{
+							db.Create(&model.FoodCategoryPost{
 								FoodId:         food.Id,
 								FoodCategoryId: category.Id,
 								CreateAt:       time.Now().Unix(),
@@ -1953,13 +2039,13 @@ func (rest *Food) ImportMenus(c *gin.Context) {
 						Name: name,
 					}
 
-					result := cmf.NewDb().Where("name = ?", name).First(&attrKey)
+					result := db.Where("name = ?", name).First(&attrKey)
 					if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
 						fmt.Println("result.Error", result.Error.Error())
 					}
 
 					if result.RowsAffected == 0 {
-						cmf.NewDb().Create(&attrKey)
+						db.Create(&attrKey)
 					}
 
 					// 获取规格key
@@ -1968,6 +2054,7 @@ func (rest *Food) ImportMenus(c *gin.Context) {
 					attrValue := model.FoodAttrValue{
 						AttrId:    attrKey.AttrId,
 						AttrValue: attrVal,
+						Db:        db,
 					}
 
 					// 获取规格值id
@@ -1980,6 +2067,7 @@ func (rest *Food) ImportMenus(c *gin.Context) {
 					attrPost := model.FoodAttrPost{
 						FoodId:      food.Id,
 						AttrValueId: attrValue.AttrValueId,
+						Db:          db,
 					}
 
 					attrPost, err = attrPost.AddAttrPost()
@@ -2006,6 +2094,7 @@ func (rest *Food) ImportMenus(c *gin.Context) {
 						Price:            price,
 						Volume:           volume,
 						Remark:           attrValue.AttrValue,
+						Db:               db,
 					}
 
 					if food.Price > sku.Price {

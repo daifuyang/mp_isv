@@ -11,7 +11,6 @@ import (
 	"gincmf/app/util"
 	"gincmf/plugins/saasPlugin/model"
 	"github.com/gin-gonic/gin"
-	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
 )
 
@@ -38,9 +37,15 @@ func (rest *MpThemePage) Show(c *gin.Context) {
 
 	fmt.Println("origId", origId)
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	mpThemePage := model.MpThemePage{}
 	// 获取当前页面的数据
-	result := cmf.NewDb().Where("id = ?", origId).First(&mpThemePage)
+	result := db.Where("id = ?", origId).First(&mpThemePage)
 
 	if result.RowsAffected == 0 {
 		rest.rc.Error(c, "获取失败", result.Error.Error())
@@ -72,14 +77,20 @@ func (rest *MpThemePage) Edit(c *gin.Context) {
 	origId := util.DecodeId(uint64(id))
 	mpThemePage := model.MpThemePage{}
 
-	result := cmf.NewDb().Where("id = ?", origId).First(&mpThemePage)
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
+	result := db.Where("id = ?", origId).First(&mpThemePage)
 	if result.RowsAffected == 0 {
 		rest.rc.Error(c, "该数据不存在！", nil)
 		return
 	}
 
 	mpThemePage.More = more
-	cmf.NewDb().Save(&mpThemePage)
+	db.Save(&mpThemePage)
 
 	rest.rc.Success(c, "保存成功！", nil)
 }
@@ -102,6 +113,13 @@ func (rest *MpThemePage) Delete(c *gin.Context) {
 
 func (rest *MpThemePage) Detail(c *gin.Context) {
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		new(controller.Rest).Error(c, err.Error(), nil)
+		c.Abort()
+		return
+	}
+
 	mid, _ := c.Get("mid")
 
 	var form struct {
@@ -120,7 +138,7 @@ func (rest *MpThemePage) Detail(c *gin.Context) {
 
 	mpThemePage := model.MpThemePage{}
 	// 获取当前页面的数据
-	tx := cmf.NewDb().Where("mid = ? AND file = ?", mid, form.File).First(&mpThemePage)
+	tx := db.Where("mid = ? AND file = ?", mid, form.File).First(&mpThemePage)
 
 	if tx.RowsAffected == 0 {
 		rest.rc.Error(c, "获取失败", tx.Error.Error())
@@ -149,11 +167,19 @@ func (rest *MpThemePage) Detail(c *gin.Context) {
  **/
 
 func (rest *MpThemePage) Home(c *gin.Context) {
+
+	db, err := util.NewDb(c)
+	if err != nil {
+		new(controller.Rest).Error(c, err.Error(), nil)
+		c.Abort()
+		return
+	}
+
 	mid, _ := c.Get("mid")
 
 	mpThemePage := model.MpThemePage{}
 	// 获取当前页面的数据
-	result := cmf.NewDb().Where("mid = ? AND home = 1", mid).First(&mpThemePage)
+	result := db.Where("mid = ? AND home = 1", mid).First(&mpThemePage)
 
 	if result.RowsAffected == 0 {
 		rest.rc.Error(c, "获取失败", result.Error.Error())

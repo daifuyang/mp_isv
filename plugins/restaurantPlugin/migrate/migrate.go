@@ -7,17 +7,30 @@ package migrate
 
 import (
 	"gincmf/plugins/restaurantPlugin/model"
+	cmf "github.com/gincmf/cmf/bootstrap"
 )
 
-func AutoMigrate() {
+func AutoMigrate(dbName string) {
 
 	// 指定数据库
-	food := new(model.Food)
-	foodCategory := new(model.FoodCategory)
-	foodSku := new(model.FoodSku)
-	store := new(model.Store)
-	desk := new(model.Desk)
-	deskCategory := new(model.DeskCategory)
+	food := model.Food{
+		Db: cmf.ManualDb(dbName),
+	}
+	foodCategory := model.FoodCategory{
+		Db: cmf.ManualDb(dbName),
+	}
+	foodSku := model.FoodSku{
+		Db: cmf.ManualDb(dbName),
+	}
+	store := model.Store{
+		Db: cmf.ManualDb(dbName),
+	}
+	desk := model.Desk{
+		Db: cmf.ManualDb(dbName),
+	}
+	deskCategory := model.DeskCategory{
+		Db: cmf.ManualDb(dbName),
+	}
 
 	new(FoodOrder).AutoMigrate()
 	foodCategory.AutoMigrate()

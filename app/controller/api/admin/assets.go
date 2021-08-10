@@ -170,7 +170,7 @@ func (rest *Assets) Delete(c *gin.Context) {
 
 		fmt.Println("Id", rewrite.Id)
 
-		result := cmf.NewDb().First(&asset, rewrite.Id)
+		result := cmf.Db().First(&asset, rewrite.Id)
 		if result.RowsAffected == 0 {
 			rest.rc.Error(c, "该内容不存在！", nil)
 			return
@@ -179,13 +179,13 @@ func (rest *Assets) Delete(c *gin.Context) {
 		asset.Id = rewrite.Id
 		asset.Status = 0
 
-		if err := cmf.NewDb().Save(asset).Error; err != nil {
+		if err := cmf.Db().Save(asset).Error; err != nil {
 			rest.rc.Error(c, "删除失败！", nil)
 			return
 		}
 	} else {
 		fmt.Println("ids", ids)
-		if err := cmf.NewDb().Model(&asset).Where("id IN (?)", ids).Updates(map[string]interface{}{"status": 0}).Error; err != nil {
+		if err := cmf.Db().Model(&asset).Where("id IN (?)", ids).Updates(map[string]interface{}{"status": 0}).Error; err != nil {
 			rest.rc.Error(c, "删除失败！", nil)
 			return
 		}
@@ -327,7 +327,7 @@ func handleUpload(c *gin.Context, file *multipart.FileHeader, fileType string) (
 	fmt.Println("err", err)
 
 	//保存到数据库
-	cmf.NewDb().Create(&model.Asset{
+	cmf.Db().Create(&model.Asset{
 		UserId:     userIdInt,
 		FileSize:   fileSize,
 		CreateAt:   time.Now().Unix(),

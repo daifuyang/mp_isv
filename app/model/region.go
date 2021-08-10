@@ -17,6 +17,7 @@ type Region struct {
 type regionResult struct {
 	Value    int            `json:"value"`
 	Label    string         `json:"label"`
+	AreaType int            `json:"area_type"`
 	Children []regionResult `json:"children"`
 }
 
@@ -45,10 +46,11 @@ func recursionAddRegion(region []Region, parentId int) []regionResult {
 	var results []regionResult
 	for _, v := range region {
 
-		if parentId == v.ParentId {
+		if parentId == v.ParentId && v.AreaType < 4 {
 			result := regionResult{
 				Value: v.AreaId,
 				Label: v.AreaName,
+				AreaType: v.AreaType,
 			}
 			result.Children = recursionAddRegion(region, v.AreaId)
 			results = append(results, result)

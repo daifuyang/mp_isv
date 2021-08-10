@@ -89,7 +89,17 @@ func (rest *Index) Get(c *gin.Context) {
 	queryArgs = append(queryArgs, 0)
 
 	// 菜品管理模型
-	store := model.Store{}
+
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
+	store := model.Store{
+		Db: db,
+	}
+
 	data, err := store.Index(c, query, queryArgs)
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)
@@ -118,8 +128,17 @@ func (rest *Index) IndexWithFoodCount(c *gin.Context) {
 	query = append(query, "delete_at = ?")
 	queryArgs = append(queryArgs, 0)
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		c.Abort()
+		return
+	}
+
 	// 菜品管理模型
-	store := model.Store{}
+	store := model.Store{
+		Db: db,
+	}
 	data, err := store.IndexWithFoodCount(c, query, queryArgs)
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)
@@ -140,7 +159,16 @@ func (rest *Index) List(c *gin.Context) {
 	query = append(query, "delete_at = ?")
 	queryArgs = append(queryArgs, 0)
 
-	store := model.Store{}
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		c.Abort()
+		return
+	}
+
+	store := model.Store{
+		Db: db,
+	}
 	data, err := store.List(query, queryArgs)
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)
@@ -177,7 +205,17 @@ func (rest Index) Show(c *gin.Context) {
 	}
 
 	mid, _ := c.Get("mid")
-	store := model.Store{}
+
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		c.Abort()
+		return
+	}
+
+	store := model.Store{
+		Db: db,
+	}
 
 	query := []string{"mid = ? AND  id = ?"}
 	queryArgs := []interface{}{mid, rewrite.Id}
@@ -196,6 +234,7 @@ func (rest Index) Show(c *gin.Context) {
 	hours := model.StoreHours{
 		Mid:     mid.(int),
 		StoreId: rewrite.Id,
+		Db:      db,
 	}
 
 	storeHours, err := hours.Hours()
@@ -263,10 +302,21 @@ func (rest Index) Edit(c *gin.Context) {
 		return
 	}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		c.Abort()
+		return
+	}
+
+	storeModel := model.Store{
+		Db: db,
+	}
+
 	query := []string{"mid = ?", "id = ?"}
 	queryArgs := []interface{}{mid, rewrite.Id}
 
-	storeData, err := new(model.Store).Show(query, queryArgs)
+	storeData, err := storeModel.Show(query, queryArgs)
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, err.Error(), nil)
 	}
@@ -467,6 +517,7 @@ func (rest Index) Edit(c *gin.Context) {
 		Notice:           notice,
 		CreateAt:         time.Now().Unix(),
 		UpdateAt:         time.Now().Unix(),
+		Db:               db,
 	}
 
 	var bt = make([]merchant.BusinessTime, 0)
@@ -625,7 +676,11 @@ func (rest Index) Edit(c *gin.Context) {
 		return
 	}
 	// 营业时间
-	sh := model.StoreHours{StoreId: store.Id, Mid: midInt}
+	sh := model.StoreHours{
+		StoreId: store.Id,
+		Mid: midInt,
+		Db: db,
+	}
 	storeHours, err = sh.AddHours(storeHours)
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)
@@ -699,6 +754,12 @@ func (rest Index) Store(c *gin.Context) {
 	provinceInt, err := strconv.Atoi(province)
 	if err != nil {
 		rest.rc.Error(c, "省份id格式错误！", nil)
+		return
+	}
+
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
 		return
 	}
 
@@ -851,7 +912,11 @@ func (rest Index) Store(c *gin.Context) {
 	query := []string{"mid = ?", "store_name = ?"}
 	queryArgs := []interface{}{mid, storeName}
 
-	storeData, err := new(model.Store).Show(query, queryArgs)
+	storeModel := model.Store{
+		Db: db,
+	}
+
+	storeData, err := storeModel.Show(query, queryArgs)
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, err.Error(), nil)
 	}
@@ -1034,7 +1099,11 @@ func (rest Index) Store(c *gin.Context) {
 		return
 	}
 	// 营业时间
-	sh := model.StoreHours{StoreId: store.Id, Mid: midInt}
+	sh := model.StoreHours{
+		StoreId: store.Id,
+		Mid: midInt,
+		Db: db,
+	}
 	storeHours, err = sh.AddHours(storeHours)
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)
@@ -1078,11 +1147,17 @@ func (rest Index) Delete(c *gin.Context) {
 		return
 	}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		new(controller.Rest).Error(c, err.Error(), nil)
+		return
+	}
+
 	mid, _ := c.Get("mid")
 	midInt := mid.(int)
 	store := model.Store{}
 
-	result := cmf.NewDb().Model(&store).Where("mid = ? AND id = ?", midInt, rewrite.Id).Update("delete_at", time.Now().Unix())
+	result := db.Model(&store).Where("mid = ? AND id = ?", midInt, rewrite.Id).Update("delete_at", time.Now().Unix())
 
 	if result.Error != nil {
 		rest.rc.Error(c, result.Error.Error(), nil)
@@ -1109,13 +1184,21 @@ func (rest Index) QueryStatus(c *gin.Context) {
 		return
 	}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		new(controller.Rest).Error(c, err.Error(), nil)
+		return
+	}
+
 	mid, _ := c.Get("mid")
 
 	alipayUserId, _ := c.Get("alipay_user_id")
 
-	store := model.Store{}
+	store := model.Store{
+		Db: db,
+	}
 
-	store, err := store.Show([]string{"mid = ?", "id = ?"}, []interface{}{mid, rewrite.Id})
+	store, err = store.Show([]string{"mid = ?", "id = ?"}, []interface{}{mid, rewrite.Id})
 
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)
@@ -1159,7 +1242,7 @@ func (rest Index) QueryStatus(c *gin.Context) {
 			store.AuditStatus = "passed"
 		}
 
-		tx := cmf.NewDb().Save(store)
+		tx := db.Save(store)
 
 		if tx.Error != nil {
 			rest.rc.Error(c, err.Error(), nil)

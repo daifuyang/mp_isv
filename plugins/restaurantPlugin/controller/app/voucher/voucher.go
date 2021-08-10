@@ -7,10 +7,10 @@ package voucher
 
 import (
 	"encoding/json"
+	"gincmf/app/util"
 	"gincmf/plugins/restaurantPlugin/model"
 	"github.com/gin-gonic/gin"
 	easyUtil "github.com/gincmf/alipayEasySdk/util"
-	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
 	cmfLog "github.com/gincmf/cmf/log"
 	"net/http"
@@ -35,11 +35,21 @@ func (rest *Voucher) Get(c *gin.Context) {
 	// 获取当前用户信息
 	userId, _ := c.Get("mp_user_id")
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	mid, _ := c.Get("mid")
 
 	status := c.Query("status")
 
-	data, err := new(model.VoucherPost).Index(c, []string{"user_id = ? AND p.mid = ? AND p.status = ?"}, []interface{}{userId, mid, status})
+	voucherPost := model.VoucherPost{
+		Db: db,
+	}
+
+	data, err := voucherPost.Index(c, []string{"user_id = ? AND p.mid = ? AND p.status = ?"}, []interface{}{userId, mid, status})
 	if err != nil {
 		rest.rc.Error(c, "获取失败！", err.Error())
 		return
@@ -56,7 +66,17 @@ func (rest *Voucher) List(c *gin.Context) {
 	mid, _ := c.Get("mid")
 	status := 0
 
-	data, err := new(model.VoucherPost).List([]string{"user_id = ? AND p.mid = ? AND p.status = ?"}, []interface{}{userId, mid, status})
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
+	voucherPost := model.VoucherPost{
+		Db: db,
+	}
+
+	data, err := voucherPost.List([]string{"user_id = ? AND p.mid = ? AND p.status = ?"}, []interface{}{userId, mid, status})
 	if err != nil {
 		rest.rc.Error(c, "获取失败！", err.Error())
 		return
@@ -102,6 +122,12 @@ func (rest *Voucher) ReceiveNotify(c *gin.Context) {
 		return
 	}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	orderId := strings.Join(param["out_trade_no"], "")
 
 	voucherDetailList := strings.Join(param["voucher_detail_list"], "")
@@ -119,7 +145,7 @@ func (rest *Voucher) ReceiveNotify(c *gin.Context) {
 
 	var fo model.FoodOrder
 
-	tx := cmf.NewDb().Debug().Where("order_id", orderId).First(&fo)
+	tx := db.Where("order_id", orderId).First(&fo)
 	if tx.Error != nil {
 		rest.rc.Error(c, tx.Error.Error(), nil)
 		return
@@ -127,19 +153,19 @@ func (rest *Voucher) ReceiveNotify(c *gin.Context) {
 
 	vp := model.VoucherPost{}
 
-	cmf.NewDb().Where("alipay_voucher_id = ?", voucherDetailMap.VoucherId).First(&vp)
+	db.Where("alipay_voucher_id = ?", voucherDetailMap.VoucherId).First(&vp)
 
 	vp.Status = 1
 	vp.UpdateAt = time.Now().Unix()
 
-	tx = cmf.NewDb().Where("alipay_voucher_id = ?", voucherDetailMap.VoucherId).Updates(vp)
+	tx = db.Where("alipay_voucher_id = ?", voucherDetailMap.VoucherId).Updates(vp)
 	if tx.Error != nil {
 		rest.rc.Error(c, tx.Error.Error(), nil)
 		return
 	}
 
 	fo.VoucherId = vp.Id
-	cmf.NewDb().Where("order_id", orderId).Updates(&fo)
+	db.Where("order_id", orderId).Updates(&fo)
 
 	c.String(http.StatusOK, "success")
 }

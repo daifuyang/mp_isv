@@ -7,8 +7,8 @@ package app
 
 import (
 	"gincmf/app/model"
+	"gincmf/app/util"
 	"github.com/gin-gonic/gin"
-	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
 	"regexp"
 	"strconv"
@@ -91,13 +91,21 @@ func (rest *User) Edit(c *gin.Context) {
 
 	mpUserId, _ := c.Get("mp_user_id")
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	if mpUserId.(int) == 0 {
-		cmf.NewDb().Create(&u)
+		u.CreateAt = time.Now().Unix()
+		u.UpdateAt = time.Now().Unix()
+		db.Create(&u)
 		// 更新第三方关系
-		cmf.NewDb().Where("open_id", openId).Update("user_id", u.Id)
+		db.Where("open_id", openId).Update("user_id", u.Id)
 	} else {
 		u.Id = mpUserId.(int)
-		cmf.NewDb().Save(&u)
+		db.Save(&u)
 	}
 
 	rest.rc.Success(c, "更新成功！", nil)

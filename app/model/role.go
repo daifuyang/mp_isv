@@ -32,7 +32,6 @@ type RoleUser struct {
 }
 
 func (model *Role) Get(c *gin.Context, query []string, queryArgs []interface{}) (cmfModel.Paginate, error) {
-
 	var role []Role
 	// 获取默认的系统分页
 	current, pageSize, err := model.paginate.Default(c)
@@ -46,8 +45,8 @@ func (model *Role) Get(c *gin.Context, query []string, queryArgs []interface{}) 
 
 	var total int64 = 0
 
-	cmf.NewDb().Where(queryStr, queryArgs...).Find(&role).Count(&total)
-	tx := cmf.NewDb().Limit(pageSize).Where(queryStr, queryArgs...).Offset((current - 1) * pageSize).Find(&role)
+	cmf.Db().Where(queryStr, queryArgs...).Find(&role).Count(&total)
+	tx := cmf.Db().Limit(pageSize).Where(queryStr, queryArgs...).Offset((current - 1) * pageSize).Find(&role)
 
 	if tx.Error != nil && errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 		return cmfModel.Paginate{}, tx.Error

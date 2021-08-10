@@ -7,8 +7,8 @@ package admin
 
 import (
 	"gincmf/app/model"
+	"gincmf/app/util"
 	"github.com/gin-gonic/gin"
-	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
 	"github.com/gorilla/websocket"
 )
@@ -132,6 +132,7 @@ func (rest *Notice) Get(c *gin.Context) {
 
 func (rest *Notice) Show(c *gin.Context) {
 
+
 	var rewrite struct {
 		Id int `uri:"id"`
 	}
@@ -140,7 +141,17 @@ func (rest *Notice) Show(c *gin.Context) {
 		return
 	}
 
-	notice, err := new(model.AdminNotice).Show([]string{"id = ?"}, []interface{}{rewrite.Id})
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
+	adminNotice := model.AdminNotice{
+		Db:db,
+	}
+
+	notice, err := adminNotice.Show([]string{"id = ?"}, []interface{}{rewrite.Id})
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)
 		return
@@ -160,9 +171,16 @@ func (rest *Notice) Read(c *gin.Context) {
 		return
 	}
 
-	tx := cmf.NewDb().Model(&model.AdminNotice{}).Where("id = ?", rewrite.Id).Update("status", 1)
+	db, err := util.NewDb(c)
+	if err != nil {
+		new(controller.Rest).Error(c, err.Error(), nil)
+		c.Abort()
+		return
+	}
 
-	err := tx.Error
+	tx := db.Model(&model.AdminNotice{}).Where("id = ?", rewrite.Id).Update("status", 1)
+
+	err = tx.Error
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)
 		return

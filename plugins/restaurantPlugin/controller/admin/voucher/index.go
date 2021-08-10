@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	appModel "gincmf/app/model"
+	"gincmf/app/util"
 	"gincmf/plugins/restaurantPlugin/model"
 	saasModel "gincmf/plugins/saasPlugin/model"
 	"github.com/gin-gonic/gin"
@@ -29,6 +30,12 @@ type Index struct {
 }
 
 func (rest *Index) Get(c *gin.Context) {
+
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
 
 	mid, _ := c.Get("mid")
 
@@ -66,7 +73,10 @@ func (rest *Index) Get(c *gin.Context) {
 		queryArgs = append(queryArgs, startTimeStamp, endTimeStamp)
 	}
 
-	voucher := model.Voucher{}
+	voucher := model.Voucher{
+		Db: db,
+	}
+
 	data, err := voucher.Index(c, query, queryArgs)
 
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
@@ -79,12 +89,22 @@ func (rest *Index) Get(c *gin.Context) {
 
 func (rest *Index) List(c *gin.Context) {
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	mid, _ := c.Get("mid")
 
 	var query = []string{"mid = ? AND status = ?"}
 	var queryArgs = []interface{}{mid, 1}
 
-	data, err := new(model.Voucher).List(query, queryArgs)
+	voucher := model.Voucher{
+		Db: db,
+	}
+
+	data, err := voucher.List(query, queryArgs)
 
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, err.Error(), nil)
@@ -104,9 +124,18 @@ func (rest *Index) Show(c *gin.Context) {
 		return
 	}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	mid, _ := c.Get("mid")
 
-	v := model.Voucher{}
+	v := model.Voucher{
+		Db: db,
+	}
+
 	data, err := v.Show([]string{"id = ? AND  mid = ? AND delete_at = ?"}, []interface{}{rewrite.Id, mid, 0})
 
 	if err != nil {
@@ -128,6 +157,12 @@ func (rest *Index) Edit(c *gin.Context) {
 		return
 	}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	mid, _ := c.Get("mid")
 
 	alipayUserId, exist := c.Get("alipay_user_id")
@@ -138,7 +173,7 @@ func (rest *Index) Edit(c *gin.Context) {
 		PublishEndTime string `json:"publish_end_time"`
 	}
 
-	err := c.ShouldBindJSON(&form)
+	err = c.ShouldBindJSON(&form)
 	if err != nil {
 		c.JSON(400, gin.H{"msg": err.Error()})
 		return
@@ -151,7 +186,7 @@ func (rest *Index) Edit(c *gin.Context) {
 		return
 	}
 
-	businessJson := saasModel.Options("business_info", mid.(int))
+	businessJson, err := saasModel.Options(db, "business_info", mid.(int))
 	bi := model.BusinessInfo{}
 	_ = json.Unmarshal([]byte(businessJson), &bi)
 	if bi.BrandName == "" {
@@ -169,7 +204,9 @@ func (rest *Index) Edit(c *gin.Context) {
 
 	brandName := bi.BrandName
 
-	voucher := model.Voucher{}
+	voucher := model.Voucher{
+		Db: db,
+	}
 
 	voucher, err = voucher.Show([]string{"id = ? AND  mid = ? AND delete_at = ?"}, []interface{}{rewrite.Id, mid, 0})
 
@@ -222,7 +259,7 @@ func (rest *Index) Edit(c *gin.Context) {
 		}
 
 		sQueryStr := strings.Join(sQuery, " OR ")
-		tx := cmf.NewDb().Where(sQueryStr, sQueryArgs...).Find(&store)
+		tx := db.Where(sQueryStr, sQueryArgs...).Find(&store)
 
 		if tx.Error != nil {
 			rest.rc.Error(c, tx.Error.Error(), nil)
@@ -312,14 +349,17 @@ func (rest *Index) Edit(c *gin.Context) {
 		}
 	}
 
-	tx := cmf.NewDb().Save(&voucher)
+	tx := db.Save(&voucher)
 	if tx.Error != nil {
 		rest.rc.Error(c, "更新失败！"+tx.Error.Error(), nil)
 		return
 	}
 
 	// 保存门店关系
-	v := model.VoucherStorePost{VoucherId: voucher.Id}
+	v := model.VoucherStorePost{
+		VoucherId: voucher.Id,
+		Db:        db,
+	}
 	err = v.Store(storeIdArr)
 
 	if err != nil {
@@ -364,6 +404,13 @@ func (rest *Index) Store(c *gin.Context) {
 	err := c.ShouldBindJSON(&form)
 	if err != nil {
 		c.JSON(400, gin.H{"msg": err.Error()})
+		return
+	}
+
+	db, err := util.NewDb(c)
+	if err != nil {
+		new(controller.Rest).Error(c, err.Error(), nil)
+		c.Abort()
 		return
 	}
 
@@ -432,7 +479,7 @@ func (rest *Index) Store(c *gin.Context) {
 
 		sQueryStr := strings.Join(sQuery, " AND ")
 
-		tx := cmf.NewDb().Where(sQueryStr, sQueryArgs...).Find(&store)
+		tx := db.Where(sQueryStr, sQueryArgs...).Find(&store)
 
 		if tx.Error != nil {
 			rest.rc.Error(c, tx.Error.Error(), nil)
@@ -454,7 +501,11 @@ func (rest *Index) Store(c *gin.Context) {
 		syncToAlipay = form.SyncToAlipay
 	}
 
-	businessJson := saasModel.Options("business_info", mid.(int))
+	businessJson, err := saasModel.Options(db, "business_info", mid.(int))
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
 	bi := model.BusinessInfo{}
 	_ = json.Unmarshal([]byte(businessJson), &bi)
 	if bi.BrandName == "" || bi.BrandLogo == "" || bi.Mobile == "" {
@@ -528,14 +579,17 @@ func (rest *Index) Store(c *gin.Context) {
 	}
 
 	// 创建入库
-	result := cmf.NewDb().Create(&voucher)
+	result := db.Create(&voucher)
 	if result.Error != nil {
 		rest.rc.Error(c, result.Error.Error(), nil)
 		return
 	}
 
 	// 保存门店关系
-	v := model.VoucherStorePost{VoucherId: voucher.Id}
+	v := model.VoucherStorePost{
+		VoucherId: voucher.Id,
+		Db:        db,
+	}
 	err = v.Store(storeIdArr)
 
 	if err != nil {
@@ -588,10 +642,16 @@ func (rest *Index) Delete(c *gin.Context) {
 		return
 	}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	mid, _ := c.Get("mid")
 
 	v := model.Voucher{}
-	tx := cmf.NewDb().Where("id = ? AND mid = ?", rewrite.Id, mid).First(&v)
+	tx := db.Where("id = ? AND mid = ?", rewrite.Id, mid).First(&v)
 
 	if tx.Error != nil {
 		rest.rc.Error(c, tx.Error.Error(), nil)
@@ -605,7 +665,7 @@ func (rest *Index) Delete(c *gin.Context) {
 
 	v.DeleteAt = time.Now().Unix()
 
-	tx = cmf.NewDb().Where("id = ? AND mid = ?", rewrite.Id, mid).Updates(&v)
+	tx = db.Where("id = ? AND mid = ?", rewrite.Id, mid).Updates(&v)
 	if tx.Error != nil {
 		rest.rc.Error(c, tx.Error.Error(), nil)
 		return
@@ -635,6 +695,13 @@ func (rest *Index) Send(c *gin.Context) {
 		return
 	}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		new(controller.Rest).Error(c, err.Error(), nil)
+		c.Abort()
+		return
+	}
+
 	mid, _ := c.Get("mid")
 
 	_, exist := c.Get("alipay_user_id")
@@ -649,7 +716,10 @@ func (rest *Index) Send(c *gin.Context) {
 		return
 	}
 
-	v := model.Voucher{}
+	v := model.Voucher{
+		Db: db,
+	}
+
 	vp := marketing.VoucherValidPeriod{}
 
 	data, err := v.Show([]string{"id = ? AND mid = ? AND status = ?"}, []interface{}{form.VoucherId, mid, 1})
@@ -697,7 +767,10 @@ func (rest *Index) Send(c *gin.Context) {
 			return
 		}
 
-		tp := appModel.UserPart{}
+		tp := appModel.UserPart{
+			Db: db,
+		}
+
 		tpData, err := tp.Show([]string{"u.id = ? AND tp.type = ? AND u.user_status = ?"}, []interface{}{form.UserId, "alipay-mp", 1})
 		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 			rest.rc.Error(c, err.Error(), nil)
@@ -709,7 +782,11 @@ func (rest *Index) Send(c *gin.Context) {
 			return
 		}
 
-		result := new(model.Voucher).Send(data.TemplateId, tpData.OpenId, data.VoucherName)
+		voucher := model.Voucher{
+			Db: db,
+		}
+
+		result := voucher.Send(data.TemplateId, tpData.OpenId, data.VoucherName)
 
 		if result.Response.Code != "10000" {
 			rest.rc.Error(c, "发送失败！"+result.Response.SubMsg, result)
@@ -720,7 +797,7 @@ func (rest *Index) Send(c *gin.Context) {
 
 	}
 
-	tx := cmf.NewDb().Create(&vPost)
+	tx := db.Create(&vPost)
 
 	if tx.Error != nil {
 		rest.rc.Error(c, "发送失败！"+tx.Error.Error(), tx.Error)

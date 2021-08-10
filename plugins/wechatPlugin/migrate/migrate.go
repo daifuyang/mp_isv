@@ -5,10 +5,18 @@
  */
 package migrate
 
-import "gincmf/plugins/wechatPlugin/model"
+import (
+	"gincmf/plugins/wechatPlugin/model"
+	cmf "github.com/gincmf/cmf/bootstrap"
+)
 
 type Migrate struct{}
 
-func (migrate *Migrate) AutoMigrate() {
-	new(model.Applyment).AutoMigrate()
+func AutoMigrate(dbName string) {
+
+	applyment := model.Applyment{
+		Db:cmf.ManualDb(dbName),
+	}
+
+	applyment.AutoMigrate()
 }

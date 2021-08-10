@@ -8,6 +8,7 @@ package tenant
 import (
 	"errors"
 	appModel "gincmf/app/model"
+	"gincmf/app/util"
 	saasModel "gincmf/plugins/saasPlugin/model"
 	"github.com/gin-gonic/gin"
 	cmf "github.com/gincmf/cmf/bootstrap"
@@ -30,6 +31,12 @@ func (rest *AuthAccess) Show(c *gin.Context) {
 		return
 	}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	mid, _ := c.Get("mid")
 
 	if rewrite.Id == 1 {
@@ -38,7 +45,7 @@ func (rest *AuthAccess) Show(c *gin.Context) {
 	}
 
 	role := saasModel.Role{}
-	err := cmf.NewDb().Where("id = ? AND mid = ?", rewrite.Id, mid).First(&role).Error
+	err = db.Where("id = ? AND mid = ?", rewrite.Id, mid).First(&role).Error
 
 	if err != nil {
 		rest.rc.Error(c, "查询角色失败！请联系管理员处理", nil)
@@ -53,7 +60,7 @@ func (rest *AuthAccess) Show(c *gin.Context) {
 
 	prefix := cmf.Conf().Database.Prefix
 
-	tx := cmf.NewDb().Table(prefix+"auth_access as a").Select("a.*,r.id as rule_id").
+	tx := db.Table(prefix+"auth_access as a").Select("a.*,r.id as rule_id").
 		Joins("INNER JOIN "+prefix+"auth_rule r on a.rule_name = r.name").
 		Where("role_id = ? AND a.mid = ?", role.Id, mid).
 		Scan(&access)
@@ -103,6 +110,12 @@ func (rest *AuthAccess) Edit(c *gin.Context) {
 		return
 	}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	// 角色描述
 	remark := c.PostForm("remark")
 	if remark == "" {
@@ -122,17 +135,17 @@ func (rest *AuthAccess) Edit(c *gin.Context) {
 		},
 	}
 
-	cmf.NewDb().Model(&role).Updates(role)
+	db.Model(&role).Updates(role)
 
 	// 查询当前存在的auth_access
 	var access []saasModel.AuthAccess
-	cmf.NewDb().Where("role_id = ? AND mid = ?", rewrite.Id, mid).Find(&access)
+	db.Where("role_id = ? AND mid = ?", rewrite.Id, mid).Find(&access)
 
 	var arrTemp []interface{}
 	for _, v := range roleAccess {
 
 		rule := appModel.AuthRule{}
-		tx := cmf.NewDb().Where("id = ?", v, mid).First(&rule)
+		tx := db.Where("id = ?", v, mid).First(&rule)
 		if tx.Error != nil {
 			if errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 				rest.rc.Error(c, v+"：该规则不存在！", nil)
@@ -143,7 +156,6 @@ func (rest *AuthAccess) Edit(c *gin.Context) {
 		}
 
 		ruleName := rule.Name
-
 		arrTemp = append(arrTemp, ruleName)
 	}
 
@@ -151,14 +163,14 @@ func (rest *AuthAccess) Edit(c *gin.Context) {
 	for _, v := range access {
 		ruleName := v.RuleName
 		if !inArray(ruleName, arrTemp) {
-			cmf.NewDb().Where("rule_name = ? AND mid = ?", ruleName, mid).Delete(&saasModel.AuthAccess{})
+			db.Where("rule_name = ? AND mid = ?", ruleName, mid).Delete(&saasModel.AuthAccess{})
 		}
 	}
 
 	for k, v := range roleAccess {
 		if !inArray(v, arrTemp) {
 			ruleName := arrTemp[k]
-			cmf.NewDb().Create(&saasModel.AuthAccess{
+			db.Create(&saasModel.AuthAccess{
 				Mid: mid.(int),
 				AuthAccess: appModel.AuthAccess{
 					RoleId: rewrite.Id, RuleName: ruleName.(string),
@@ -203,7 +215,13 @@ func (rest *AuthAccess) Store(c *gin.Context) {
 
 	role := saasModel.Role{}
 
-	tx := cmf.NewDb().Where("name = ? AND mid = ?", name, mid).First(&role)
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
+	tx := db.Where("name = ? AND mid = ?", name, mid).First(&role)
 	if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, tx.Error.Error(), nil)
 		return
@@ -219,7 +237,7 @@ func (rest *AuthAccess) Store(c *gin.Context) {
 	role.Remark = remark
 	role.CreateAt = time.Now().Unix()
 
-	tx = cmf.NewDb().Where("name = ? AND mid = ?", name, mid).Create(&role)
+	tx = db.Where("name = ? AND mid = ?", name, mid).Create(&role)
 	if tx.Error != nil {
 		rest.rc.Error(c, tx.Error.Error(), nil)
 		return
@@ -233,7 +251,7 @@ func (rest *AuthAccess) Store(c *gin.Context) {
 	for _, v := range roleAccess {
 
 		rule := appModel.AuthRule{}
-		tx := cmf.NewDb().Where("id = ?", v, mid).First(&rule)
+		tx := db.Where("id = ?", v, mid).First(&rule)
 		if tx.Error != nil {
 			if errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 				rest.rc.Error(c, v+"：该规则不存在！", nil)
@@ -252,7 +270,7 @@ func (rest *AuthAccess) Store(c *gin.Context) {
 				RuleName: ruleName,
 			},
 		}
-		cmf.NewDb().Where("role_id = ? AND rule_name = ? AND mid = ?", role.Id, ruleName, mid).FirstOrCreate(&roleAccess)
+		db.Where("role_id = ? AND rule_name = ? AND mid = ?", role.Id, ruleName, mid).FirstOrCreate(&roleAccess)
 	}
 
 	rest.rc.Success(c, "操作成功！", role.Id)

@@ -8,7 +8,6 @@ package model
 import (
 	"errors"
 	"github.com/gin-gonic/gin"
-	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/data"
 	cmfModel "github.com/gincmf/cmf/model"
 	"gorm.io/gorm"
@@ -28,10 +27,11 @@ type AdminNotice struct {
 	Audio      string `gorm:"type:varchar(255);comment:通知提示音" json:"audio"`
 	IsPlay     int    `gorm:"type:tinyint(3);comment:类型（0 => 未拨放，1 => 已拨放）;default:0" json:"is_play"`
 	paginate   cmfModel.Paginate
+	Db         *gorm.DB `gorm:"-" json:"-"`
 }
 
 func (model *AdminNotice) AutoMigrate() {
-	cmf.NewDb().AutoMigrate(&model)
+	model.Db.AutoMigrate(&model)
 }
 
 // 查询消息列表
@@ -51,14 +51,16 @@ func (model *AdminNotice) Get(c *gin.Context, query []string, queryArgs []interf
 
 func (model *AdminNotice) PaginateGet(current int, pageSize int, query []string, queryArgs []interface{}) (cmfModel.Paginate, error) {
 
+	db := model.Db
+
 	var notice []AdminNotice
 
 	// 合并参数合计
 	queryStr := strings.Join(query, " AND ")
 
 	var total int64 = 0
-	cmf.NewDb().Where(queryStr, queryArgs...).Find(&notice).Count(&total)
-	tx := cmf.NewDb().Where(queryStr, queryArgs...).Limit(pageSize).Offset((current - 1) * pageSize).Order("id desc").Find(&notice)
+	db.Where(queryStr, queryArgs...).Find(&notice).Count(&total)
+	tx := db.Where(queryStr, queryArgs...).Limit(pageSize).Offset((current - 1) * pageSize).Order("id desc").Find(&notice)
 
 	if tx.Error != nil && errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 		return cmfModel.Paginate{}, tx.Error
@@ -81,7 +83,7 @@ func (model *AdminNotice) Show(query []string, queryArgs []interface{}) (AdminNo
 
 	notice := AdminNotice{}
 	queryStr := strings.Join(query, " AND ")
-	tx := cmf.NewDb().Where(queryStr, queryArgs...).First(&notice)
+	tx := model.Db.Where(queryStr, queryArgs...).First(&notice)
 
 	if tx.Error != nil {
 		return notice, tx.Error
@@ -103,7 +105,7 @@ func (model *AdminNotice) Save(title string, desc string, id int, t int, audio s
 		Audio:    audio,
 	}
 
-	tx := cmf.NewDb().Create(&notice)
+	tx := model.Db.Create(&notice)
 
 	if tx.Error != nil {
 		return AdminNotice{}, nil

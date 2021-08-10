@@ -8,9 +8,9 @@ package settings
 import (
 	"encoding/json"
 	"errors"
+	"gincmf/app/util"
 	"gincmf/plugins/restaurantPlugin/model"
 	"github.com/gin-gonic/gin"
-	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
 	cmfLog "github.com/gincmf/cmf/log"
 	"gorm.io/gorm"
@@ -30,11 +30,18 @@ func (rest *TakeOut) Show(c *gin.Context) {
 		return
 	}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		new(controller.Rest).Error(c, err.Error(), nil)
+		c.Abort()
+		return
+	}
+
 	mid, _ := c.Get("mid")
 
 	op := model.Option{}
 
-	result := cmf.NewDb().Where("option_name = ? AND store_id = ? AND mid = ?", "takeout", rewrite.Id, mid).First(&op)
+	result := db.Where("option_name = ? AND store_id = ? AND mid = ?", "takeout", rewrite.Id, mid).First(&op)
 	if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, result.Error.Error(), nil)
 		return
@@ -60,6 +67,13 @@ func (rest *TakeOut) Edit(c *gin.Context) {
 		return
 	}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		new(controller.Rest).Error(c, err.Error(), nil)
+		c.Abort()
+		return
+	}
+
 	mid, _ := c.Get("mid")
 
 	if form.StoreId == 0 {
@@ -69,7 +83,7 @@ func (rest *TakeOut) Edit(c *gin.Context) {
 
 	op := model.Option{}
 
-	result := cmf.NewDb().Where("option_name = ? AND store_id = ?", "takeout", form.StoreId).First(&op)
+	result := db.Where("option_name = ? AND store_id = ?", "takeout", form.StoreId).First(&op)
 	if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, result.Error.Error(), nil)
 		return
@@ -156,9 +170,9 @@ func (rest *TakeOut) Edit(c *gin.Context) {
 	}
 	op.OptionValue = string(val)
 	if op.Id == 0 {
-		cmf.NewDb().Create(&op)
+		db.Create(&op)
 	} else {
-		cmf.NewDb().Save(&op)
+		db.Save(&op)
 	}
 
 	rest.rc.Success(c, "修改成功！", ei)

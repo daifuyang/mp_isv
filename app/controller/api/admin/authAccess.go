@@ -8,8 +8,8 @@ package admin
 import (
 	"fmt"
 	"gincmf/app/model"
+	"gincmf/app/util"
 	"github.com/gin-gonic/gin"
-	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
 	"time"
 )
@@ -33,8 +33,15 @@ func (rest *AuthAccess) Show(c *gin.Context) {
 		return
 	}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	role := model.Role{}
-	err := cmf.NewDb().Where("id = ?", rewrite.Id).First(&role).Error
+
+	err = db.Where("id = ?", rewrite.Id).First(&role).Error
 
 	if err != nil {
 		rest.rc.Error(c, "查询角色失败！请联系管理员处理", nil)
@@ -43,7 +50,7 @@ func (rest *AuthAccess) Show(c *gin.Context) {
 
 	var access []model.AuthAccess
 
-	cmf.NewDb().Where("role_id = ?", role.Id).Find(&access)
+	db.Where("role_id = ?", role.Id).Find(&access)
 
 	var rule []string
 	for _, v := range access {
@@ -92,6 +99,13 @@ func (rest *AuthAccess) Edit(c *gin.Context) {
 		return
 	}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		new(controller.Rest).Error(c, err.Error(), nil)
+		c.Abort()
+		return
+	}
+
 	// 角色授权列表
 	roleAccess := c.PostFormArray("role_access")
 
@@ -101,11 +115,11 @@ func (rest *AuthAccess) Edit(c *gin.Context) {
 		CreateAt: time.Now().Unix(),
 	}
 
-	cmf.NewDb().Model(&role).Where("id = ?", rewrite.Id).Updates(role)
+	db.Model(&role).Where("id = ?", rewrite.Id).Updates(role)
 
 	// 查询当前存在的auth_access
 	var access []model.AuthAccess
-	cmf.NewDb().Where("role_id = ?", rewrite.Id).Find(&access)
+	db.Where("role_id = ?", rewrite.Id).Find(&access)
 
 	var arrTemp []interface{}
 	for _, v := range roleAccess {
@@ -117,7 +131,7 @@ func (rest *AuthAccess) Edit(c *gin.Context) {
 	for _, v := range access {
 		ruleName := v.RuleName
 		if !inArray(ruleName, arrTemp) {
-			cmf.NewDb().Where("rule_name = ?", ruleName).Delete(&model.AuthAccess{})
+			db.Where("rule_name = ?", ruleName).Delete(&model.AuthAccess{})
 		}
 	}
 
@@ -131,7 +145,7 @@ func (rest *AuthAccess) Edit(c *gin.Context) {
 	for _, v := range roleAccess {
 		if !inArray(v, arrTemp) {
 			ruleName := v
-			cmf.NewDb().Create(&model.AuthAccess{RoleId: rewrite.Id, RuleName: ruleName})
+			db.Create(&model.AuthAccess{RoleId: rewrite.Id, RuleName: ruleName})
 		}
 	}
 
@@ -164,6 +178,12 @@ func (rest *AuthAccess) Store(c *gin.Context) {
 		return
 	}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	// 角色授权列表
 	roleAccess := c.PostFormArray("role_access")
 
@@ -173,7 +193,7 @@ func (rest *AuthAccess) Store(c *gin.Context) {
 		CreateAt: time.Now().Unix(),
 	}
 
-	cmf.NewDb().Where("name = ?", name).FirstOrCreate(&role)
+	db.Where("name = ?", name).FirstOrCreate(&role)
 
 	if role.Id == 0 {
 		rest.rc.Error(c, "创建角色失败！请联系管理员", nil)
@@ -186,7 +206,7 @@ func (rest *AuthAccess) Store(c *gin.Context) {
 			RoleId:   role.Id,
 			RuleName: ruleName,
 		}
-		cmf.NewDb().Where("role_id = ? AND rule_name = ?", role.Id, ruleName).FirstOrCreate(&roleAccess)
+		db.Where("role_id = ? AND rule_name = ?", role.Id, ruleName).FirstOrCreate(&roleAccess)
 	}
 
 	rest.rc.Success(c, "操作成功！", role.Id)

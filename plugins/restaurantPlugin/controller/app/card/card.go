@@ -48,7 +48,15 @@ func (rest *Card) VipDetail(c *gin.Context) {
 	// 获取当前用户信息
 	userId, _ := c.Get("mp_user_id")
 
-	u := model.User{}
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
+	u := model.User{
+		Db: db,
+	}
 
 	userData, err := u.Show([]string{"u.id = ?"}, []interface{}{userId, mid})
 
@@ -59,7 +67,7 @@ func (rest *Card) VipDetail(c *gin.Context) {
 
 	// 获取会员卡状态
 	card := model.CardTemplate{}
-	tx := cmf.NewDb().Where("id = ? AND mid = ? AND status = ? AND delete_at = ?", 1, mid, 1, 0).First(&card)
+	tx := db.Where("id = ? AND mid = ? AND status = ? AND delete_at = ?", 1, mid, 1, 0).First(&card)
 	if tx.Error != nil {
 		rest.rc.Error(c, tx.Error.Error(), nil)
 		return
@@ -83,7 +91,7 @@ func (rest *Card) VipDetail(c *gin.Context) {
 	}
 
 	// 获取当前配置会员卡开卡信息
-	vipInfo := saasModel.Options("vip_info", mid.(int))
+	vipInfo, err := saasModel.Options(db, "vip_info", mid.(int))
 
 	var viMap model.VipInfo
 	json.Unmarshal([]byte(vipInfo), &viMap)
@@ -119,7 +127,7 @@ func (rest *Card) VipDetail(c *gin.Context) {
 
 			voucherItem := make([]model.VoucherItem, 0)
 			for _, iv := range v.Benefit.Voucher.Once {
-				voucher, err := rest.validVoucher(iv)
+				voucher, err := rest.validVoucher(db, iv)
 				if err == nil {
 					voucherItem = append(voucherItem, voucher)
 				}
@@ -129,7 +137,7 @@ func (rest *Card) VipDetail(c *gin.Context) {
 			voucherItem = make([]model.VoucherItem, 0)
 			for _, iv := range v.Benefit.Voucher.Month {
 
-				voucher, err := rest.validVoucher(iv)
+				voucher, err := rest.validVoucher(db, iv)
 				if err == nil {
 					voucherItem = append(voucherItem, voucher)
 				}
@@ -146,7 +154,7 @@ func (rest *Card) VipDetail(c *gin.Context) {
 
 }
 
-func (rest *Card) validVoucher(VoucherItem model.VoucherItem) (model.VoucherItem, error) {
+func (rest *Card) validVoucher(db *gorm.DB, VoucherItem model.VoucherItem) (model.VoucherItem, error) {
 
 	prefix := cmf.Conf().Database.Prefix
 
@@ -157,7 +165,7 @@ func (rest *Card) validVoucher(VoucherItem model.VoucherItem) (model.VoucherItem
 		TemplateId         string `json:"template_id"`
 	}
 
-	tx := cmf.NewDb().Table(prefix+"voucher_post vp").
+	tx := db.Table(prefix+"voucher_post vp").
 		Joins("INNER JOIN "+prefix+"voucher v ON vp.voucher_id = v.id").Where("v.id = ?", VoucherItem.VoucherId).Scan(&voucher)
 
 	if tx.RowsAffected > 0 {
@@ -209,7 +217,16 @@ func (rest *Card) Send(c *gin.Context) {
 	// 获取当前用户信息
 	userId, _ := c.Get("mp_user_id")
 
-	u := model.User{}
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
+	u := model.User{
+		Db: db,
+	}
+
 	userData, err := u.Show([]string{"u.id = ?"}, []interface{}{userId})
 	if err != nil {
 		rest.rc.Error(c, "获取用户信息失败！"+err.Error(), err)
@@ -218,13 +235,13 @@ func (rest *Card) Send(c *gin.Context) {
 
 	// 获取会员卡状态
 	card := model.CardTemplate{}
-	tx := cmf.NewDb().Where("id = ? AND mid = ? AND status = ? AND delete_at = ?", 1, mid, 1, 0).First(&card)
+	tx := db.Where("id = ? AND mid = ? AND status = ? AND delete_at = ?", 1, mid, 1, 0).First(&card)
 	if tx.Error != nil {
 		rest.rc.Error(c, tx.Error.Error(), nil)
 		return
 	}
 
-	vipInfo := saasModel.Options("vip_info", mid.(int))
+	vipInfo, err := saasModel.Options(db, "vip_info", mid.(int))
 
 	var viMap model.VipInfo
 	json.Unmarshal([]byte(vipInfo), &viMap)
@@ -245,6 +262,7 @@ func (rest *Card) Send(c *gin.Context) {
 	// 获取会员信息
 	vip := model.MemberCard{
 		UserId: userData.Id,
+		Db:     db,
 	}
 
 	nowUnix := time.Now().Unix()
@@ -298,7 +316,7 @@ func (rest *Card) Send(c *gin.Context) {
 			return
 		}
 
-		tx := cmf.NewDb().Where("user_id = ? AND mid = ? AND vip_level = ? AND fee = ? AND pay_type = ? AND order_status = ?", mpUserId, mid, initVipLevel, fee, payType, "WAIT_BUYER_PAY").First(&co)
+		tx := db.Where("user_id = ? AND mid = ? AND vip_level = ? AND fee = ? AND pay_type = ? AND order_status = ?", mpUserId, mid, initVipLevel, fee, payType, "WAIT_BUYER_PAY").First(&co)
 
 		if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 			rest.rc.Error(c, tx.Error.Error(), nil)
@@ -348,7 +366,11 @@ func (rest *Card) Send(c *gin.Context) {
 			return
 		}
 
-		businessJson := saasModel.Options("business_info", mid.(int))
+		businessJson, err := saasModel.Options(db, "business_info", mid.(int))
+		if err != nil {
+			rest.rc.Error(c, err.Error(), nil)
+			return
+		}
 		bi := model.BusinessInfo{}
 		json.Unmarshal([]byte(businessJson), &bi)
 
@@ -361,7 +383,7 @@ func (rest *Card) Send(c *gin.Context) {
 			vip.EndAt = 0
 			vip.VipNum = vipNum
 			vip.Status = 0
-			cmf.NewDb().Create(&vip)
+			db.Create(&vip)
 			co.VipName = vipLevel.LevelName
 			co.VipLevel = vipLevel.LevelId
 			co.VipNum = vipNum
@@ -433,7 +455,7 @@ func (rest *Card) Send(c *gin.Context) {
 
 			co.PayType = "wxpay"
 			mpTheme := saasModel.MpTheme{}
-			tx := cmf.NewDb().Where("mid = ?", mid).First(&mpTheme)
+			tx := db.Where("mid = ?", mid).First(&mpTheme)
 			if tx.Error != nil {
 				if errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 					rest.rc.Error(c, "小程序不存在！", nil)
@@ -506,7 +528,7 @@ func (rest *Card) Send(c *gin.Context) {
 			co.RequestPayment.PaySign = signature
 
 		}
-		tx = cmf.NewDb().Create(&co)
+		tx = db.Create(&co)
 		if tx.Error != nil {
 			rest.rc.Error(c, tx.Error.Error(), nil)
 			return
@@ -527,7 +549,7 @@ func (rest *Card) Send(c *gin.Context) {
 			vip.EndAt = -1
 			vip.VipNum = vipNum
 			vip.Status = 1
-			cmf.NewDb().Create(&vip)
+			db.Create(&vip)
 			rest.rc.Success(c, "开卡成功！", nil)
 		} else {
 			rest.rc.Error(c, "该用户已经领取了会员卡！", nil)
@@ -548,10 +570,16 @@ func (rest *Card) Send(c *gin.Context) {
 
 func (rest *Card) Apply(c *gin.Context) {
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	mid, _ := c.Get("mid")
 
 	card := model.CardTemplate{}
-	tx := cmf.NewDb().Where("id = ? AND mid = ?", 1, mid).First(&card)
+	tx := db.Where("id = ? AND mid = ?", 1, mid).First(&card)
 
 	if tx.Error != nil {
 		rest.rc.Error(c, tx.Error.Error(), nil)
@@ -598,24 +626,41 @@ func (rest *Card) SyncCardToAlipay(c *gin.Context) {
 
 	accessToken := oauthResult.Response.AccessToken
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	mpUserId, _ := c.Get("mp_user_id")
 	Openid, _ := c.Get("open_id")
 	mid, _ := c.Get("mid")
 
-	ct, err := new(model.CardTemplate).Show([]string{"id = ? AND mid = ? AND status = ?"}, []interface{}{1, mid, 1})
+	cardTemplate := model.CardTemplate{
+		Db: db,
+	}
+
+	ct, err := cardTemplate.Show([]string{"id = ? AND mid = ? AND status = ?"}, []interface{}{1, mid, 1})
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)
 		return
 	}
 
-	mc, err := new(model.MemberCard).Show([]string{"user_id = ? AND mid = ? AND status = ? and delete_at = ?"}, []interface{}{mpUserId, mid, 1, 0})
+	memberCard := model.MemberCard{
+		Db: db,
+	}
+	mc, err := memberCard.Show([]string{"user_id = ? AND mid = ? AND status = ? and delete_at = ?"}, []interface{}{mpUserId, mid, 1, 0})
 
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)
 		return
 	}
 
-	u, err := new(model.User).Show([]string{"u.id = ? AND mid = ? AND user_type = ? AND user_status = ?"}, []interface{}{mpUserId, mid, 0, 1})
+	user := model.User{
+		Db: db,
+	}
+
+	u, err := user.Show([]string{"u.id = ? AND mid = ? AND user_type = ? AND user_status = ?"}, []interface{}{mpUserId, mid, 0, 1})
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)
 		return

@@ -6,6 +6,7 @@
 package app
 
 import (
+	"gincmf/app/util"
 	"gincmf/plugins/portalPlugin/model"
 	"github.com/gin-gonic/gin"
 	"github.com/gincmf/cmf/controller"
@@ -85,8 +86,15 @@ func (rest *Category) Show(c *gin.Context) {
 		return
 	}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	portalCategory := model.PortalCategory{
 		Id: rewrite.Id,
+		Db: db,
 	}
 
 	data, err := portalCategory.Show()

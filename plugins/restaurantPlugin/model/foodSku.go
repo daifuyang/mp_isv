@@ -32,30 +32,30 @@ type FoodSku struct {
 
 func (model FoodSku) AutoMigrate() {
 
-	cmf.NewDb().Migrator().DropIndex(&FoodSku{}, "idx_attr_post")
-	cmf.NewDb().Migrator().DropIndex(&FoodSku{}, "idx_code")
+	db := model.Db
 
-	cmf.NewDb().Migrator().CreateIndex(&FoodSku{}, "idx_attr_post")
-	cmf.NewDb().Migrator().CreateIndex(&FoodSku{}, "idx_code")
+	db.Migrator().DropIndex(&FoodSku{}, "idx_attr_post")
+	db.Migrator().DropIndex(&FoodSku{}, "idx_code")
 
-	cmf.NewDb().AutoMigrate(&model)
-	cmf.NewDb().AutoMigrate(&FoodAttrKey{})
-	cmf.NewDb().AutoMigrate(&FoodAttrValue{})
-	cmf.NewDb().AutoMigrate(&FoodAttrPost{})
+	db.Migrator().CreateIndex(&FoodSku{}, "idx_attr_post")
+	db.Migrator().CreateIndex(&FoodSku{}, "idx_code")
+
+	db.AutoMigrate(&model)
+	db.AutoMigrate(&FoodAttrKey{})
+	db.AutoMigrate(&FoodAttrValue{})
+	db.AutoMigrate(&FoodAttrPost{})
 }
 
 func (model FoodSku) ListByFoodId(query []string, queryArgs []interface{}) ([]FoodSku, error) {
 
-	if model.Db == nil {
-		model.Db = cmf.NewDb()
-	}
+	db := model.Db
 
 	query = append(query, "food_id = ?")
 	queryArgs = append(queryArgs, model.FoodId)
 
 	queryStr := strings.Join(query, " AND ")
 	var foodSku []FoodSku
-	result := cmf.NewDb().Where(queryStr, queryArgs...).Find(&foodSku)
+	result := db.Where(queryStr, queryArgs...).Find(&foodSku)
 	if result.Error != nil {
 
 		return foodSku, result.Error
@@ -65,13 +65,11 @@ func (model FoodSku) ListByFoodId(query []string, queryArgs []interface{}) ([]Fo
 
 func (model FoodSku) Show(query []string, queryArgs []interface{}) (FoodSku, error) {
 
-	if model.Db == nil {
-		model.Db = cmf.NewDb()
-	}
+	db := model.Db
 
 	queryStr := strings.Join(query, " AND ")
 	foodSku := FoodSku{}
-	result := cmf.NewDb().Where(queryStr, queryArgs...).First(&foodSku)
+	result := db.Where(queryStr, queryArgs...).First(&foodSku)
 	if result.Error != nil {
 		return foodSku, result.Error
 	}
@@ -85,9 +83,7 @@ type SkuDetail struct {
 
 func (model FoodSku) Detail(query []string, queryArgs []interface{}) (SkuDetail, error) {
 
-	if model.Db == nil {
-		model.Db = cmf.NewDb()
-	}
+	db := model.Db
 
 	queryStr := strings.Join(query, " AND ")
 
@@ -95,7 +91,7 @@ func (model FoodSku) Detail(query []string, queryArgs []interface{}) (SkuDetail,
 
 	prefix := cmf.Conf().Database.Prefix
 
-	result := cmf.NewDb().Table(prefix+"food_sku sku").Select("sku.*,av.attr_value as sku_detail").
+	result := db.Table(prefix+"food_sku sku").Select("sku.*,av.attr_value as sku_detail").
 		Joins("INNER JOIN "+prefix+"food_attr_post ap ON sku.attr_post = ap.attr_post_id").
 		Joins("INNER JOIN "+prefix+"food_attr_value av ON ap.attr_value_id = av.attr_value_id").
 		Where(queryStr, queryArgs...).Scan(&sku)
@@ -107,7 +103,11 @@ func (model FoodSku) Detail(query []string, queryArgs []interface{}) (SkuDetail,
 
 func (model FoodSku) Store() (FoodSku, error) {
 
-	foodSku := FoodSku{}
+	db := model.Db
+
+	foodSku := FoodSku{
+		Db: db,
+	}
 
 	query := []string{"food_id = ?", "attr_post = ?"}
 	queryArgs := []interface{}{model.FoodId, model.AttrPost}
@@ -118,7 +118,7 @@ func (model FoodSku) Store() (FoodSku, error) {
 	}
 
 	if foodSku.SkuId == 0 {
-		result := cmf.NewDb().Create(&model)
+		result := db.Create(&model)
 		if result.Error != nil {
 			return foodSku, result.Error
 		}
@@ -132,11 +132,11 @@ func (model FoodSku) Store() (FoodSku, error) {
 
 func (model FoodSku) FirstOrSave() (FoodSku, error) {
 
-	if model.Db == nil {
-		model.Db = cmf.NewDb()
-	}
+	db := model.Db
 
-	foodSku := FoodSku{}
+	foodSku := FoodSku{
+		Db: db,
+	}
 
 	query := []string{"food_id = ?", "attr_post = ?"}
 	queryArgs := []interface{}{model.FoodId, model.AttrPost}
@@ -147,32 +147,32 @@ func (model FoodSku) FirstOrSave() (FoodSku, error) {
 	}
 
 	// 查看编码是否为唯一
-	tx := model.Db.Where("code = ? && code != '' && food_id != ?", model.Code, model.FoodId).First(&FoodSku{})
+	tx := db.Where("code = ? && code != '' && food_id != ?", model.Code, model.FoodId).First(&FoodSku{})
 	if tx.RowsAffected > 0 {
 		return foodSku, errors.New(model.AttrValue + "规格分类或编码已存在")
 	}
 
 	if foodSku.SkuId == 0 {
 
-		tx = model.Db.Where("attr_post = ? || (code = ? && code != '') && food_id != ?", model.AttrPost, model.Code, model.FoodId).First(&FoodSku{})
+		tx = db.Where("attr_post = ? || (code = ? && code != '') && food_id != ?", model.AttrPost, model.Code, model.FoodId).First(&FoodSku{})
 		if tx.RowsAffected > 0 {
 			return foodSku, errors.New(model.AttrValue + "规格分类或编码已存在")
 		}
 
-		result := model.Db.Create(&model)
+		result := db.Create(&model)
 		if result.Error != nil {
 			return foodSku, result.Error
 		}
 	} else {
 
 		// 查看编码是否为唯一
-		tx := model.Db.Where("(attr_post = ? || (code = ? && code != '')) && sku_id != ?", model.AttrPost, model.Code, foodSku.SkuId).First(&FoodSku{})
+		tx := db.Where("(attr_post = ? || (code = ? && code != '')) && sku_id != ?", model.AttrPost, model.Code, foodSku.SkuId).First(&FoodSku{})
 		if tx.RowsAffected > 0 {
 			return foodSku, errors.New(model.AttrValue + "规格分类或编码已存在")
 		}
 
 		model.SkuId = foodSku.SkuId
-		result := model.Db.Save(&model)
+		result := db.Save(&model)
 		if result.Error != nil {
 			return foodSku, result.Error
 		}

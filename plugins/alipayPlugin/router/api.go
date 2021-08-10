@@ -19,8 +19,8 @@ import (
 func ApiListenRouter() {
 	// 支付宝授权回调url
 
-	cmf.Get("api/v1/getway", middleware.UseMp, new(controller.GetWay).GetWay)
-	cmf.Post("api/v1/getway", middleware.UseMp, new(controller.GetWay).GetWay)
+	cmf.Get("api/v1/getway", new(controller.GetWay).GetWay, middleware.UseMp)
+	cmf.Post("api/v1/getway", new(controller.GetWay).GetWay, middleware.UseMp)
 
 	adminGroup := cmf.Group("api/v1/admin", middleware.ValidationBearerToken, middleware.TenantDb, middleware.Rbac)
 	{

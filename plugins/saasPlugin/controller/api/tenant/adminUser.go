@@ -7,14 +7,14 @@ package tenant
 
 import (
 	"errors"
-	"fmt"
 	appModel "gincmf/app/model"
+	"gincmf/app/util"
 	"gincmf/plugins/saasPlugin/model"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
-	"github.com/gincmf/cmf/util"
+	cmfUtil "github.com/gincmf/cmf/util"
 	"gorm.io/gorm"
 	"regexp"
 	"strconv"
@@ -26,6 +26,13 @@ type AdminUser struct {
 }
 
 func (rest *AdminUser) Get(c *gin.Context) {
+
+	db, err := util.NewDb(c)
+	if err != nil {
+		new(controller.Rest).Error(c, err.Error(), nil)
+		c.Abort()
+		return
+	}
 
 	mid, _ := c.Get("mid")
 
@@ -50,7 +57,9 @@ func (rest *AdminUser) Get(c *gin.Context) {
 		queryArgs = append(queryArgs, "%"+userEmail+"%")
 	}
 
-	adminUser := model.AdminUser{}
+	adminUser := model.AdminUser{
+		Db: db,
+	}
 	data, err := adminUser.Get(c, query, queryArgs)
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)
@@ -70,6 +79,12 @@ func (rest *AdminUser) Show(c *gin.Context) {
 		return
 	}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	mid, _ := c.Get("mid")
 
 	query := "au.id = ? AND mid = ?"
@@ -79,7 +94,7 @@ func (rest *AdminUser) Show(c *gin.Context) {
 
 	adminUser := model.AdminUser{}
 
-	tx := cmf.NewDb().Table(prefix+"admin_user as au").
+	tx := db.Table(prefix+"admin_user as au").
 		Joins("INNER JOIN "+prefix+"mp_theme_admin_user_post p ON au.id = p.admin_user_id").
 		Where(query, queryArgs...).First(&adminUser)
 
@@ -98,7 +113,7 @@ func (rest *AdminUser) Show(c *gin.Context) {
 	}
 
 	var roleUser []appModel.RoleUser
-	cmf.NewDb().Where("user_id = ?", adminUser.Id).Find(&roleUser)
+	db.Where("user_id = ?", adminUser.Id).Find(&roleUser)
 
 	var role []int
 	for _, v := range roleUser {
@@ -150,9 +165,15 @@ func (rest *AdminUser) Edit(c *gin.Context) {
 
 	realName := c.PostForm("user_realname")
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	adminUser := model.AdminUser{}
 
-	result := cmf.NewDb().Where("id = ?", rewrite.Id).First(&adminUser)
+	result := db.Where("id = ?", rewrite.Id).First(&adminUser)
 	if result.RowsAffected == 0 {
 		rest.rc.Error(c, "用户不存在！", nil)
 		return
@@ -166,10 +187,10 @@ func (rest *AdminUser) Edit(c *gin.Context) {
 	adminUser.UserStatus = 1
 
 	if password != "" {
-		adminUser.UserPass = util.GetMd5(password)
+		adminUser.UserPass = cmfUtil.GetMd5(password)
 	}
 
-	err = cmf.NewDb().Save(&adminUser).Error
+	err = db.Save(&adminUser).Error
 	if err != nil {
 		rest.rc.Error(c, "更新用户出错，请联系管理员！！", nil)
 		return
@@ -195,7 +216,7 @@ func (rest *AdminUser) Edit(c *gin.Context) {
 			tenant.UserEmail = email
 			tenant.UpdateAt = time.Now().Unix()
 			if password != "" {
-				tenant.UserPass = util.GetMd5(password)
+				tenant.UserPass = cmfUtil.GetMd5(password)
 			}
 		}
 
@@ -215,12 +236,10 @@ func (rest *AdminUser) Edit(c *gin.Context) {
 
 	roleIds := c.PostFormArray("role_ids")
 
-	fmt.Println("roleIds", roleIds)
-
 	if len(roleIds) > 0 {
 
 		// 删除原来角色
-		cmf.NewDb().Where("user_id = ?", rewrite.Id).Delete(&appModel.RoleUser{})
+		db.Where("user_id = ?", rewrite.Id).Delete(&appModel.RoleUser{})
 
 		// 存入用户角色
 		for _, v := range roleIds {
@@ -229,7 +248,7 @@ func (rest *AdminUser) Edit(c *gin.Context) {
 				RoleId: roleId,
 				UserId: rewrite.Id,
 			}
-			cmf.NewDb().Create(&roleUser)
+			db.Create(&roleUser)
 		}
 
 	}
@@ -243,6 +262,12 @@ func (rest *AdminUser) Edit(c *gin.Context) {
 }
 
 func (rest *AdminUser) Store(c *gin.Context) {
+
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
 
 	mid, _ := c.Get("mid")
 
@@ -281,19 +306,19 @@ func (rest *AdminUser) Store(c *gin.Context) {
 		Mobile:       mobile,
 		UserRealName: realName,
 		UserLogin:    userLogin,
-		UserPass:     util.GetMd5(password),
+		UserPass:     cmfUtil.GetMd5(password),
 		UserEmail:    email,
 		UserStatus:   1,
 	}
 
-	result := cmf.NewDb().Where("user_login = ?", userLogin).First(&model.AdminUser{})
+	result := db.Where("user_login = ?", userLogin).First(&model.AdminUser{})
 
 	if result.RowsAffected > 0 {
 		rest.rc.Error(c, "用户已存在！", nil)
 		return
 	}
 
-	err := cmf.NewDb().Create(&adminUser).Error
+	err = db.Create(&adminUser).Error
 	if err != nil {
 		rest.rc.Error(c, "创建用户出错，请联系管理员！！", nil)
 		return
@@ -307,7 +332,7 @@ func (rest *AdminUser) Store(c *gin.Context) {
 		Status:      1,
 	}
 
-	tx := cmf.NewDb().Debug().Where("mid = ? and admin_user_id = ?", mid, userId).FirstOrCreate(&themePost)
+	tx := db.Debug().Where("mid = ? and admin_user_id = ?", mid, userId).FirstOrCreate(&themePost)
 	if tx.Error != nil {
 		rest.rc.Error(c, tx.Error.Error(), nil)
 		return
@@ -319,7 +344,7 @@ func (rest *AdminUser) Store(c *gin.Context) {
 
 		// 查看当前角色是否存在小程序中心
 		role := model.Role{}
-		tx := cmf.NewDb().Where("id = ? AND mid = ?", roleId, mid).First(&role)
+		tx := db.Where("id = ? AND mid = ?", roleId, mid).First(&role)
 		if tx.Error != nil {
 			if errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 				rest.rc.Error(c, "非法传参！改门店不存在该角色！", nil)
@@ -330,7 +355,7 @@ func (rest *AdminUser) Store(c *gin.Context) {
 			RoleId: roleId,
 			UserId: userId,
 		}
-		cmf.NewDb().Create(&roleUser)
+		db.Create(&roleUser)
 
 	}
 
@@ -343,7 +368,12 @@ func (rest *AdminUser) Delete(c *gin.Context) {
 
 func (rest *AdminUser) CurrentUser(c *gin.Context) {
 	// 获取当前用户
-	var currentUser = new(model.AdminUser).CurrentUser(c)
+	var currentUser, err = new(model.AdminUser).CurrentUser(c)
+
+	if err != nil {
+		new(controller.Rest).Error(c, "获取成功", nil)
+		return
+	}
 
 	aliasName, _ := c.Get("aliasName")
 
@@ -355,5 +385,5 @@ func (rest *AdminUser) CurrentUser(c *gin.Context) {
 	result.AdminUser = currentUser
 	result.AliasName = aliasName.(string)
 
-	controller.Rest{}.Success(c, "获取成功", result)
+	new(controller.Rest).Success(c, "获取成功", result)
 }

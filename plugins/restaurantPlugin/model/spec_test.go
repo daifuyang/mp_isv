@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	cmf "github.com/gincmf/cmf/bootstrap"
-	"github.com/gincmf/cmf/model"
 	"gorm.io/gorm"
 	"log"
 	"testing"
@@ -18,10 +17,6 @@ import (
 func Test_attr(t *testing.T) {
 
 	cmf.Initialize("../../../data/conf/config.json")
-
-	if model.Db == nil {
-		model.Db = cmf.NewDb()
-	}
 
 	var tempAttr []tempAttrPost
 	prefix := cmf.Conf().Database.Prefix

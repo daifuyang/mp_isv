@@ -6,6 +6,7 @@
 package contact
 
 import (
+	"gincmf/app/util"
 	"gincmf/plugins/alipayPlugin/model"
 	"github.com/gin-gonic/gin"
 	"github.com/gincmf/cmf/controller"
@@ -16,8 +17,17 @@ type Contact struct {
 }
 
 func (rest *Contact) Get(c *gin.Context) {
+
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	mid, _ := c.Get("mid")
-	cb := model.ContactButton{}
+	cb := model.ContactButton{
+		Db: db,
+	}
 	data, err := cb.Show(mid.(int))
 
 	if err != nil {

@@ -15,7 +15,6 @@ import (
 	saasModel "gincmf/plugins/saasPlugin/model"
 	"github.com/gin-gonic/gin"
 	"github.com/gincmf/alipayEasySdk/payment"
-	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
 	cmfUtil "github.com/gincmf/cmf/util"
 	"github.com/gincmf/wechatEasySdk"
@@ -32,6 +31,12 @@ type Recharge struct {
 
 func (rest *Recharge) Order(c *gin.Context) {
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	mid, _ := c.Get("mid")
 
 	// 获取当前用户信息
@@ -40,7 +45,11 @@ func (rest *Recharge) Order(c *gin.Context) {
 	var query = []string{"mid = ? AND  user_id = ? AND order_status = ?"}
 	var queryArgs = []interface{}{mid, userId, "TRADE_FINISHED"}
 
-	data, err := new(model.RechargeOrder).Index(c, query, queryArgs)
+	rechargeOrder := model.RechargeOrder{
+		Db: db,
+	}
+
+	data, err := rechargeOrder.Index(c, query, queryArgs)
 
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)
@@ -55,14 +64,20 @@ func (rest *Recharge) Show(c *gin.Context) {
 
 	mid, _ := c.Get("mid")
 
-	recJson := saasModel.Options("recharge", mid.(int))
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
+	recJson, err := saasModel.Options(db, "recharge", mid.(int))
 
 	var recharge []model.Recharge
 	json.Unmarshal([]byte(recJson), &recharge)
 
 	user := appModel.CurrentMpUser(c)
 
-	tx := cmf.NewDb().Where("id = ?", user.Id).First(&user)
+	tx :=db.Where("id = ?", user.Id).First(&user)
 	if tx.Error != nil {
 		rest.rc.Error(c, tx.Error.Error(), nil)
 		return
@@ -105,7 +120,15 @@ func (rest *Recharge) Pay(c *gin.Context) {
 		return
 	}
 
-	ro := model.RechargeOrder{}
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
+	ro := model.RechargeOrder{
+		Db: db,
+	}
 
 	var payType = ""
 	fmt.Println("mpType", mpType)
@@ -122,7 +145,7 @@ func (rest *Recharge) Pay(c *gin.Context) {
 		return
 	}
 
-	tx := cmf.NewDb().Where("user_id = ? AND mid = ? AND fee = ? AND pay_type = ? AND order_status = ?", mpUserId, mid, form.Fee, payType, "WAIT_BUYER_PAY").First(&ro)
+	tx := db.Where("user_id = ? AND mid = ? AND fee = ? AND pay_type = ? AND order_status = ?", mpUserId, mid, form.Fee, payType, "WAIT_BUYER_PAY").First(&ro)
 
 	if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, tx.Error.Error(), nil)
@@ -167,7 +190,12 @@ func (rest *Recharge) Pay(c *gin.Context) {
 	}
 
 	// 支付宝小程序下单
-	businessJson := saasModel.Options("business_info", mid.(int))
+	businessJson, err := saasModel.Options(db, "business_info", mid.(int))
+
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
 	bi := model.BusinessInfo{}
 	json.Unmarshal([]byte(businessJson), &bi)
 	// 支付宝小程序下单
@@ -229,7 +257,7 @@ func (rest *Recharge) Pay(c *gin.Context) {
 
 		ro.PayType = "wxpay"
 		mpTheme := saasModel.MpTheme{}
-		tx := cmf.NewDb().Where("mid = ?", mid).First(&mpTheme)
+		tx := db.Where("mid = ?", mid).First(&mpTheme)
 		if tx.Error != nil {
 			if errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 				rest.rc.Error(c, "小程序不存在！", nil)
@@ -302,7 +330,7 @@ func (rest *Recharge) Pay(c *gin.Context) {
 
 	}
 
-	tx = cmf.NewDb().Create(&ro)
+	tx = db.Create(&ro)
 	if tx.Error != nil {
 		rest.rc.Error(c, tx.Error.Error(), nil)
 		return

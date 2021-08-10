@@ -34,19 +34,28 @@ type Qrcode struct {
  **/
 func (rest *Qrcode) Get(c *gin.Context) {
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	// 获取mid
 	mid, _ := c.Get("mid")
 
 	// 获取store_id
 	storeId := c.Query("store_id")
 
-	s := model.Store{}
+	s := model.Store{
+		Db: db,
+	}
+
 	if storeId == "" {
 		rest.rc.Error(c, "门店id不能为空！", nil)
 		return
 	}
 
-	tx := cmf.NewDb().Where("mid = ? AND id = ?", mid, storeId).First(&s)
+	tx := db.Where("mid = ? AND id = ?", mid, storeId).First(&s)
 	if tx.Error != nil {
 		if errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 			rest.rc.Error(c, "该门店不存在！", nil)
@@ -56,7 +65,10 @@ func (rest *Qrcode) Get(c *gin.Context) {
 		return
 	}
 
-	qp := model.QrcodePost{}
+	qp := model.QrcodePost{
+		Db: db,
+	}
+
 	data, err := qp.Index(c, []string{"mid = ? AND  store_id = ? AND delete_at = 0"}, []interface{}{mid, storeId})
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)
@@ -85,6 +97,12 @@ func (rest *Qrcode) Show(c *gin.Context) {
 		return
 	}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	// 获取mid
 	mid, _ := c.Get("mid")
 
@@ -97,7 +115,7 @@ func (rest *Qrcode) Show(c *gin.Context) {
 		return
 	}
 
-	tx := cmf.NewDb().Where("mid = ? AND id = ?", mid, storeId).First(&s)
+	tx := db.Where("mid = ? AND id = ?", mid, storeId).First(&s)
 	if tx.Error != nil {
 		if errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 			rest.rc.Error(c, "该门店不存在！", nil)
@@ -107,9 +125,11 @@ func (rest *Qrcode) Show(c *gin.Context) {
 		return
 	}
 
-	qp := model.QrcodePost{}
+	qp := model.QrcodePost{
+		Db: db,
+	}
 
-	tx = cmf.NewDb().Where("id = ? AND mid = ? AND  store_id = ? AND  delete_at = 0", rewrite.Id, mid, storeId).First(&qp)
+	tx = db.Where("id = ? AND mid = ? AND  store_id = ? AND  delete_at = 0", rewrite.Id, mid, storeId).First(&qp)
 
 	if tx.Error != nil {
 		rest.rc.Error(c, tx.Error.Error(), nil)
@@ -147,6 +167,12 @@ func (rest *Qrcode) Edit(c *gin.Context) {
 		return
 	}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	// 获取mid
 	mid, _ := c.Get("mid")
 
@@ -154,12 +180,13 @@ func (rest *Qrcode) Edit(c *gin.Context) {
 	storeId := c.PostForm("store_id")
 
 	s := model.Store{}
+
 	if storeId == "" {
 		rest.rc.Error(c, "门店id不能为空！", nil)
 		return
 	}
 
-	tx := cmf.NewDb().Where("mid = ? AND id = ?", mid, storeId).First(&s)
+	tx := db.Where("mid = ? AND id = ?", mid, storeId).First(&s)
 	if tx.Error != nil {
 		if errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 			rest.rc.Error(c, "该门店不存在！", nil)
@@ -171,7 +198,7 @@ func (rest *Qrcode) Edit(c *gin.Context) {
 
 	qp := model.QrcodePost{}
 
-	tx = cmf.NewDb().Where("id = ? AND mid = ? AND  store_id = ? AND  delete_at = 0", rewrite.Id, mid, storeId).First(&qp)
+	tx = db.Where("id = ? AND mid = ? AND  store_id = ? AND  delete_at = 0", rewrite.Id, mid, storeId).First(&qp)
 	if tx.Error != nil {
 		rest.rc.Error(c, tx.Error.Error(), nil)
 		return
@@ -179,7 +206,7 @@ func (rest *Qrcode) Edit(c *gin.Context) {
 
 	qp.Name = name
 
-	tx = cmf.NewDb().Save(&qp)
+	tx = db.Save(&qp)
 	if tx.Error != nil {
 		rest.rc.Error(c, tx.Error.Error(), nil)
 		return
@@ -205,6 +232,12 @@ func (rest *Qrcode) Store(c *gin.Context) {
 	appId, _ := c.Get("app_id")
 	aliAppId := appId.(string)
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+	
 	// 获取mid
 	mid, _ := c.Get("mid")
 	midInt := mid.(int)
@@ -218,7 +251,7 @@ func (rest *Qrcode) Store(c *gin.Context) {
 		return
 	}
 
-	tx := cmf.NewDb().Where("mid = ? AND id = ?", mid, storeId).First(&s)
+	tx := db.Where("mid = ? AND id = ?", mid, storeId).First(&s)
 	if tx.Error != nil {
 		if errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 			rest.rc.Error(c, "该门店不存在！", nil)
@@ -238,7 +271,7 @@ func (rest *Qrcode) Store(c *gin.Context) {
 
 	deskName := "桌号"
 	if deskIdInt > 0 {
-		tx = cmf.NewDb().Debug().Where("mid = ? AND id = ?", mid, deskId).First(&desk)
+		tx = db.Debug().Where("mid = ? AND id = ?", mid, deskId).First(&desk)
 		if tx.Error != nil {
 			if errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 				rest.rc.Error(c, "该桌号不存在！", nil)
@@ -292,7 +325,7 @@ func (rest *Qrcode) Store(c *gin.Context) {
 
 	qp := model.QrcodePost{}
 
-	tx = cmf.NewDb().Where("qrcode_code = ?", qrcode.Code).First(&qp)
+	tx = db.Where("qrcode_code = ?", qrcode.Code).First(&qp)
 	if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, tx.Error.Error(), nil)
 		return
@@ -311,9 +344,9 @@ func (rest *Qrcode) Store(c *gin.Context) {
 	}
 
 	if tx.RowsAffected == 0 {
-		cmf.NewDb().Create(&qp)
+		db.Create(&qp)
 	} else {
-		cmf.NewDb().Debug().Save(&qp)
+		db.Debug().Save(&qp)
 	}
 
 	tx = cmf.Db().Save(&qrcode)
@@ -336,6 +369,12 @@ func (rest *Qrcode) Delete(c *gin.Context) {
 		return
 	}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	// 获取mid
 	mid, _ := c.Get("mid")
 
@@ -348,7 +387,7 @@ func (rest *Qrcode) Delete(c *gin.Context) {
 		return
 	}
 
-	tx := cmf.NewDb().Where("mid = ? AND id = ?", mid, storeId).First(&s)
+	tx := db.Where("mid = ? AND id = ?", mid, storeId).First(&s)
 	if tx.Error != nil {
 		if errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 			rest.rc.Error(c, "该门店不存在！", nil)
@@ -360,7 +399,7 @@ func (rest *Qrcode) Delete(c *gin.Context) {
 
 	qp := model.QrcodePost{}
 
-	tx = cmf.NewDb().Where("id = ? AND mid = ? AND  store_id = ? AND  delete_at = 0", rewrite.Id, mid, storeId).First(&qp)
+	tx = db.Where("id = ? AND mid = ? AND  store_id = ? AND  delete_at = 0", rewrite.Id, mid, storeId).First(&qp)
 	if tx.Error != nil {
 		rest.rc.Error(c, tx.Error.Error(), nil)
 		return
@@ -368,7 +407,7 @@ func (rest *Qrcode) Delete(c *gin.Context) {
 
 	qp.DeleteAt = time.Now().Unix()
 
-	tx = cmf.NewDb().Save(&qp)
+	tx = db.Save(&qp)
 	if tx.Error != nil {
 		rest.rc.Error(c, tx.Error.Error(), nil)
 		return

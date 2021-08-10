@@ -5,7 +5,9 @@
  */
 package migrate
 
-import cmf "github.com/gincmf/cmf/bootstrap"
+import (
+	"gorm.io/gorm"
+)
 
 type QrcodePost struct {
 	Id         int    `json:"id"`
@@ -18,8 +20,9 @@ type QrcodePost struct {
 	CreateAt   int64  `gorm:"type:bigint(20);not null" json:"create_at"`
 	UpdateAt   int64  `gorm:"type:bigint(20);not null" json:"update_at"`
 	DeleteAt   int64  `gorm:"type:bigint(20);not null" json:"delete_at"`
+	Db   *gorm.DB `gorm:"-" json:"-"`
 }
 
 func (migrate *QrcodePost) AutoMigrate() {
-	cmf.NewDb().AutoMigrate(&migrate)
+	migrate.Db.AutoMigrate(&migrate)
 }

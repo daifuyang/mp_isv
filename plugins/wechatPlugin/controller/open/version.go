@@ -16,8 +16,8 @@ import (
 	saasModel "gincmf/plugins/saasPlugin/model"
 	"gincmf/plugins/wechatPlugin/model"
 	"github.com/gin-gonic/gin"
-	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
+	cmfLog "github.com/gincmf/cmf/log"
 	"github.com/gincmf/wechatEasySdk/open"
 	"gorm.io/gorm"
 	"io"
@@ -41,6 +41,12 @@ type Version struct {
  **/
 func (rest *Version) Detail(c *gin.Context) {
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+	
 	mid, _ := c.Get("mid")
 
 	accessToken, exist := c.Get("authorizerAccessToken")
@@ -63,7 +69,7 @@ func (rest *Version) Detail(c *gin.Context) {
 	}
 
 	mpTheme := new(saasModel.MpTheme)
-	tx := cmf.NewDb().Where("mid = ?", mid).Order("id desc").First(&mpTheme)
+	tx := db.Where("mid = ?", mid).Order("id desc").First(&mpTheme)
 	if tx.Error != nil {
 		if errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 			rest.rc.Error(c, "该主题不存在", nil)
@@ -100,8 +106,14 @@ func (rest *Version) Upload(c *gin.Context) {
 		return
 	}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	var count int64
-	cmf.NewDb().Where("mid = ? and is_audit = ? AND type = ?", mid, 1, "wechat").First(&saasModel.MpThemeVersion{}).Count(&count)
+	db.Where("mid = ? and is_audit = ? AND type = ?", mid, 1, "wechat").First(&saasModel.MpThemeVersion{}).Count(&count)
 	if count > 0 {
 		rest.rc.Error(c, "请等待待审核的小程序完成审核状态在升级!", nil)
 		return
@@ -109,7 +121,11 @@ func (rest *Version) Upload(c *gin.Context) {
 
 	appVersions := "0.0.0"
 
-	version, err := new(saasModel.MpThemeVersion).Show([]string{"mid = ? and type = ?"}, []interface{}{mid, "wechat"})
+	mpThemeVersion := saasModel.MpThemeVersion{
+		Db: db,
+	}
+	
+	version, err := mpThemeVersion.Show([]string{"mid = ? and type = ?"}, []interface{}{mid, "wechat"})
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, err.Error(), nil)
 		return
@@ -162,7 +178,9 @@ func (rest *Version) Upload(c *gin.Context) {
 		_, err := new(model.Subscribe).Edit(accessToken.(string), midInt)
 
 		if err != nil {
-			rest.rc.Error(c, err.Error(), nil)
+			cmfLog.Error( err.Error() )
+			// rest.rc.Error(c, err.Error(), nil)
+			// return
 		}
 
 	}
@@ -186,6 +204,21 @@ func (rest *Version) Upload(c *gin.Context) {
 	appVersion := rest.NextVersion(&versionModel)
 	versionModel.Version = appVersion
 
+	pluginListResponse := new(open.Wxa).GetPluginList(accessToken.(string))
+	fmt.Println("pluginListResponse", pluginListResponse)
+
+	canApply := true
+	for _, v := range pluginListResponse.PluginList {
+		if v.AppId == "wxaae6519cee98d824" {
+			canApply = false
+		}
+	}
+
+	if canApply {
+		applyResponse := new(open.Wxa).ApplyPlugin(accessToken.(string), "wxaae6519cee98d824")
+		fmt.Println("applyResponse", applyResponse)
+	}
+
 	// 开始构建
 	bizContent := map[string]interface{}{
 		"template_id":  app.TemplateId,
@@ -202,7 +235,7 @@ func (rest *Version) Upload(c *gin.Context) {
 	}
 
 	theme := saasModel.MpTheme{}
-	tx := cmf.NewDb().Where("mid = ?", mid).First(&theme)
+	tx := db.Where("mid = ?", mid).First(&theme)
 	if tx.Error != nil {
 		rest.rc.Error(c, tx.Error.Error(), nil)
 		return
@@ -238,14 +271,14 @@ func (rest *Version) Upload(c *gin.Context) {
 		}
 
 		theme := saasModel.MpTheme{}
-		tx := cmf.NewDb().Where("mid = ?", mid).First(&theme)
+		tx := db.Where("mid = ?", mid).First(&theme)
 		if tx.Error != nil {
 			rest.rc.Error(c, tx.Error.Error(), nil)
 			return
 		}
 
 		theme.WechatExpQrCodeUrl = path
-		tx = cmf.NewDb().Where("mid = ?", mid).Updates(&theme)
+		tx = db.Where("mid = ?", mid).Updates(&theme)
 		if tx.Error != nil {
 			rest.rc.Error(c, tx.Error.Error(), nil)
 			return
@@ -255,7 +288,7 @@ func (rest *Version) Upload(c *gin.Context) {
 		fmt.Println(response.Errmsg)
 	}
 
-	tx = cmf.NewDb().Where("template_version = ? AND  type = ?", versionModel.TemplateVersion, "wechat").First(&versionModel)
+	tx = db.Where("template_version = ? AND  type = ?", versionModel.TemplateVersion, "wechat").First(&versionModel)
 
 	if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, tx.Error.Error(), nil)
@@ -287,14 +320,14 @@ func (rest *Version) Upload(c *gin.Context) {
 			}
 
 			theme := saasModel.MpTheme{}
-			tx := cmf.NewDb().Where("mid = ?", mid).First(&theme)
+			tx := db.Where("mid = ?", mid).First(&theme)
 			if tx.Error != nil {
 				rest.rc.Error(c, tx.Error.Error(), nil)
 				return
 			}
 
 			theme.WechatQrCodeUrl = path
-			tx = cmf.NewDb().Where("mid = ?", mid).Updates(&theme)
+			tx = db.Where("mid = ?", mid).Updates(&theme)
 			if tx.Error != nil {
 				rest.rc.Error(c, tx.Error.Error(), nil)
 				return
@@ -306,14 +339,13 @@ func (rest *Version) Upload(c *gin.Context) {
 	}
 
 	if tx.RowsAffected == 0 {
-		cmf.NewDb().Where("template_version = ? AND  type = ?", versionModel.TemplateVersion, "wechat").Create(&versionModel)
+		db.Where("template_version = ? AND  type = ?", versionModel.TemplateVersion, "wechat").Create(&versionModel)
 	} else {
-		cmf.NewDb().Where("template_version = ? AND  type = ?", versionModel.TemplateVersion, "wechat").Updates(&versionModel)
+		db.Where("template_version = ? AND  type = ?", versionModel.TemplateVersion, "wechat").Updates(&versionModel)
 
 	}
 
 	rest.rc.Success(c, "构建成功！", nil)
-	return
 
 }
 
@@ -379,8 +411,14 @@ func (rest *Version) Audit(c *gin.Context) {
 		return
 	}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	mpTheme := new(saasModel.MpTheme)
-	tx := cmf.NewDb().Where("mid = ?", mid).Order("id desc").First(&mpTheme)
+	tx := db.Where("mid = ?", mid).Order("id desc").First(&mpTheme)
 	if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, tx.Error.Error(), nil)
 		return
@@ -392,7 +430,11 @@ func (rest *Version) Audit(c *gin.Context) {
 		return
 	}
 
-	version, err := new(saasModel.MpThemeVersion).Show([]string{"mid = ?", "type = ?"}, []interface{}{mid, "wechat"})
+	mpThemeVersion := saasModel.MpThemeVersion{
+		Db: db,
+	}
+
+	version, err := mpThemeVersion.Show([]string{"mid = ?", "type = ?"}, []interface{}{mid, "wechat"})
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)
 		return
@@ -403,7 +445,7 @@ func (rest *Version) Audit(c *gin.Context) {
 		return
 	}
 
-	businessJson := saasModel.Options("business_info", mid.(int))
+	businessJson ,err := saasModel.Options(db,"business_info", mid.(int))
 
 	bi := resModel.BusinessInfo{}
 
@@ -427,7 +469,7 @@ func (rest *Version) Audit(c *gin.Context) {
 
 	version.IsAudit = 1
 	version.Status = "wait"
-	tx = cmf.NewDb().Save(&version)
+	tx = db.Save(&version)
 
 	if tx.Error != nil {
 		rest.rc.Error(c, err.Error(), nil)
@@ -457,8 +499,14 @@ func (rest *Version) LatestAuditStatus(c *gin.Context) {
 		return
 	}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	mpTheme := new(saasModel.MpTheme)
-	tx := cmf.NewDb().Where("mid = ?", mid).Order("id desc").First(&mpTheme)
+	tx := db.Where("mid = ?", mid).Order("id desc").First(&mpTheme)
 	if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, tx.Error.Error(), nil)
 		return
@@ -504,7 +552,7 @@ func (rest *Version) LatestAuditStatus(c *gin.Context) {
 	}
 
 	version.UpdateAt = time.Now().Unix()
-	tx = cmf.NewDb().Save(&version)
+	tx = db.Save(&version)
 
 	if tx.Error != nil {
 		rest.rc.Error(c, err.Error(), nil)

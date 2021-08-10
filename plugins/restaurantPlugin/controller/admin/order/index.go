@@ -7,9 +7,9 @@ package order
 
 import (
 	"errors"
+	"gincmf/app/util"
 	resModel "gincmf/plugins/restaurantPlugin/model"
 	"github.com/gin-gonic/gin"
-	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
 	cmfLog "github.com/gincmf/cmf/log"
 	"github.com/gorilla/websocket"
@@ -86,7 +86,15 @@ func (rest *Index) Index(c *gin.Context) {
 		queryArgs = append(queryArgs, orderStatus)
 	}
 
-	order := resModel.FoodOrder{}
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
+	order := resModel.FoodOrder{
+		Db: db,
+	}
 	data, err := order.IndexByStore(c, query, queryArgs)
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, err.Error(), nil)
@@ -342,7 +350,17 @@ func (rest *Index) Show(c *gin.Context) {
 	var query = []string{"fo.mid = ? AND fo.id = ?"}
 	var queryArgs = []interface{}{mid, rewrite.Id}
 
-	data, err := new(resModel.FoodOrder).ShowByStore(query, queryArgs)
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
+	foodOrder := resModel.FoodOrder{
+		Db: db,
+	}
+
+	data, err := foodOrder.ShowByStore(query, queryArgs)
 
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)
@@ -372,10 +390,19 @@ func (rest *Index) RefundShow(c *gin.Context) {
 
 	mid, _ := c.Get("mid")
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	var query = []string{"fo.mid = ?", " fo.id = ? "}
 	var queryArgs = []interface{}{mid, rewrite.Id, "TRADE_SUCCESS"}
 
-	data, err := new(resModel.FoodOrder).ShowByStore(query, queryArgs)
+	foodOrder := resModel.FoodOrder{
+		Db: db,
+	}
+	data, err := foodOrder.ShowByStore(query, queryArgs)
 
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, err.Error(), nil)
@@ -388,7 +415,7 @@ func (rest *Index) RefundShow(c *gin.Context) {
 	}
 
 	var result []resModel.FoodOrderRefund
-	tx := cmf.NewDb().Where("mid = ? and order_id = ?", mid, data.OrderId).Find(&result)
+	tx := db.Where("mid = ? and order_id = ?", mid, data.OrderId).Find(&result)
 	if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, tx.Error.Error(), nil)
 		return
@@ -443,10 +470,20 @@ func (rest *Index) Refund(c *gin.Context) {
 		return
 	}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	var query = []string{"fo.mid = ?", " fo.id = ? "}
 	var queryArgs = []interface{}{mid, rewrite.Id}
 
-	data, err := new(resModel.FoodOrder).ShowByStore(query, queryArgs)
+	foodOrder := resModel.FoodOrder{
+		Db: db,
+	}
+
+	data, err := foodOrder.ShowByStore(query, queryArgs)
 
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, err.Error(), nil)
@@ -504,12 +541,22 @@ func (rest *Index) ReceivedOrRefused(c *gin.Context) {
 		return
 	}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	mid, _ := c.Get("mid")
 
 	var query = []string{"fo.mid = ?", " fo.id = ? "}
 	var queryArgs = []interface{}{mid, rewrite.Id, "TRADE_SUCCESS"}
 
-	data, err := new(resModel.FoodOrder).ShowByStore(query, queryArgs)
+	foodOrder := resModel.FoodOrder{
+		Db: db,
+	}
+
+	data, err := foodOrder.ShowByStore(query, queryArgs)
 
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, err.Error(), nil)
@@ -552,7 +599,7 @@ func (rest *Index) ReceivedOrRefused(c *gin.Context) {
 		return
 	}
 
-	tx := cmf.NewDb().Begin()
+	tx := db.Begin()
 	tx.SavePoint("sp1")
 
 	defer func() {
@@ -577,6 +624,7 @@ func (rest *Index) ReceivedOrRefused(c *gin.Context) {
 	if os == "1" {
 		foodOrder := resModel.FoodOrder{
 			Id: data.Id,
+			Db: db,
 		}
 
 		foodOrder.Db = tx
@@ -631,12 +679,21 @@ func (rest *Index) Finished(c *gin.Context) {
 		return
 	}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		new(controller.Rest).Error(c, err.Error(), nil)
+		return
+	}
+
 	mid, _ := c.Get("mid")
 
 	var query = []string{"fo.mid = ?", " fo.id = ? "}
 	var queryArgs = []interface{}{mid, rewrite.Id, "TRADE_SUCCESS"}
 
-	data, err := new(resModel.FoodOrder).ShowByStore(query, queryArgs)
+	foodOrder := resModel.FoodOrder{
+		Db: db,
+	}
+	data, err := foodOrder.ShowByStore(query, queryArgs)
 
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, err.Error(), nil)
@@ -653,7 +710,7 @@ func (rest *Index) Finished(c *gin.Context) {
 		return
 	}
 
-	tx := cmf.NewDb().Where("mid = ? AND id = ?", mid, data.Id).Updates(&resModel.FoodOrder{
+	tx := db.Where("mid = ? AND id = ?", mid, data.Id).Updates(&resModel.FoodOrder{
 		OrderStatus: "TRADE_FINISHED",
 	})
 
@@ -687,7 +744,17 @@ func (rest *Index) OrderPrinter(c *gin.Context) {
 
 	mid, _ := c.Get("mid")
 
-	err := new(resModel.Printer).Send(mid.(int), rewrite.Id)
+	db, err := util.NewDb(c)
+	if err != nil {
+		new(controller.Rest).Error(c, err.Error(), nil)
+		return
+	}
+
+	printer := resModel.Printer{
+		Db: db,
+	}
+
+	err = printer.Send(mid.(int), rewrite.Id)
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)
 		return

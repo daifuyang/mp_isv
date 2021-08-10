@@ -7,6 +7,7 @@ package model
 
 type VoucherDetailList struct {
 	Amount             string `json:"amount"`
+	FundChannel        string `json:"fund_channel"`
 	MerchantContribute string `json:"merchantContribute"`
 	Name               string `json:"name"`
 	OtherContribute    string `json:"otherContribute"`

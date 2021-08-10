@@ -18,6 +18,7 @@ import (
 	"github.com/gin-gonic/gin"
 	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
+	cmfLog "github.com/gincmf/cmf/log"
 	"gorm.io/gorm"
 	"strconv"
 	"strings"
@@ -49,6 +50,12 @@ func (rest *MpTheme) Get(c *gin.Context) {
 		return
 	}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	var query = []string{"delete_at = ?"}
 	var queryArgs = []interface{}{0}
 
@@ -59,8 +66,8 @@ func (rest *MpTheme) Get(c *gin.Context) {
 	if superRole {
 
 		queryStr := strings.Join(query, " AND ")
-		cmf.NewDb().Where(queryStr, queryArgs...).First(&mpTheme).Count(&total)
-		tx = cmf.NewDb().Where(queryStr, queryArgs...).Limit(intPageSize).Offset((intCurrent - 1) * intPageSize).Order("id desc").Find(&mpTheme)
+		db.Where(queryStr, queryArgs...).First(&mpTheme).Count(&total)
+		tx = db.Where(queryStr, queryArgs...).Limit(intPageSize).Offset((intCurrent - 1) * intPageSize).Order("id desc").Find(&mpTheme)
 
 	} else {
 
@@ -70,12 +77,12 @@ func (rest *MpTheme) Get(c *gin.Context) {
 
 		queryStr := strings.Join(query, " AND ")
 		prefix := cmf.Conf().Database.Prefix
-		cmf.NewDb().Table(prefix+"mp_theme theme").
+		db.Table(prefix+"mp_theme theme").
 			Joins("INNER JOIN "+prefix+"theme_admin_user_post p ON p.mid = theme.mid").
 			Where(queryStr, queryArgs...).
 			First(&mpTheme).Count(&total)
 
-		tx = cmf.NewDb().Debug().Table(prefix+"mp_theme as theme").
+		tx = db.Table(prefix+"mp_theme as theme").
 			Joins("INNER JOIN "+prefix+"mp_theme_admin_user_post p ON p.mid = theme.mid").
 			Where(queryStr, queryArgs...).
 			Limit(intPageSize).Offset((intCurrent - 1) * intPageSize).
@@ -100,7 +107,7 @@ func (rest *MpTheme) Get(c *gin.Context) {
 		v.AppLogoPrev = util.GetFileUrl(v.AppLogo, "clipper")
 
 		mpThemeFile := model.MpThemePage{}
-		result := cmf.NewDb().Where("theme_id = ? and home = 1", v.Id).First(&mpThemeFile)
+		result := db.Where("theme_id = ? and home = 1", v.Id).First(&mpThemeFile)
 
 		// 对外加密id
 		mid := util.EncodeId(uint64(mpThemeFile.Id))
@@ -113,7 +120,7 @@ func (rest *MpTheme) Get(c *gin.Context) {
 				Home:     1,
 				CreateAt: time.Now().Unix(),
 			}
-			cmf.NewDb().Create(&themeFile)
+			db.Create(&themeFile)
 
 			mid = util.EncodeId(uint64(themeFile.Id))
 		}
@@ -148,8 +155,15 @@ func (rest *MpTheme) Show(c *gin.Context) {
 		return
 	}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		c.Abort()
+		return
+	}
+
 	mp := model.MpTheme{}
-	tx := cmf.NewDb().Where("id = ?", rewrite.Id).First(&mp)
+	tx := db.Where("id = ?", rewrite.Id).First(&mp)
 
 	if tx.Error != nil {
 		rest.rc.Error(c, tx.Error.Error(), nil)
@@ -170,7 +184,13 @@ func (rest *MpTheme) ShowByMid(c *gin.Context) {
 
 	var style model.Style
 
-	cmf.NewDb().Where("mid = ?", mid).First(&mp)
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
+	db.Where("mid = ?", mid).First(&mp)
 
 	json.Unmarshal([]byte(mp.Style), &style)
 
@@ -202,8 +222,14 @@ func (rest *MpTheme) Edit(c *gin.Context) {
 		return
 	}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	mp := model.MpTheme{}
-	tx := cmf.NewDb().Where("id = ?", rewrite.Id).First(&mp)
+	tx := db.Where("id = ?", rewrite.Id).First(&mp)
 
 	if tx.RowsAffected == 0 {
 		rest.rc.Error(c, "该小程序不存在！", nil)
@@ -213,7 +239,7 @@ func (rest *MpTheme) Edit(c *gin.Context) {
 	mp.Name = name
 	mp.AppLogo = appLogo
 
-	cmf.NewDb().Save(&mp)
+	db.Save(&mp)
 
 	rest.rc.Success(c, "修改成功！", nil)
 
@@ -244,9 +270,15 @@ func (rest *MpTheme) Store(c *gin.Context) {
 	iTenantId, _ := c.Get("tenant_id")
 	tenantId, _ := iTenantId.(int)
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	// 判断当前用户开通的门户数
 	var count int64 = 0
-	cmf.NewDb().Model(&model.MpTheme{}).Where("delete_at = 0").Count(&count)
+	db.Model(&model.MpTheme{}).Where("delete_at = 0").Count(&count)
 
 	if count > 2 {
 		rest.rc.Error(c, "体验用户最多可以生成三个小程序！", nil)
@@ -269,8 +301,11 @@ func (rest *MpTheme) Store(c *gin.Context) {
 	businessInfo.BrandLogo = appLogo
 	businessInfo.MiniCategoryIds = miniCategoryIds
 
-	op := resModel.Option{Mid: mid}
-	_, err := op.Updates(businessInfo)
+	op := resModel.Option{
+		Mid: mid,
+		Db:  db,
+	}
+	_, err = op.Updates(businessInfo)
 
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)
@@ -279,7 +314,7 @@ func (rest *MpTheme) Store(c *gin.Context) {
 
 	mpTheme := model.MpTheme{}
 	if themeId > 0 {
-		tx := cmf.NewDb().Where("id = ?", themeId).Find(&mpTheme)
+		tx := db.Where("id = ?", themeId).Find(&mpTheme)
 		if tx.Error != nil {
 			rest.rc.Error(c, tx.Error.Error(), nil)
 			return
@@ -299,7 +334,7 @@ func (rest *MpTheme) Store(c *gin.Context) {
 
 	var mpThemePage []model.MpThemePage
 
-	err = cmf.NewDb().Transaction(func(tx *gorm.DB) error {
+	err = db.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(&saasTheme).Error; err != nil {
 			// 返回任何错误都会回滚事务
 			return err
@@ -320,7 +355,7 @@ func (rest *MpTheme) Store(c *gin.Context) {
 		} else {
 			var pages []appModel.MpThemePage
 			prefix := cmf.Conf().Database.Prefix
-			cmf.Db().Table(prefix+"mp_theme t").Select("p.*").
+			cmf.Db().Debug().Table(prefix+"mp_theme t").Select("p.*").
 				Joins("INNER JOIN  "+prefix+"mp_theme_page p ON t.id = p.theme_id").
 				Where("t.id = ?", themeId).Scan(&pages)
 
@@ -385,11 +420,19 @@ func (rest *MpTheme) Delete(c *gin.Context) {
 		return
 	}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		new(controller.Rest).Error(c, err.Error(), nil)
+		c.Abort()
+		return
+	}
+
 	mp := model.MpTheme{
 		Id:       rewrite.Id,
 		DeleteAt: time.Now().Unix(),
 	}
-	cmf.NewDb().Updates(&mp)
+
+	db.Updates(&mp)
 
 	rest.rc.Success(c, "删除成功！", nil)
 
@@ -413,7 +456,18 @@ func (rest *MpTheme) UpdateCategory(c *gin.Context) {
 		return
 	}
 
-	businessJson := saasModel.Options("business_info", mid.(int))
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
+	businessJson, err := saasModel.Options(db, "business_info", mid.(int))
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	bi := resModel.BusinessInfo{}
 	json.Unmarshal([]byte(businessJson), &bi)
 
@@ -423,6 +477,13 @@ func (rest *MpTheme) UpdateCategory(c *gin.Context) {
 
 // 解绑小程序授权关系
 func (rest *MpTheme) UnOauth(c *gin.Context) {
+
+	db, err := util.NewDb(c)
+	if err != nil {
+		new(controller.Rest).Error(c, err.Error(), nil)
+		c.Abort()
+		return
+	}
 
 	mid, _ := c.Get("mid")
 
@@ -445,6 +506,7 @@ func (rest *MpTheme) UnOauth(c *gin.Context) {
 	tx := cmf.Db().Where("tenant_id = ? AND mp_id = ? AND  id = ?", tenant.TenantId, mid, rewrite.Id).First(&oauth)
 
 	if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
+		cmfLog.Error(tx.Error.Error())
 		rest.rc.Error(c, tx.Error.Error(), nil)
 		return
 	}
@@ -455,19 +517,21 @@ func (rest *MpTheme) UnOauth(c *gin.Context) {
 	}
 
 	// 删除版本信息
-	tx = cmf.NewDb().Where("mid = ? AND  type = ?", oauth.MpId, oauth.Type).Delete(&saasModel.MpThemeVersion{})
+	tx = db.Where("mid = ? AND  type = ?", oauth.MpId, oauth.Type).Delete(&saasModel.MpThemeVersion{})
 	if tx.Error != nil {
+		cmfLog.Error(tx.Error.Error())
 		rest.rc.Error(c, tx.Error.Error(), nil)
 		return
 	}
 
 	if oauth.Type == "alipay" {
 		// 删除小程序的加密aesKey
-		tx = cmf.NewDb().Model(&saasModel.MpTheme{}).Where("mid = ?", oauth.MpId).Updates(map[string]string{
+		tx = db.Debug().Model(saasModel.MpTheme{}).Where("mid = ?", oauth.MpId).Updates(map[string]interface{}{
 			"encrypt_key":            "",
 			"alipay_exp_qr_code_url": "",
 		})
 		if tx.Error != nil {
+			cmfLog.Error(tx.Error.Error())
 			rest.rc.Error(c, tx.Error.Error(), nil)
 			return
 		}
@@ -476,12 +540,13 @@ func (rest *MpTheme) UnOauth(c *gin.Context) {
 	if oauth.Type == "wechat" {
 
 		// 删除微信相关信息
-		tx = cmf.NewDb().Model(&saasModel.MpTheme{}).Where("mid = ?", oauth.MpId).Updates(map[string]string{
+		tx = db.Model(&saasModel.MpTheme{}).Where("mid = ?", oauth.MpId).Updates(map[string]interface{}{
 			"wechat_exp_qr_code_url": "",
 			"sub_mchid":              "",
 			"wechat_qr_code_url":     "",
 		})
 		if tx.Error != nil {
+			cmfLog.Error(tx.Error.Error())
 			rest.rc.Error(c, tx.Error.Error(), nil)
 			return
 		}
@@ -490,6 +555,7 @@ func (rest *MpTheme) UnOauth(c *gin.Context) {
 
 	tx = cmf.Db().Where("tenant_id = ? AND mp_id = ? AND  id = ?", tenant.TenantId, mid, rewrite.Id).Delete(&oauth)
 	if tx.Error != nil {
+		cmfLog.Error(tx.Error.Error())
 		rest.rc.Error(c, tx.Error.Error(), nil)
 		return
 	}

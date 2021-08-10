@@ -8,9 +8,9 @@ package settings
 import (
 	"encoding/json"
 	"errors"
+	"gincmf/app/util"
 	"gincmf/plugins/restaurantPlugin/model"
 	"github.com/gin-gonic/gin"
-	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
 	cmfLog "github.com/gincmf/cmf/log"
 	"gorm.io/gorm"
@@ -21,6 +21,12 @@ type EatIn struct {
 }
 
 func (rest *EatIn) Show(c *gin.Context) {
+
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
 
 	mid, _ := c.Get("mid")
 
@@ -34,7 +40,7 @@ func (rest *EatIn) Show(c *gin.Context) {
 
 	op := model.Option{}
 
-	result := cmf.NewDb().Where("option_name = ? AND store_id = ? AND mid = ?", "eatin", rewrite.Id, mid).First(&op)
+	result := db.Where("option_name = ? AND store_id = ? AND mid = ?", "eatin", rewrite.Id, mid).First(&op)
 	if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, result.Error.Error(), nil)
 		return
@@ -51,6 +57,12 @@ func (rest *EatIn) Show(c *gin.Context) {
 // 编辑
 func (rest *EatIn) Edit(c *gin.Context) {
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	mid, _ := c.Get("mid")
 
 	var form struct {
@@ -60,6 +72,7 @@ func (rest *EatIn) Edit(c *gin.Context) {
 		SellClear          string  `json:"sell_clear"`
 		SaleType           int     `json:"sale_type"`      // 0：餐前付款    1：餐后付款
 		EatType            int     `json:"eat_type"`       // 0：堂食有桌号  1：堂食无桌号
+		OrderType          int     `json:"order_type"`     // 点餐模式
 		SurchargeType      int     `json:"surcharge_type"` // 附加费类型
 		Surcharge          float64 `json:"surcharge"`      // 附加费
 		CustomEnabled      int     `json:"custom_enabled"`
@@ -69,7 +82,7 @@ func (rest *EatIn) Edit(c *gin.Context) {
 		Day                int     `json:"day"`                 //可预约天数
 	}
 
-	err := c.ShouldBindJSON(&form)
+	err = c.ShouldBindJSON(&form)
 	if err != nil {
 		c.JSON(400, gin.H{"msg": err.Error()})
 		return
@@ -81,7 +94,7 @@ func (rest *EatIn) Edit(c *gin.Context) {
 	}
 
 	op := model.Option{}
-	result := cmf.NewDb().Where("option_name = ? AND store_id = ? AND mid =?", "eatin", form.StoreId, mid).First(&op)
+	result := db.Where("option_name = ? AND store_id = ? AND mid =?", "eatin", form.StoreId, mid).First(&op)
 	if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, result.Error.Error(), nil)
 		return
@@ -105,6 +118,11 @@ func (rest *EatIn) Edit(c *gin.Context) {
 	eatType := 0
 	if form.EatType == 1 {
 		eatType = 1
+	}
+
+	orderType := 0
+	if form.OrderType == 1 {
+		orderType = 1
 	}
 
 	surchargeType := 0
@@ -150,6 +168,7 @@ func (rest *EatIn) Edit(c *gin.Context) {
 		SellClear:          form.SellClear,
 		SaleType:           saleType,
 		EatType:            eatType,
+		OrderType:          orderType,
 		SurchargeType:      surchargeType,
 		Surcharge:          surcharge,
 		CustomEnabled:      customEnabled,
@@ -168,9 +187,9 @@ func (rest *EatIn) Edit(c *gin.Context) {
 
 	op.OptionValue = string(val)
 	if op.Id == 0 {
-		cmf.NewDb().Create(&op)
+		db.Create(&op)
 	} else {
-		cmf.NewDb().Save(&op)
+		db.Save(&op)
 	}
 
 	rest.rc.Success(c, "修改成功！", ei)

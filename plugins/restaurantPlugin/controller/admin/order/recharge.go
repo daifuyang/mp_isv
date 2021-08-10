@@ -8,9 +8,9 @@ package order
 import (
 	"errors"
 	"fmt"
+	"gincmf/app/util"
 	"gincmf/plugins/restaurantPlugin/model"
 	"github.com/gin-gonic/gin"
-	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
 	"gorm.io/gorm"
 	"strconv"
@@ -35,6 +35,12 @@ func (rest Recharge) Get(c *gin.Context) {
 	var query = []string{"ro.mid = ?"}
 	var queryArgs = []interface{}{mid}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	keywords := c.Query("keywords")
 
 	if keywords != "" {
@@ -47,7 +53,10 @@ func (rest Recharge) Get(c *gin.Context) {
 		query = append(query, querySubStr)
 	}
 
-	data, err := new(model.RechargeOrder).Index(c, query, queryArgs)
+	rechargeOrder := model.RechargeOrder{
+		Db: db,
+	}
+	data, err := rechargeOrder.Index(c, query, queryArgs)
 
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)
@@ -76,10 +85,16 @@ func (rest Recharge) Show(c *gin.Context) {
 		return
 	}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	mid, _ := c.Get("mid")
 
 	ro := model.RechargeOrder{}
-	tx := cmf.NewDb().Where("id = ? and mid = ?", rewrite.Id, mid).First(&ro)
+	tx := db.Where("id = ? and mid = ?", rewrite.Id, mid).First(&ro)
 
 	if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, tx.Error.Error(), nil)
@@ -119,6 +134,12 @@ func (rest Recharge) Refund(c *gin.Context) {
 		return
 	}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	mid, _ := c.Get("mid")
 
 	refundFee := c.PostForm("refund_fee")
@@ -141,7 +162,7 @@ func (rest Recharge) Refund(c *gin.Context) {
 		return
 	}
 
-	txBegin := cmf.NewDb().Begin()
+	txBegin := db.Begin()
 	defer func() {
 		if r := recover(); r != nil {
 			txBegin.RollbackTo("sp1")
@@ -152,7 +173,10 @@ func (rest Recharge) Refund(c *gin.Context) {
 	var queryArgs = []interface{}{mid, rewrite.Id}
 	queryStr := strings.Join(query, " AND ")
 
-	ro := model.RechargeOrder{}
+	ro := model.RechargeOrder{
+		Db: txBegin,
+	}
+
 	tx := txBegin.Where(queryStr, queryArgs...).First(&ro)
 
 	if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {

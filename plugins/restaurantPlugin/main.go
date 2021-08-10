@@ -18,6 +18,6 @@ func regRouter() {
 	router.ApiListenRouter()
 }
 
-func AutoMigrate() {
-	migrate.AutoMigrate()
+func AutoMigrate(dbName string) {
+	migrate.AutoMigrate(dbName)
 }

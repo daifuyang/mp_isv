@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	cmfModel "gincmf/app/model"
+	"gincmf/app/util"
 	"gincmf/plugins/restaurantPlugin/model"
 	saasModel "gincmf/plugins/saasPlugin/model"
 	"github.com/gin-gonic/gin"
@@ -116,6 +117,16 @@ func (rest *Auth) Redirect(c *gin.Context) {
 
 	// 获取用户授权码
 	appAuthCode := c.Query("app_auth_code")
+
+	if appAuthCode == "" {
+		appAuthCode = c.Query("auth_code")
+	}
+
+	if appAuthCode == "" {
+		rest.rc.Error(c, "auth_code不存在！", nil)
+		return
+	}
+
 	redirect := c.Query("redirect")
 
 	// 获取自定义额外参数
@@ -131,8 +142,9 @@ func (rest *Auth) Redirect(c *gin.Context) {
 		Mid      int    `json:"mid"`
 		Type     string `json:"type"`
 	}
-	err := json.Unmarshal(decoded, &stateMap)
-	fmt.Println("err", err)
+
+	json.Unmarshal(decoded, &stateMap)
+
 
 	tenant := saasModel.Tenant{}
 	tx := cmf.Db().Where("tenant_id = ?", stateMap.TenantId).First(&tenant)
@@ -245,6 +257,12 @@ func (rest *Auth) Token(c *gin.Context) {
 		return
 	}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	data := new(base.Oauth).GetSystemToken(code)
 
 	if data.Response.UserId == "" {
@@ -257,7 +275,9 @@ func (rest *Auth) Token(c *gin.Context) {
 	queryArgs := []interface{}{openId, mid}
 
 	// 查询当前用户是否存在
-	userPart := model.UserPart{}
+	userPart := model.UserPart{
+		Db: db,
+	}
 	partData, err := userPart.Show(query, queryArgs)
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, err.Error(), nil)
@@ -266,7 +286,7 @@ func (rest *Auth) Token(c *gin.Context) {
 
 	// 当前三方关系不存在 新建第三方用户
 	if partData.OpenId == "" {
-		cmf.NewDb().Where("open_id = ?", openId).FirstOrCreate(&model.ThirdPart{
+		db.Where("open_id = ?", openId).FirstOrCreate(&model.ThirdPart{
 			Mid:    mid.(int),
 			Type:   "alipay-mp",
 			UserId: 0,

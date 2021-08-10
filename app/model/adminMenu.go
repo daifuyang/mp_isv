@@ -55,31 +55,31 @@ func AddAdminMenu(pid int, uniName string, name string, path string, hide int) {
 		Path:       path,
 		HideInMenu: hide,
 	}
-	cmf.NewDb().FirstOrCreate(&adminMenu)
+	cmf.Db().FirstOrCreate(&adminMenu)
 }
 
 func GetAdminMenu(query []string, queryArgs []interface{}) AdminMenu {
 	adminMenu := AdminMenu{}
 	queryStr := strings.Join(query, " AND ")
-	cmf.NewDb().Where(queryStr, queryArgs...).First(&adminMenu)
+	cmf.Db().Where(queryStr, queryArgs...).First(&adminMenu)
 	return adminMenu
 }
 
 func EditAdminMenu(id int, pid int, uniName string, name string, path string, hide int) {
 	adminMenu := AdminMenu{}
-	result := cmf.NewDb().Where("id = ?", id).First(&adminMenu)
+	result := cmf.Db().Where("id = ?", id).First(&adminMenu)
 	if result.RowsAffected > 0 {
 		adminMenu.ParentId = pid
 		adminMenu.UniqueName = uniName
 		adminMenu.Name = name
 		adminMenu.Path = path
 		adminMenu.HideInMenu = hide
-		cmf.NewDb().Save(&adminMenu)
+		cmf.Db().Save(&adminMenu)
 	}
 }
 
 // 自动生成菜单和权限控制
-func AutoAdminMenu() {
+func AutoAdminMenu(dbName string) {
 	var adminMenus []confAdminMenu
 
 	bytes, err := ioutil.ReadFile("./data/conf/menu.json")
@@ -90,7 +90,7 @@ func AutoAdminMenu() {
 	err = json.Unmarshal(bytes, &adminMenus)
 	if err == nil {
 		// 增加json中的菜单
-		recursionAddMenu(adminMenus, 0)
+		recursionAddMenu(dbName, adminMenus, 0)
 	}
 }
 
@@ -102,7 +102,7 @@ func AutoAdminMenu() {
  * @return
  **/
 
-func recursionAddMenu(menus []confAdminMenu, parentId int) {
+func recursionAddMenu(dbName string, menus []confAdminMenu, parentId int) {
 
 	// 增加当前层级
 	for _, v := range menus {
@@ -119,10 +119,10 @@ func recursionAddMenu(menus []confAdminMenu, parentId int) {
 
 		// 保存菜单
 		if v.Path != "" {
-			result := cmf.NewDb().Create(&adminMenu)
+			result := cmf.ManualDb(dbName).Create(&adminMenu)
 			if result.RowsAffected > 0 {
 				if len(v.Children) > 0 {
-					recursionAddMenu(v.Children, adminMenu.Id)
+					recursionAddMenu(dbName, v.Children, adminMenu.Id)
 				}
 			}
 		}
@@ -144,7 +144,7 @@ func inRule(name string, title string, ruleApi []ruleApi) {
 	}
 
 	// 加入到authRule规则表
-	tx := cmf.NewDb().Where("name = ?", name).FirstOrCreate(&authRule)
+	tx := cmf.Db().Where("name = ?", name).FirstOrCreate(&authRule)
 	if tx.Error != nil {
 		return
 	}
@@ -160,7 +160,7 @@ func inRule(name string, title string, ruleApi []ruleApi) {
 	}
 
 	if len(rApi) > 0 {
-		tx = cmf.NewDb().Create(&rApi)
+		tx = cmf.Db().Create(&rApi)
 		if tx.Error != nil {
 			return
 		}

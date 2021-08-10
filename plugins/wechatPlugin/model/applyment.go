@@ -10,8 +10,8 @@ import (
 	"gincmf/app/util"
 	saasModel "gincmf/plugins/saasPlugin/model"
 	"github.com/gin-gonic/gin"
-	cmf "github.com/gincmf/cmf/bootstrap"
 	cmfModel "github.com/gincmf/cmf/model"
+	"gorm.io/gorm"
 	"strings"
 	"time"
 )
@@ -44,6 +44,7 @@ type Applyment struct {
 	MerchantName      string              `gorm:"-" json:"merchant_name"`
 	OriginFormObj     Form                `gorm:"-" json:"origin_form_obj"`
 	MediaListObj      MediaList           `gorm:"-" json:"media_list_obj"`
+	Db                *gorm.DB            `gorm:"-" json:"-"`
 }
 
 type contactInfo struct {
@@ -196,10 +197,12 @@ type Form struct {
 }
 
 func (model *Applyment) AutoMigrate() {
-	cmf.NewDb().AutoMigrate(&Applyment{})
+	model.Db.AutoMigrate(&Applyment{})
 }
 
 func (model *Applyment) Index(c *gin.Context, query []string, queryArgs []interface{}) (cmfModel.Paginate, error) {
+
+	db := model.Db
 
 	mid, _ := c.Get("mid")
 
@@ -214,12 +217,12 @@ func (model *Applyment) Index(c *gin.Context, query []string, queryArgs []interf
 
 	var total int64 = 0
 	var applyment []Applyment
-	tx := cmf.NewDb().Where(queryStr, queryArgs...).Find(&applyment).Count(&total)
+	tx := db.Where(queryStr, queryArgs...).Find(&applyment).Count(&total)
 	if tx.Error != nil {
 		return cmfModel.Paginate{}, tx.Error
 	}
 
-	tx = cmf.NewDb().Where(queryStr, queryArgs...).
+	tx = db.Where(queryStr, queryArgs...).
 		Limit(pageSize).Offset((current - 1) * pageSize).Find(&applyment)
 	if tx.Error != nil {
 		return cmfModel.Paginate{}, tx.Error
@@ -227,7 +230,7 @@ func (model *Applyment) Index(c *gin.Context, query []string, queryArgs []interf
 
 	// 获取当前主题小程序
 	theme := saasModel.MpTheme{}
-	tx = cmf.NewDb().Where("mid = ?", mid).First(&theme)
+	tx = db.Where("mid = ?", mid).First(&theme)
 	if tx.Error != nil {
 		return cmfModel.Paginate{}, tx.Error
 	}
@@ -258,8 +261,10 @@ func (model *Applyment) Index(c *gin.Context, query []string, queryArgs []interf
 
 func (model *Applyment) Show(query []string, queryArgs []interface{}) (applyment Applyment, err error) {
 
+	db := model.Db
+
 	queryStr := strings.Join(query, " AND ")
-	tx := cmf.NewDb().Where(queryStr, queryArgs...).Find(&applyment)
+	tx := db.Where(queryStr, queryArgs...).Find(&applyment)
 	if tx.Error != nil {
 		return applyment, tx.Error
 	}

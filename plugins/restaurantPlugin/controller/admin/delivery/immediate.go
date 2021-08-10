@@ -7,10 +7,9 @@ package delivery
 
 import (
 	"errors"
-	"fmt"
+	"gincmf/app/util"
 	"gincmf/plugins/restaurantPlugin/model"
 	"github.com/gin-gonic/gin"
-	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
 	"gorm.io/gorm"
 	"time"
@@ -29,9 +28,15 @@ type ImmediateDelivery struct {
  **/
 func (rest *ImmediateDelivery) Get(c *gin.Context) {
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	var immediateDelivery []model.ImmediateDelivery
 
-	tx := cmf.NewDb().Find(&immediateDelivery)
+	tx := db.Find(&immediateDelivery)
 
 	for k, _ := range immediateDelivery {
 		immediateDelivery[k].AppSecret = ""
@@ -91,11 +96,15 @@ func (rest *ImmediateDelivery) Edit(c *gin.Context) {
 		return
 	}
 
-	fmt.Println("form", form)
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
 
 	immediateDelivery := model.ImmediateDelivery{}
 
-	tx := cmf.NewDb().Where("id = ?", rewrite.Id).First(&immediateDelivery)
+	tx := db.Where("id = ?", rewrite.Id).First(&immediateDelivery)
 	if tx.Error != nil {
 
 		if errors.Is(tx.Error, gorm.ErrRecordNotFound) {
@@ -112,11 +121,11 @@ func (rest *ImmediateDelivery) Edit(c *gin.Context) {
 
 	if form.Field == "is_main" {
 		// 修改全部配送状态
-		tx = cmf.NewDb().Model(&immediateDelivery).Where("is_main", 1).Update("is_main", 0)
+		tx = db.Model(&immediateDelivery).Where("is_main", 1).Update("is_main", 0)
 		immediateDelivery.IsMain = form.Value
 	}
 
-	tx = cmf.NewDb().Save(&immediateDelivery)
+	tx = db.Save(&immediateDelivery)
 	if tx.Error != nil {
 		rest.rc.Error(c, tx.Error.Error(), nil)
 		return
@@ -167,7 +176,13 @@ func (rest *ImmediateDelivery) Handle(c *gin.Context) {
 	}
 	msg := "操作成功"
 
-	tx := cmf.NewDb().Where("delivery_id = ?", form.DeliveryId).First(&immediateDelivery)
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
+	tx := db.Where("delivery_id = ?", form.DeliveryId).First(&immediateDelivery)
 	if tx.Error != nil {
 		rest.rc.Error(c, tx.Error.Error(), nil)
 		return
@@ -178,7 +193,7 @@ func (rest *ImmediateDelivery) Handle(c *gin.Context) {
 		immediateDelivery.AppKey = form.AppKey
 		immediateDelivery.AppSecret = form.AppSecret
 		immediateDelivery.Status = 1
-		tx = cmf.NewDb().Save(&immediateDelivery)
+		tx = db.Save(&immediateDelivery)
 		if tx.Error != nil {
 			rest.rc.Error(c, tx.Error.Error(), nil)
 			return

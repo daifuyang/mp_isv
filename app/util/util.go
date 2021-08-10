@@ -15,6 +15,7 @@ import (
 	cmfUtil "github.com/gincmf/cmf/util"
 	uuid "github.com/nu7hatch/gouuid"
 	"github.com/pjebs/optimus-go"
+	"gorm.io/gorm"
 	"io"
 	"log"
 	"math"
@@ -443,9 +444,9 @@ func ZipCreate(inFiles []string, targetName string) (result []string, err error)
 
 }
 
-func Database() (database string, err error) {
+func Database(db *gorm.DB) (database string, err error) {
 
-	tx := cmf.NewDb().Debug().Raw("select database();").Scan(&database)
+	tx := db.Debug().Raw("select database();").Scan(&database)
 
 	if tx.Error != nil {
 		return "", tx.Error

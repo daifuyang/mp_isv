@@ -7,6 +7,7 @@ package middleware
 
 import (
 	"errors"
+	"gincmf/app/util"
 	"gincmf/plugins/restaurantPlugin/model"
 	"github.com/gin-gonic/gin"
 	"github.com/gincmf/cmf/controller"
@@ -29,28 +30,37 @@ func ValidationStore(c *gin.Context) {
 
 	mid, exist := c.Get("mid")
 	if !exist {
-		controller.Rest{}.Error(c, "小程序唯一mid不能为空！", nil)
+		new(controller.Rest).Error(c, "小程序唯一mid不能为空！", nil)
 		c.Abort()
 		return
 	}
 
 	if storeNumber == "" {
-		controller.Rest{}.Error(c, "门店不能为空！", nil)
+		new(controller.Rest).Error(c, "门店不能为空！", nil)
 		c.Abort()
 		return
 	}
 
-	store := model.Store{}
-	store, err := store.Show([]string{"store_number = ? AND mid = ? AND delete_at = ?"}, []interface{}{storeNumber, mid, 0})
+	db, err := util.NewDb(c)
+	if err != nil {
+		new(controller.Rest).Error(c, err.Error(), nil)
+		c.Abort()
+		return
+	}
+
+	storeModel := model.Store{
+		Db: db,
+	}
+	store, err := storeModel.Show([]string{"store_number = ? AND mid = ? AND delete_at = ?"}, []interface{}{storeNumber, mid, 0})
 
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			controller.Rest{}.Error(c, "当前门店不存在！", nil)
+			new(controller.Rest).Error(c, "当前门店不存在！", nil)
 			c.Abort()
 			return
 		}
 
-		controller.Rest{}.Error(c, err.Error(), nil)
+		new(controller.Rest).Error(c, err.Error(), nil)
 		c.Abort()
 		return
 	}

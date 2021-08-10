@@ -17,7 +17,6 @@ import (
 	"github.com/gincmf/alipayEasySdk/data"
 	"github.com/gincmf/alipayEasySdk/merchant"
 	"github.com/gincmf/alipayEasySdk/mini"
-	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
 	"gorm.io/gorm"
 	"strconv"
@@ -39,7 +38,18 @@ type Version struct {
 func (rest *Version) Detail(c *gin.Context) {
 
 	mid, _ := c.Get("mid")
-	version, err := new(saasModel.MpThemeVersion).Show([]string{"mid = ?", "type = ?"}, []interface{}{mid, "alipay"})
+
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
+	mpThemeVersion := saasModel.MpThemeVersion{
+		Db: db,
+	}
+
+	version, err := mpThemeVersion.Show([]string{"mid = ?", "type = ?"}, []interface{}{mid, "alipay"})
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)
 		return
@@ -66,8 +76,13 @@ func (rest *Version) Upload(c *gin.Context) {
 	mid, _ := c.Get("mid")
 	midInt := mid.(int)
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, "数据库索引异常！", nil)
+	}
+
 	var count int64
-	cmf.NewDb().Where("mid = ? and is_audit = ? AND type = ?", mid, 1, "alipay").First(&saasModel.MpThemeVersion{}).Count(&count)
+	db.Where("mid = ? and is_audit = ? AND type = ?", mid, 1, "alipay").First(&saasModel.MpThemeVersion{}).Count(&count)
 	if count > 0 {
 		rest.rc.Error(c, "请等待待审核的小程序完成审核状态在升级!", nil)
 		return
@@ -104,7 +119,7 @@ func (rest *Version) Upload(c *gin.Context) {
 	appVersion := rest.NextVersion(&versionModel)
 	versionModel.Version = appVersion
 
-	result, appVersion := rest.UploadVersion(versionModel)
+	result, appVersion := rest.UploadVersion(c, versionModel)
 
 	if result.Response.Code == "10000" {
 
@@ -126,7 +141,12 @@ func (rest *Version) Upload(c *gin.Context) {
 }
 
 // 递归发起
-func (rest *Version) UploadVersion(version saasModel.MpThemeVersion) (mini.VersionUploadResult, string) {
+func (rest *Version) UploadVersion(c *gin.Context, version saasModel.MpThemeVersion) (mini.VersionUploadResult, string) {
+
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, "数据库索引异常！", nil)
+	}
 
 	appVersion := version.Version
 	bizContent := make(map[string]interface{}, 0)
@@ -147,12 +167,12 @@ func (rest *Version) UploadVersion(version saasModel.MpThemeVersion) (mini.Versi
 			version.Version = appVersion
 			version.Id = 0
 			version.CreateAt = time.Now().Unix()
-			cmf.NewDb().Create(&version)
+			db.Create(&version)
 			// 递归
-			return rest.UploadVersion(version)
+			return rest.UploadVersion(c, version)
 		}
 	} else {
-		cmf.NewDb().Create(&version)
+		db.Create(&version)
 	}
 
 	return result, appVersion
@@ -214,7 +234,18 @@ func (rest *Version) ExperienceCreate(c *gin.Context) {
 
 	// 获取当前版本
 	mid, _ := c.Get("mid")
-	version, err := new(saasModel.MpThemeVersion).Show([]string{"mid = ?", "type = ?"}, []interface{}{mid, "alipay"})
+
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
+	mpThemeVersion := saasModel.MpThemeVersion{
+		Db: db,
+	}
+
+	version, err := mpThemeVersion.Show([]string{"mid = ?", "type = ?"}, []interface{}{mid, "alipay"})
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)
 		return
@@ -244,7 +275,18 @@ func (rest *Version) ExperienceQuery(c *gin.Context) {
 
 	// 获取当前版本
 	mid, _ := c.Get("mid")
-	version, err := new(saasModel.MpThemeVersion).Show([]string{"mid = ?", "type = ?"}, []interface{}{mid, "alipay"})
+
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
+	mpThemeVersion := saasModel.MpThemeVersion{
+		Db: db,
+	}
+
+	version, err := mpThemeVersion.Show([]string{"mid = ?", "type = ?"}, []interface{}{mid, "alipay"})
 	if err != nil {
 
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -321,8 +363,14 @@ func (rest *Version) DetailQuery(c *gin.Context) {
 
 	mid, _ := c.Get("mid")
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	mpTheme := new(saasModel.MpTheme)
-	tx := cmf.NewDb().Where("mid = ?", mid).Order("id desc").First(&mpTheme)
+	tx := db.Where("mid = ?", mid).Order("id desc").First(&mpTheme)
 	if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, tx.Error.Error(), nil)
 		return
@@ -334,7 +382,11 @@ func (rest *Version) DetailQuery(c *gin.Context) {
 		return
 	}
 
-	version, err := new(saasModel.MpThemeVersion).Show([]string{"mid = ?", "type = ?"}, []interface{}{mid, "alipay"})
+	mpThemeVersion := saasModel.MpThemeVersion{
+		Db: db,
+	}
+
+	version, err := mpThemeVersion.Show([]string{"mid = ?", "type = ?"}, []interface{}{mid, "alipay"})
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)
 		return
@@ -371,7 +423,7 @@ func (rest *Version) DetailQuery(c *gin.Context) {
 			return
 		}
 
-		tx = cmf.NewDb().Save(&version)
+		tx = db.Save(&version)
 		if tx.Error != nil {
 			rest.rc.Error(c, err.Error(), nil)
 			return
@@ -394,20 +446,27 @@ func (rest *Version) Audit(c *gin.Context) {
 
 	mid, _ := c.Get("mid")
 
-	mpTheme := new(saasModel.MpTheme)
-	tx := cmf.NewDb().Where("mid = ?", mid).Order("id desc").First(&mpTheme)
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, "数据库索引异常！", nil)
+	}
+
+	mpTheme := saasModel.MpTheme{
+		Db: db,
+	}
+	tx := db.Where("mid = ?", mid).Order("id desc").First(&mpTheme)
 	if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, tx.Error.Error(), nil)
 		return
 	}
 
 	if tx.RowsAffected == 0 {
-		mpTheme = nil
 		rest.rc.Error(c, "小程序不存在或被删除", nil)
 		return
 	}
 
-	version, err := new(saasModel.MpThemeVersion).Show([]string{"mid = ?", "type = ?"}, []interface{}{mid, "alipay"})
+	mpThemeVersion := saasModel.MpThemeVersion{Db: db}
+	version, err := mpThemeVersion.Show([]string{"mid = ?", "type = ?"}, []interface{}{mid, "alipay"})
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)
 		return
@@ -420,7 +479,12 @@ func (rest *Version) Audit(c *gin.Context) {
 		return
 	}
 
-	businessJson := saasModel.Options("business_info", mid.(int))
+	businessJson, err := saasModel.Options(db, "business_info", mid.(int))
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	bi := model.BusinessInfo{}
 	json.Unmarshal([]byte(businessJson), &bi)
 
@@ -515,7 +579,7 @@ func (rest *Version) Audit(c *gin.Context) {
 
 	version.IsAudit = 1
 	version.Status = "wait"
-	tx = cmf.NewDb().Save(&version)
+	tx = db.Save(&version)
 
 	if tx.Error != nil {
 		rest.rc.Error(c, err.Error(), nil)

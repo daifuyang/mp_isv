@@ -7,6 +7,7 @@ package store
 
 import (
 	"errors"
+	"gincmf/app/util"
 	"gincmf/plugins/restaurantPlugin/model"
 	"github.com/gin-gonic/gin"
 	"github.com/gincmf/cmf/controller"
@@ -29,6 +30,12 @@ type Index struct {
 func (rest *Index) List(c *gin.Context) {
 
 	mid, _ := c.Get("mid")
+
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
 
 	var query = []string{"mid = ?"}
 	var queryArgs = []interface{}{mid}
@@ -67,6 +74,7 @@ func (rest *Index) List(c *gin.Context) {
 	store := model.Store{
 		Longitude: lon,
 		Latitude:  lat,
+		Db:        db,
 	}
 
 	query = append(query, "delete_at = ?")
@@ -86,6 +94,7 @@ func (rest *Index) Show(c *gin.Context) {
 	var rewrite struct {
 		Id int `uri:"id"`
 	}
+
 	if err := c.ShouldBindUri(&rewrite); err != nil {
 		c.JSON(400, gin.H{"msg": err.Error()})
 		return
@@ -115,9 +124,16 @@ func (rest *Index) Show(c *gin.Context) {
 		return
 	}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	store := model.Store{
 		Longitude: lon,
 		Latitude:  lat,
+		Db:        db,
 	}
 
 	mid, _ := c.Get("mid")

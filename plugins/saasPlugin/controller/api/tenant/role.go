@@ -5,6 +5,7 @@
 package tenant
 
 import (
+	"gincmf/app/util"
 	"gincmf/plugins/saasPlugin/model"
 	"github.com/gin-gonic/gin"
 	"github.com/gincmf/cmf/controller"
@@ -18,6 +19,13 @@ func (rest *Role) Get(c *gin.Context) {
 
 	var query []string
 	var queryArgs []interface{}
+
+	db, err := util.NewDb(c)
+	if err != nil {
+		new(controller.Rest).Error(c, err.Error(), nil)
+		c.Abort()
+		return
+	}
 
 	mid, exist := c.Get("mid")
 
@@ -39,7 +47,10 @@ func (rest *Role) Get(c *gin.Context) {
 		query = append(query, "name LIKE ?")
 		queryArgs = append(queryArgs, "%"+name+"%")
 	}
-	role := model.Role{}
+
+	role := model.Role{
+		Db: db,
+	}
 
 	data, err := role.Get(c, query, queryArgs)
 	if err != nil {

@@ -6,6 +6,7 @@
 package middleware
 
 import (
+	"fmt"
 	saasModel "gincmf/plugins/saasPlugin/model"
 	"github.com/gin-gonic/gin"
 	cmf "github.com/gincmf/cmf/bootstrap"
@@ -25,22 +26,26 @@ func MainDb(c *gin.Context) {
 func TenantDb(c *gin.Context) {
 
 	currentTenant, err := saasModel.CurrentTenant(c)
-	aliasName := strconv.Itoa(currentTenant.TenantId)
-	if currentTenant.AliasName != "" {
-		aliasName = currentTenant.AliasName
-	}
 
-	c.Set("aliasName", aliasName)
 	if err != nil {
 		cmfLog.Error("err：" + err.Error())
 		new(controller.Rest).Error(c, "该租户不存在！", nil)
 		c.Abort()
 		return
 	}
-	db := "tenant_" + strconv.Itoa(currentTenant.TenantId)
-	newDb := cmf.ManualDb(db)
 
-	c.Set("DB", newDb)
+	aliasName := strconv.Itoa(currentTenant.TenantId)
+	if currentTenant.AliasName != "" {
+		aliasName = currentTenant.AliasName
+	}
+
+	c.Set("aliasName", aliasName)
+	db := "tenant_" + strconv.Itoa(currentTenant.TenantId)
+
+	fmt.Println("tenant db", db)
+
+	c.Set("DB", db)
+
 	c.Next()
 }
 

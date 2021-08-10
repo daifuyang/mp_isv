@@ -7,9 +7,9 @@ package desk
 
 import (
 	"errors"
+	"gincmf/app/util"
 	"gincmf/plugins/restaurantPlugin/model"
 	"github.com/gin-gonic/gin"
-	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
 	"gorm.io/gorm"
 	"strconv"
@@ -40,6 +40,12 @@ func (rest CategoryController) Get(c *gin.Context) {
 	var query []string
 	var queryArgs []interface{}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	mid, _ := c.Get("mid")
 	query = append(query, "mid = ?")
 	queryArgs = append(queryArgs, mid)
@@ -56,7 +62,9 @@ func (rest CategoryController) Get(c *gin.Context) {
 		queryArgs = append(queryArgs, storeId)
 	}
 
-	category := model.DeskCategory{}
+	category := model.DeskCategory{
+		Db: db,
+	}
 
 	data, err := category.Index(c, query, queryArgs)
 
@@ -94,10 +102,20 @@ func (rest CategoryController) Show(c *gin.Context) {
 		return
 	}
 
-	category := model.DeskCategory{}
+
 
 	var query []string
 	var queryArgs []interface{}
+
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
+	category := model.DeskCategory{
+		Db: db,
+	}
 
 	mid, _ := c.Get("mid")
 
@@ -148,6 +166,12 @@ func (rest CategoryController) Edit(c *gin.Context) {
 		return
 	}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	mid, _ := c.Get("mid")
 
 	storeId := c.PostForm("store_id")
@@ -179,6 +203,7 @@ func (rest CategoryController) Edit(c *gin.Context) {
 		CategoryName: categoryName,
 		LeastSeats:   leastSeatsInt,
 		MaximumSeats: maximumSeats,
+		Db: db,
 	}
 
 	data, err := category.Update()
@@ -211,6 +236,12 @@ func (rest CategoryController) Edit(c *gin.Context) {
 // @Router /admin/desk/category [post]
 func (rest CategoryController) Store(c *gin.Context) {
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	mid, _ := c.Get("mid")
 
 	categoryName := c.PostForm("category_name")
@@ -241,6 +272,7 @@ func (rest CategoryController) Store(c *gin.Context) {
 		CategoryName: categoryName,
 		LeastSeats:   leastSeatsInt,
 		MaximumSeats: maximumSeats,
+		Db: db,
 	}
 
 	result, err := category.Store()
@@ -279,10 +311,19 @@ func (rest CategoryController) Delete(c *gin.Context) {
 		return
 	}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	mid, _ := c.Get("mid")
 	midInt := mid.(int)
-	category := model.DeskCategory{}
-	cmf.NewDb().Where("mid = ? AND id = ?", midInt, rewrite.Id).Delete(&category)
+	category := model.DeskCategory{
+		Db: db,
+	}
+
+	db.Where("mid = ? AND id = ?", midInt, rewrite.Id).Delete(&category)
 
 	rest.rc.Success(c, "删除成功！", nil)
 }

@@ -8,11 +8,11 @@ package partner
 import (
 	"encoding/json"
 	"errors"
+	appUtil "gincmf/app/util"
 	saasModel "gincmf/plugins/saasPlugin/model"
 	"gincmf/plugins/wechatPlugin/model"
 	"github.com/fatih/structs"
 	"github.com/gin-gonic/gin"
-	cmf "github.com/gincmf/cmf/bootstrap"
 	"github.com/gincmf/cmf/controller"
 	"github.com/gincmf/wechatEasySdk/merchant"
 	"github.com/gincmf/wechatEasySdk/util"
@@ -34,11 +34,22 @@ type Applyment struct {
  **/
 func (rest *Applyment) Get(c *gin.Context) {
 
-	data, err := new(model.Applyment).Index(c, nil, nil)
+	db, err := appUtil.NewDb(c)
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)
 		return
 	}
+
+	applyment := model.Applyment{
+		Db:db,
+	}
+
+	data, err :=applyment.Index(c, nil, nil)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	rest.rc.Success(c, "获取成功！", data)
 	return
 
@@ -65,7 +76,17 @@ func (rest *Applyment) Show(c *gin.Context) {
 	query := []string{"id = ?"}
 	queryArgs := []interface{}{rewrite.Id}
 
-	data, err := new(model.Applyment).Show(query, queryArgs)
+	db, err := appUtil.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c,err.Error(),nil)
+		return
+	}
+
+	applyment := model.Applyment{
+		Db: db,
+	}
+
+	data, err := applyment.Show(query, queryArgs)
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)
 		return
@@ -262,9 +283,15 @@ func (rest *Applyment) Applyment(c *gin.Context, editId int) {
 
 	applyment := model.Applyment{}
 
+	db, err := appUtil.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	if editId > 0 {
 
-		tx := cmf.NewDb().Where("id = ?", editId).First(&applyment)
+		tx := db.Where("id = ?", editId).First(&applyment)
 		if tx.Error != nil {
 			if errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 				rest.rc.Error(c, "该申请记录不存在", nil)
@@ -306,12 +333,12 @@ func (rest *Applyment) Applyment(c *gin.Context, editId int) {
 			applyment.Id = editId
 			applyment.UpdateAt = time.Now().Unix()
 			applyment.AuditDetail = auditDetail
-			tx = cmf.NewDb().Save(&applyment)
+			tx = db.Save(&applyment)
 
 		} else {
 			applyment.BusinessCode = strconv.FormatInt(time.Now().Unix(), 10)
 			applyment.CreateAt = time.Now().Unix()
-			tx = cmf.NewDb().Create(&applyment)
+			tx = db.Create(&applyment)
 		}
 
 		if tx.Error != nil {
@@ -334,6 +361,7 @@ func (rest *Applyment) State(c *gin.Context) {
 	var rewrite struct {
 		Id int `uri:"id"`
 	}
+
 	if err := c.ShouldBindUri(&rewrite); err != nil {
 		c.JSON(400, gin.H{"msg": err.Error()})
 		return
@@ -342,7 +370,18 @@ func (rest *Applyment) State(c *gin.Context) {
 	query := []string{"id = ?"}
 	queryArgs := []interface{}{rewrite.Id}
 
-	applyment, err := new(model.Applyment).Show(query, queryArgs)
+	db, err := appUtil.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
+	applyment := model.Applyment{
+		Db: db,
+	}
+
+	applyment, err = applyment.Show(query, queryArgs)
+
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)
 		return
@@ -362,7 +401,7 @@ func (rest *Applyment) State(c *gin.Context) {
 	applyment.ApplymentState = applyResult.ApplymentState
 	applyment.AuditDetail = string(auditDetail)
 	applyment.AuditDetailObj = applyResult.AuditDetail
-	tx := cmf.NewDb().Updates(&applyment)
+	tx := db.Updates(&applyment)
 	if tx.Error != nil {
 		rest.rc.Error(c, tx.Error.Error(), nil)
 		return
@@ -392,9 +431,15 @@ func (rest *Applyment) BindSubMchid(c *gin.Context) {
 
 	mid, _ := c.Get("mid")
 
+	db, err := appUtil.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	// 获取当前主题小程序
 	theme := saasModel.MpTheme{}
-	tx := cmf.NewDb().Where("mid = ?", mid).First(&theme)
+	tx := db.Where("mid = ?", mid).First(&theme)
 	if tx.Error != nil {
 		if errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 			rest.rc.Error(c, "小程序不存在！", nil)
@@ -405,7 +450,7 @@ func (rest *Applyment) BindSubMchid(c *gin.Context) {
 	}
 
 	theme.SubMchid = subMcchid
-	tx = cmf.NewDb().Where("mid = ?", mid).Updates(&theme)
+	tx = db.Where("mid = ?", mid).Updates(&theme)
 	if tx.Error != nil {
 		rest.rc.Error(c, tx.Error.Error(), nil)
 		return
