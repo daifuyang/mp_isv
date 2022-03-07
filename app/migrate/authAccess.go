@@ -6,14 +6,13 @@ package migrate
 
 import (
 	"gincmf/app/model"
-	"gorm.io/gorm"
+	cmf "github.com/gincmf/cmf/bootstrap"
 )
 
 type authAccess struct {
-	Db *gorm.DB
 	Migrate
 }
 
 func (migrate *authAccess) AutoMigrate() {
-	migrate.Db.AutoMigrate(model.AuthAccess{})
+	cmf.Db().AutoMigrate(model.AuthAccess{})
 }

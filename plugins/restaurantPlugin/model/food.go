@@ -480,7 +480,9 @@ func (model Food) Show(query []string, queryArgs []interface{}) (Food, error) {
 
 func (model Food) Save() (Food, error) {
 
-	food := Food{}
+	food := Food{
+		Db: model.Db,
+	}
 
 	query := []string{"mid = ?", "store_id = ?", "name = ?"}
 	queryArgs := []interface{}{model.Mid, model.StoreId, model.Name}
@@ -517,7 +519,9 @@ func (model Food) Save() (Food, error) {
  **/
 func (model Food) Update() (Food, error) {
 
-	foodModel := Food{}
+	foodModel := Food{
+		Db: model.Db,
+	}
 
 	query := []string{"mid = ?", "store_id = ?", "id = ?"}
 	queryArgs := []interface{}{model.Mid, model.StoreId, model.Id}
@@ -552,7 +556,9 @@ func (model Food) Delete() (Food, error) {
 
 	db := model.Db
 
-	food := Food{}
+	food := Food{
+		Db: db,
+	}
 	query := []string{"mid = ?", "store_id = ?", "id = ?"}
 	queryArgs := []interface{}{model.Mid, model.StoreId, model.Id}
 

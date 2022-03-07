@@ -37,7 +37,6 @@ type AdminUser struct {
 	LastLoginIp  string   `gorm:"type:varchar(100)" json:"last_loginip"`
 	Mobile       string   `gorm:"type:varchar(20);not null" json:"mobile"`
 	More         string   `gorm:"type:text" json:"more"`
-	Db           *gorm.DB `gorm:"-" json:"-"`
 }
 
 // 自动迁移

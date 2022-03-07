@@ -29,7 +29,7 @@ type Qrcode struct {
  * @Param
  * @return
  **/
-func (v *Qrcode) Index(c *gin.Context) {
+func (web *Qrcode) Index(c *gin.Context) {
 
 	ua := c.Request.Header.Get("user-agent")
 	ua = strings.ToLower(ua)
@@ -51,8 +51,7 @@ func (v *Qrcode) Index(c *gin.Context) {
 		uaType = "wechat"
 	}
 
-	iTemplate, _ := c.Get("template")
-	v.Template = iTemplate.(view.Template)
+	view := web.GetView(c)
 
 	// 完成业务
 	var rewrite struct {
@@ -67,7 +66,7 @@ func (v *Qrcode) Index(c *gin.Context) {
 	qrcode := model.Qrcode{}
 	tx := cmf.Db().Where("code = ?", rewrite.Id).First(&qrcode)
 	if tx.Error != nil {
-		v.Error("该二维码非指定点餐二维码！")
+		view.Error("该二维码非指定点餐二维码！")
 		return
 	}
 
@@ -105,7 +104,7 @@ func (v *Qrcode) Index(c *gin.Context) {
 			query = url.QueryEscape(query)
 			// fmt.Println("query",query)
 			platformapi := "alipays://platformapi/startapp?appId=" + qrcode.AliAppId + "&page=" + qrcode.Page + "&query=" + query
-			v.Assign("platformapi", platformapi)
+			view.Assign("platformapi", platformapi)
 		}
 
 		// 获取回调授权authorizationCode
@@ -115,7 +114,7 @@ func (v *Qrcode) Index(c *gin.Context) {
 
 			if err != nil {
 				if uaType == "wechat" {
-					v.Error("请联系商户开通微信小程序！")
+					view.Error("请联系商户开通微信小程序！")
 					return
 				}
 			} else {
@@ -127,21 +126,21 @@ func (v *Qrcode) Index(c *gin.Context) {
 
 				schemeResponse := new(open.Wxa).GenerateUrlLink(authorizerAccessToken, bizContent)
 				if schemeResponse.Errcode != 0 && uaType == "wechat" {
-					v.Error(schemeResponse.Errmsg)
+					view.Error(schemeResponse.Errmsg)
 					return
 				}
 
-				v.Assign("wechatScheme", schemeResponse.UrlLink)
+				view.Assign("wechatScheme", schemeResponse.UrlLink)
 			}
 		}
-		v.Assign("uaType", uaType)
+		view.Assign("uaType", uaType)
 	}
-	v.Assign("status", status)
+	view.Assign("status", status)
 
 	if canOpen {
-		v.Fetch("openMp.html")
+		view.Fetch("openMp.html")
 	} else {
-		v.Fetch("qrcode.html")
+		view.Fetch("qrcode.html")
 	}
 
 }

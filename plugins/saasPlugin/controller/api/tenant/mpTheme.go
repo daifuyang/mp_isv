@@ -402,10 +402,16 @@ func (rest *MpTheme) Store(c *gin.Context) {
 	}
 
 	// 初始化角色
-	new(saasModel.Role).Init(mid)
+	role := saasModel.Role{
+		Db: db,
+	}
+	role.Init(mid)
 
 	// 初始化门户
-	new(portalModel.PortalCategory).Init(mid)
+	pc := portalModel.PortalCategory{
+		Db: db,
+	}
+	pc.Init(mid)
 
 	rest.rc.Success(c, "创建成功！", mpTheme)
 }

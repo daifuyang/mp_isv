@@ -81,12 +81,15 @@ func ApiListenRouter() {
 
 		mid, _ := c.Get("mid")
 
-		db,_ := c.Get("DB")
+		db, _ := c.Get("DB")
 
 		dbName := db.(string)
 
 		saasMigrate.AutoMigrate(dbName)
-		new(saasModel.Role).Init(mid.(int))
+		role := saasModel.Role{
+			Db: cmf.ManualDb(dbName),
+		}
+		role.Init(mid.(int))
 
 		// 地址
 		c.JSON(200, model.ReturnData{

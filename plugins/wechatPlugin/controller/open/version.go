@@ -46,7 +46,7 @@ func (rest *Version) Detail(c *gin.Context) {
 		rest.rc.Error(c, err.Error(), nil)
 		return
 	}
-	
+
 	mid, _ := c.Get("mid")
 
 	accessToken, exist := c.Get("authorizerAccessToken")
@@ -124,7 +124,7 @@ func (rest *Version) Upload(c *gin.Context) {
 	mpThemeVersion := saasModel.MpThemeVersion{
 		Db: db,
 	}
-	
+
 	version, err := mpThemeVersion.Show([]string{"mid = ? and type = ?"}, []interface{}{mid, "wechat"})
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, err.Error(), nil)
@@ -174,11 +174,14 @@ func (rest *Version) Upload(c *gin.Context) {
 			return
 		}
 
+		subscribe := model.Subscribe{
+			Db: db,
+		}
 		// 进行模板生成和绑定
-		_, err := new(model.Subscribe).Edit(accessToken.(string), midInt)
+		_, err := subscribe.Edit(accessToken.(string), midInt)
 
 		if err != nil {
-			cmfLog.Error( err.Error() )
+			cmfLog.Error(err.Error())
 			// rest.rc.Error(c, err.Error(), nil)
 			// return
 		}
@@ -445,7 +448,7 @@ func (rest *Version) Audit(c *gin.Context) {
 		return
 	}
 
-	businessJson ,err := saasModel.Options(db,"business_info", mid.(int))
+	businessJson, err := saasModel.Options(db, "business_info", mid.(int))
 
 	bi := resModel.BusinessInfo{}
 

@@ -271,7 +271,7 @@ func (rest *Qrcode) Store(c *gin.Context) {
 
 	deskName := "桌号"
 	if deskIdInt > 0 {
-		tx = db.Debug().Where("mid = ? AND id = ?", mid, deskId).First(&desk)
+		tx = db.Where("mid = ? AND id = ?", mid, deskId).First(&desk)
 		if tx.Error != nil {
 			if errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 				rest.rc.Error(c, "该桌号不存在！", nil)

@@ -19,10 +19,10 @@
     "default": "mysql",
     "mysql": {
       "type": "mysql",
-      "host": "rm-bp1sz0va1gb9943hjio.mysql.rds.aliyuncs.com",
+      "host": "127.0.0.1",
       "database": "mp_isv",
-      "username": "mp_isv",
-      "password": "codecloud2020",
+      "username": "root",
+      "password": "123456",
       "port": "3306",
       "charset": "utf8mb4",
       "prefix": "cmf_",

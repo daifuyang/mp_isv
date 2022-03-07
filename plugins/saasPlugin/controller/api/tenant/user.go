@@ -95,6 +95,7 @@ func (rest *User) FastRegister(c *gin.Context) {
 			Mobile:    mobile,
 			UserPass:  password,
 			CreateAt:  time.Now().Unix(),
+			Db:        cmf.ManualDb(dbName),
 		}
 
 		adminUser.Init()

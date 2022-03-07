@@ -125,9 +125,19 @@ func (rest *Wxa) AddTemplate(c *gin.Context) {
 		return
 	}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	mid, _ := c.Get("mid")
 
-	template, err := new(model.Subscribe).Edit(authorizerAccessToken.(string), mid.(int))
+	subscribe := model.Subscribe{
+		Db: db,
+	}
+
+	template, err := subscribe.Edit(authorizerAccessToken.(string), mid.(int))
 
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)
@@ -144,7 +154,16 @@ func (rest *Wxa) GetTemplates(c *gin.Context) {
 
 	mid, _ := c.Get("mid")
 
-	template, err := new(model.Subscribe).Show(mid.(int))
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
+	subscribe := model.Subscribe{
+		Db: db,
+	}
+	template, err := subscribe.Show(mid.(int))
 
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)

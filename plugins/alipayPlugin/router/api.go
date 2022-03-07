@@ -22,37 +22,40 @@ func ApiListenRouter() {
 	cmf.Get("api/v1/getway", new(controller.GetWay).GetWay, middleware.UseMp)
 	cmf.Post("api/v1/getway", new(controller.GetWay).GetWay, middleware.UseMp)
 
-	adminGroup := cmf.Group("api/v1/admin", middleware.ValidationBearerToken, middleware.TenantDb, middleware.Rbac)
+	adminGroup := cmf.Group("api/v1/admin/alipay", middleware.ValidationBearerToken, middleware.TenantDb, middleware.Rbac)
 	{
-		adminGroup.Get("/alipay/auth/:id", new(admin.MpIsvAuth).Show, middleware.ValidationMerchant, aliMidd.ValidationAlipay, aliMidd.AppAuthToken)
+		adminGroup.Get("/auth/:id", new(admin.MpIsvAuth).Show, middleware.ValidationMerchant, aliMidd.ValidationAlipay, aliMidd.AppAuthToken)
 
 		// 版本上传
-		adminGroup.Post("/alipay/upload", new(mini.Version).Upload, middleware.ValidationMerchant, aliMidd.ValidationAlipay, aliMidd.AppAuthToken)
+		adminGroup.Post("/upload", new(mini.Version).Upload, middleware.ValidationMerchant, aliMidd.ValidationAlipay, aliMidd.AppAuthToken)
 
 		// 版本审核
-		adminGroup.Get("/alipay/audit", new(mini.Version).Audit, middleware.ValidationMerchant, aliMidd.ValidationAlipay, aliMidd.AppAuthToken)
+		adminGroup.Get("/audit", new(mini.Version).Audit, middleware.ValidationMerchant, aliMidd.ValidationAlipay, aliMidd.AppAuthToken)
 
 		// 版本状态
-		adminGroup.Get("/alipay/audit/detail", new(mini.Version).DetailQuery, middleware.ValidationMerchant, aliMidd.ValidationAlipay, aliMidd.AppAuthToken)
+		adminGroup.Get("/audit/detail", new(mini.Version).DetailQuery, middleware.ValidationMerchant, aliMidd.ValidationAlipay, aliMidd.AppAuthToken)
 
 		// 查询版本详情
-		adminGroup.Get("/alipay/detail", new(mini.Version).Detail, middleware.ValidationMerchant, aliMidd.ValidationAlipay, aliMidd.AppAuthToken)
+		adminGroup.Get("/detail", new(mini.Version).Detail, middleware.ValidationMerchant, aliMidd.ValidationAlipay, aliMidd.AppAuthToken)
 
 		// 查询支付宝小程序详情
-		adminGroup.Get("/alipay/baseinfo", new(mini.BaseInfo).Detail, middleware.ValidationMerchant, aliMidd.ValidationAlipay, aliMidd.AppAuthToken)
+		adminGroup.Get("/baseinfo", new(mini.BaseInfo).Detail, middleware.ValidationMerchant, aliMidd.ValidationAlipay, aliMidd.AppAuthToken)
 
 		// 成员管理
-		adminGroup.Get("/alipay/members", new(mini.Members).Get, middleware.ValidationMerchant, aliMidd.ValidationAlipay, aliMidd.AppAuthToken)
-		adminGroup.Post("/alipay/members", new(mini.Members).Store, middleware.ValidationMerchant, aliMidd.ValidationAlipay, aliMidd.AppAuthToken)
-		adminGroup.Delete("/alipay/members", new(mini.Members).Delete, middleware.ValidationMerchant, aliMidd.ValidationAlipay, aliMidd.AppAuthToken)
+		adminGroup.Get("/members", new(mini.Members).Get, middleware.ValidationMerchant, aliMidd.ValidationAlipay, aliMidd.AppAuthToken)
+		adminGroup.Post("/members", new(mini.Members).Store, middleware.ValidationMerchant, aliMidd.ValidationAlipay, aliMidd.AppAuthToken)
+		adminGroup.Delete("/members", new(mini.Members).Delete, middleware.ValidationMerchant, aliMidd.ValidationAlipay, aliMidd.AppAuthToken)
 
 		// 设置小程序为体验版
-		adminGroup.Post("/alipay/experience/create", new(mini.Version).ExperienceCreate, middleware.ValidationMerchant, aliMidd.ValidationAlipay, aliMidd.AppAuthToken)
-		adminGroup.Get("/alipay/experience/query", new(mini.Version).ExperienceQuery, middleware.ValidationMerchant, aliMidd.ValidationAlipay, aliMidd.AppAuthToken)
+		adminGroup.Post("/experience/create", new(mini.Version).ExperienceCreate, middleware.ValidationMerchant, aliMidd.ValidationAlipay, aliMidd.AppAuthToken)
+		adminGroup.Get("/experience/query", new(mini.Version).ExperienceQuery, middleware.ValidationMerchant, aliMidd.ValidationAlipay, aliMidd.AppAuthToken)
 
 		// 智能云客服配置
-		adminGroup.Get("/alipay/contact/button", new(admin.ContactButton).Get, middleware.ValidationMerchant)
-		adminGroup.Post("/alipay/contact/button", new(admin.ContactButton).Edit, middleware.ValidationMerchant)
+		adminGroup.Get("/contact/button", new(admin.ContactButton).Get, middleware.ValidationMerchant)
+		adminGroup.Post("/contact/button", new(admin.ContactButton).Edit, middleware.ValidationMerchant)
+
+		// 开通支付宝同城配送接口
+		adminGroup.Post("/delivery/:id", new(admin.InstantDelivery).OpenDelivery, middleware.ValidationMerchant)
 
 	}
 

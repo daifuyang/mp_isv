@@ -95,7 +95,7 @@ func (rest *Cart) SocketGet(c *gin.Context) {
 
 		key := "mp_isv" + tenantIdStr + ":cart:desk" + strconv.Itoa(deskNumber.(int))
 
-		allData, _ := cmf.NewRedisDb().Get(key).Result()
+		allData, _ :=cmf.RedisDb().Get(key).Result()
 
 		cartStr := cartsConn[conn]
 		allDataByte, _ := json.Marshal(allData)
@@ -285,7 +285,7 @@ func (rest *Cart) SetCart(c *gin.Context) {
 	}
 
 	key := "mp_isv" + tenantIdStr + ":cart:desk" + strconv.Itoa(desk.DeskNumber)
-	allCart, _ := cmf.NewRedisDb().Get(key).Result()
+	allCart, _ :=cmf.RedisDb().Get(key).Result()
 
 	var carts = make(map[string]*foodItem, 0)
 
@@ -475,7 +475,7 @@ func (rest *Cart) SetCart(c *gin.Context) {
 	}
 
 	cartsJson, _ := json.Marshal(carts)
-	cmf.NewRedisDb().Set(key, cartsJson, 0)
+	cmf.RedisDb().Set(key, cartsJson, 0)
 
 	rest.rc.Success(c, "设置成功！", carts)
 
@@ -518,7 +518,7 @@ func (rest *Cart) ClearCart(c *gin.Context) {
 
 	key := "mp_isv" + tenantIdStr + ":cart:desk" + strconv.Itoa(desk.DeskNumber)
 
-	cmf.NewRedisDb().Del(key)
+	cmf.RedisDb().Del(key)
 
 	rest.rc.Success(c,"操作成功！",nil)
 

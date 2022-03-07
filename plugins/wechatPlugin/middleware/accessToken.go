@@ -20,7 +20,7 @@ func AccessToken(c *gin.Context) {
 	options := wechatEasySdk.OpenOptions()
 
 	if options.ComponentVerifyTicket == "" {
-		redis := cmf.NewRedisDb()
+		redis :=cmf.RedisDb()
 		ticket, err := redis.Get("componentVerifyTicket").Result()
 		if err == nil {
 			options.ComponentVerifyTicket = ticket
@@ -35,7 +35,7 @@ func AccessToken(c *gin.Context) {
 			"component_verify_ticket": options.ComponentVerifyTicket,
 		}
 
-		redis := cmf.NewRedisDb()
+		redis :=cmf.RedisDb()
 
 		accessToken, err := redis.Get("accessToken").Result()
 

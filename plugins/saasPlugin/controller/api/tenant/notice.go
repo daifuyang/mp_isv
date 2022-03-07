@@ -200,13 +200,13 @@ func (rest Notice) SocketGet(c *gin.Context) {
 		// 读取redis是否是最新的订单
 		eatInKey := "mp_isv:" + tenantIdStr + ":latest_notice"
 
-		latestNotice, _ := cmf.NewRedisDb().Get(eatInKey).Result()
+		latestNotice, _ :=cmf.RedisDb().Get(eatInKey).Result()
 		latestNoticeInt, _ := strconv.Atoi(latestNotice)
 
 		if latestNoticeInt < notice.Id || first {
 
 			if latestNotice == "" || latestNoticeInt < notice.Id {
-				cmf.NewRedisDb().Set(eatInKey, notice.Id, 0)
+				cmf.RedisDb().Set(eatInKey, notice.Id, 0)
 			}
 
 			var noticeMap []saasModel.AdminNotice

@@ -92,11 +92,11 @@ func (rest *ReceiveNotify) Notify(c *gin.Context) {
 			fmt.Println("tickets.ComponentVerifyTicket", tickets)
 			cmfLog.Save(requestForm.ComponentVerifyTicket, "tickets.log")
 			wechatEasySdk.SetOpenOption("ComponentVerifyTicket", tickets)
-			redis := cmf.NewRedisDb()
+			redis :=cmf.RedisDb()
 			redis.Set("componentVerifyTicket", tickets, time.Hour*12)
 
 			if cmf.Conf().App.Evn == "release" {
-				redisDb, err := cmf.RedisDb("52.130.144.34", "codecloud2020")
+				redisDb, err := cmf.ManualRedisDb("52.130.144.34", "codecloud2020")
 				if err == nil {
 					redisDb.Set("componentVerifyTicket", tickets, time.Hour*12)
 				}

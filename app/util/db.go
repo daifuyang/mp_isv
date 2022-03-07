@@ -21,5 +21,5 @@ func NewDb(c *gin.Context) (*gorm.DB, error) {
 
 	dbName := db.(string)
 
-	return cmf.TempDb(dbName), nil
+	return cmf.ManualDb(dbName), nil
 }

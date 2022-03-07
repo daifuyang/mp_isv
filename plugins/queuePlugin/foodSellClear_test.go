@@ -50,7 +50,7 @@ func TestFoodClearSell(t *testing.T) {
 					fmt.Println("启动堂食沽清")
 
 					// 读取redis 是否完成沽清
-					val, _ := cmf.NewRedisDb().Get(insertKey + mid).Result()
+					val, _ :=cmf.RedisDb().Get(insertKey + mid).Result()
 					if val != "" {
 
 						sellClearTime := v.SellClear
@@ -68,10 +68,10 @@ func TestFoodClearSell(t *testing.T) {
 
 							if nowSecond >= scSecond {
 								controller.SellClear(dbName)
-								cmf.NewRedisDb().Set(insertKey, "1", 0)
+								cmf.RedisDb().Set(insertKey, "1", 0)
 								year, month, day := time.Now().Date()
 								today := time.Date(year, month, day, 23, 59, 59, 59, time.Local)
-								cmf.NewRedisDb().ExpireAt(insertKey, today)
+								cmf.RedisDb().ExpireAt(insertKey, today)
 							}
 
 						}

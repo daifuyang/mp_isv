@@ -6,7 +6,6 @@
 package model
 
 import (
-	"fmt"
 	cmfData "github.com/gincmf/cmf/data"
 	"gorm.io/gorm"
 	"time"
@@ -14,6 +13,7 @@ import (
 
 type ImmediateDelivery struct {
 	Id           int      `json:"id"`
+	Type         int      `gorm:"type:tinyint(3);comment:平台类型(0：微信，1：支付宝);default:0;" json:"type"`
 	DeliveryId   string   `gorm:"type:varchar(20);comment:配送公司Id" json:"delivery_id"`
 	DeliveryName string   `gorm:"type:varchar(32);comment:配送公司名称" json:"delivery_name"`
 	Shopid       string   `gorm:"type:varchar(64);comment:配送公司开发平台app_key" json:"shop_id"`
@@ -63,7 +63,6 @@ func (model *ImmediateDelivery) CanUseTime(dt []deliveryTimes) bool {
 		endTime, _ := time.ParseInLocation(cmfData.TimeLayout, today+" "+v.EndTime+":59", time.Local)
 
 		if now.After(startTime) && now.Before(endTime) {
-			fmt.Println("hit", "击中")
 			return true
 		}
 

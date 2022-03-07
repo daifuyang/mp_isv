@@ -14,9 +14,9 @@ import (
 func Init() {
 	router.ApiListenRouter()
 
-	redis := cmf.NewRedisDb()
+	redis :=cmf.RedisDb()
 	if cmf.Conf().App.Evn != "release" {
-		redis, _ = cmf.RedisDb("52.130.144.34", "codecloud2020")
+		redis, _ = cmf.ManualRedisDb("52.130.144.34", "codecloud2020")
 	}
 
 	ticket, err := redis.Get("componentVerifyTicket").Result()

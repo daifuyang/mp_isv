@@ -116,7 +116,7 @@ func orderTask() {
 		}
 
 		// 移出队列
-		cmd := cmf.NewRedisDb().ZRem(q.Key, v.Member)
+		cmd :=cmf.RedisDb().ZRem(q.Key, v.Member)
 		if cmd.Err() != nil {
 			fmt.Println("cmd.err", cmd.Err())
 		}
@@ -124,7 +124,8 @@ func orderTask() {
 }
 
 // ------堂食沽清
-func foodInit() {
+func
+foodInit() {
 
 	var tenant []saasModel.Tenant
 	tx := cmf.Db().Find(&tenant)
@@ -155,7 +156,7 @@ func foodInit() {
 				if v.EnabledSellClear == 1 {
 
 					// 读取redis 是否完成沽清
-					val, _ := cmf.NewRedisDb().Get(insertKey + mid).Result()
+					val, _ :=cmf.RedisDb().Get(insertKey + mid).Result()
 					if val != "1" {
 						sellClearTime := v.SellClear
 						if sellClearTime == "" {
@@ -171,10 +172,10 @@ func foodInit() {
 
 							if nowSecond >= scSecond {
 								SellClear(dbName)
-								cmf.NewRedisDb().Set(insertKey, "1", 0)
+								cmf.RedisDb().Set(insertKey, "1", 0)
 								year, month, day := time.Now().Date()
 								today := time.Date(year, month, day, 23, 59, 59, 59, time.Local)
-								cmf.NewRedisDb().ExpireAt(insertKey, today)
+								cmf.RedisDb().ExpireAt(insertKey, today)
 							}
 
 						}

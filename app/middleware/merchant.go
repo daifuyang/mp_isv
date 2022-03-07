@@ -7,7 +7,6 @@ package middleware
 
 import (
 	"errors"
-	"fmt"
 	"gincmf/app/model"
 	"gincmf/app/util"
 	saasModel "gincmf/plugins/saasPlugin/model"
@@ -45,8 +44,6 @@ func ValidationMerchant(c *gin.Context) {
 
 	tenantId, _ := c.Get("tenant_id")
 
-	fmt.Println("tenantId",tenantId)
-
 	var mpAuth []model.MpIsvAuth
 	tx := cmf.Db().Where("mp_id = ?", mid).Order("id desc").Find(&mpAuth)
 	if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
@@ -76,6 +73,8 @@ func ValidationMerchant(c *gin.Context) {
 				alipayEasySdk.SetOption("AppAuthToken", v.AppAuthToken)
 			}
 		}
+	}else {
+		canAccess = true
 	}
 
 	if !canAccess {

@@ -551,6 +551,7 @@ func (rest *Order) DeliveryFee(c *gin.Context) {
 	totalFee, _ := decimal.NewFromFloat(fee).Add(decimal.NewFromFloat(boxFee)).Round(2).Float64()
 
 	fo := model.FoodOrder{
+		Mid:         mid.(int),
 		TotalAmount: totalFee,
 		AddressId:   addressId,
 		GoodsWeight: goodsWeight,
@@ -754,7 +755,7 @@ func (rest *Order) PreCreate(c *gin.Context) {
 	var deliveryMap = model.DeliveryMap{}
 
 	if form.DeliveryToken != "" {
-		deliveryOrderStr, _ := cmf.NewRedisDb().Get(form.DeliveryToken).Result()
+		deliveryOrderStr, _ :=cmf.RedisDb().Get(form.DeliveryToken).Result()
 		json.Unmarshal([]byte(deliveryOrderStr), &deliveryMap)
 
 	}
@@ -1257,12 +1258,15 @@ func (rest *Order) PreCreate(c *gin.Context) {
 			})
 
 			wxTotal := decimal.NewFromFloat(odTotal).Mul(decimal.NewFromInt(100)).IntPart()
-			wechatDetail = append(wechatDetail, pay.GoodsDetail{
-				MerchantGoodsId: code,
-				GoodsName:       title,
-				Quantity:        v.Count,
-				UnitPrice:       int(wxTotal),
-			})
+
+			if wxTotal > 0 {
+				wechatDetail = append(wechatDetail, pay.GoodsDetail{
+					MerchantGoodsId: code,
+					GoodsName:       title,
+					Quantity:        v.Count,
+					UnitPrice:       int(wxTotal),
+				})
+			}
 
 			deliveryGoods = append(deliveryGoods, model.DeliveryGoods{
 				GoodCount: int(count),
@@ -1384,12 +1388,14 @@ func (rest *Order) PreCreate(c *gin.Context) {
 			})
 
 			wxTotal := decimal.NewFromFloat(odTotal).Mul(decimal.NewFromInt(100)).IntPart()
-			wechatDetail = append(wechatDetail, pay.GoodsDetail{
-				MerchantGoodsId: code,
-				GoodsName:       title,
-				Quantity:        v.Count,
-				UnitPrice:       int(wxTotal),
-			})
+			if wxTotal > 0 {
+				wechatDetail = append(wechatDetail, pay.GoodsDetail{
+					MerchantGoodsId: code,
+					GoodsName:       title,
+					Quantity:        v.Count,
+					UnitPrice:       int(wxTotal),
+				})
+			}
 
 			deliveryGoods = append(deliveryGoods, model.DeliveryGoods{
 				GoodCount: int(count),
@@ -1797,8 +1803,10 @@ func (rest *Order) PreCreate(c *gin.Context) {
 					"currency": "CNY",
 				}
 			} else {
+				totalAmount := decimal.NewFromFloat(totalFee).Mul(decimal.NewFromInt(100)).Round(0).IntPart()
+				fmt.Println("totalAmount", totalAmount)
 				bizContent["amount"] = map[string]interface{}{
-					"total":    totalFee * 100,
+					"total":    totalAmount,
 					"currency": "CNY",
 				}
 			}
@@ -1823,13 +1831,15 @@ func (rest *Order) PreCreate(c *gin.Context) {
 			}
 
 			payResult := new(pay.PartnerPay).Jsapi(bizContent)
+
+			payResultJson, _ := json.Marshal(&payResult)
+
 			if payResult.Code != "" {
+				cmfLog.Save(string(payResultJson), "preCreateErr.log")
 				txBegin.RollbackTo("sp1")
 				rest.rc.Error(c, "服务器网络请求失败，请稍后重试！", nil)
 				return
 			}
-
-			payResultJson, _ := json.Marshal(&payResult)
 
 			cmfLog.Save(string(payResultJson), "preCreate.log")
 
@@ -3450,9 +3460,9 @@ func (rest *orderData) orderHandle() (err error) {
 
 		_, err = foodOrderModel.SendPrinter(fo, printOrder, store.StoreName, appointmentTime, canPrinter)
 		if err != nil {
-			txBegin.RollbackTo("sp1")
+			// txBegin.RollbackTo("sp1")
 			cmfLog.Save(err.Error(), "payErr.log")
-			return err
+			// return err
 		}
 	}
 

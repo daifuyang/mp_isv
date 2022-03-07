@@ -18,7 +18,6 @@ require (
 	github.com/go-openapi/spec v0.20.0 // indirect
 	github.com/go-playground/validator/v10 v10.4.1 // indirect
 	github.com/go-redis/redis v6.15.9+incompatible
-	github.com/golang/protobuf v1.4.3 // indirect
 	github.com/golang/snappy v0.0.3 // indirect
 	github.com/gorilla/sessions v1.2.1 // indirect
 	github.com/gorilla/websocket v1.4.2
@@ -36,7 +35,7 @@ require (
 	golang.org/x/crypto v0.0.0-20201016220609-9e8e0b390897 // indirect
 	golang.org/x/net v0.0.0-20201216054612-986b41b23924 // indirect
 	golang.org/x/oauth2 v0.0.0-20200902213428-5d25da1a8d43
-	golang.org/x/tools v0.0.0-20201215192005-fa10ef0b8743
+	golang.org/x/tools v0.0.0-20201215192005-fa10ef0b8743 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	gopkg.in/oauth2.v3 v3.12.0
 	gorm.io/driver/mysql v1.0.3 // indirect

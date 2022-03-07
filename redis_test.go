@@ -14,7 +14,7 @@ import (
 
 func Test_redis(t *testing.T) {
 	cmf.Initialize("./data/conf/config.json")
-	exists := cmf.NewRedisDb().Exists("1111")
+	exists :=cmf.RedisDb().Exists("1111")
 	fmt.Println("exists", exists.Val())
 
 }

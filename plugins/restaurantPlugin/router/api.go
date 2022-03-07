@@ -167,6 +167,9 @@ func ApiListenRouter() {
 
 		adminGroup.Rest("/immediate_delivery", new(delivery.ImmediateDelivery), wechatMiddle.AccessToken, wechatMiddle.AuthorizerAccessToken)
 
+		// 支付宝即时配送商家门店
+		adminGroup.Rest("/alipay/immediate_delivery", new(delivery.Alipay))
+
 		adminGroup.Get("/settings/scan", new(wechat.Scan).Get, middleware.ValidationMerchant)
 		adminGroup.Post("/settings/scan", new(wechat.Scan).Edit, middleware.ValidationMerchant)
 
@@ -268,13 +271,12 @@ func ApiListenRouter() {
 		appGroup.Post("/carts/set", new(cart.Cart).SetCart, middleware.ValidationBindMobile)
 		appGroup.Post("/carts/clear/:id", new(cart.Cart).ClearCart, middleware.ValidationBindMobile)
 
-		/*appGroup.Get("/test1", new(test.Index).Test1)
-		appGroup.Get("/test2", new(test.Index).Test2)*/
-
 	}
 
 	testGroup := cmf.Group("api/v1/test", middleware.Test)
 	{
+		//testGroup.Get("/test1", new(test.Index).Test1)
+		//testGroup.Get("/test2", new(test.Index).Test2)
 		testGroup.Get("/test/:id", new(app.Test).Get, AliMiddle.AppAuthToken)
 	}
 

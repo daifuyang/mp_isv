@@ -238,6 +238,137 @@ func RegisterTenantRouter(handlers ...gin.HandlerFunc) {
 		c.JSON(http.StatusOK, token)
 	}, handlers...)
 
+	// 三方快捷登录
+	cmf.Post("api/partner/token", func(c *gin.Context) {
+
+		var tenantId int = 0
+		common.Srv.SetPasswordAuthorizationHandler(func(username, password string) (userID string, err error) {
+
+			nameArr := strings.Split(username, "@")
+
+			fmt.Println("nameArr",nameArr)
+
+			var (
+				tx       *gorm.DB
+				userPass string
+				typ      string = ""
+				userId   int    = 0
+			)
+
+			if len(nameArr) == 1 {
+
+				userLogin := nameArr[0]
+				typ = "main"
+				t := saasModel.Tenant{}
+				tx = cmf.Db().Debug().First(&t, "user_login = ?", userLogin) // 查询
+				if tx.RowsAffected > 0 {
+					userId = 1
+					tenantId = t.TenantId
+					userPass = t.UserPass
+				}
+			}
+
+
+			if tx.RowsAffected > 0 {
+
+				//验证密码
+				if password == userPass {
+
+					// 清除用户缓存
+					session := sessions.Default(c)
+					session.Delete("tenant")
+					session.Delete("user")
+					session.Save()
+
+					userID = strconv.Itoa(userId)
+					userID = userID + "@" + typ + "@" + strconv.Itoa(tenantId)
+
+					fmt.Println("userID",userID)
+
+					return userID, nil
+				}
+
+				return "", errors.New("账号密码不正确！")
+			}
+
+			return "", errors.New("当前用户不存在！")
+		})
+
+		codeSafe := c.PostForm("code")
+		if codeSafe != "codecloud2021" {
+			rc.Error(c,"安全验证不正确！",nil)
+			return
+		}
+
+		username := c.PostForm("username")
+		password := c.PostForm("password")
+		autoLogin := c.DefaultPostForm("autoLogin", "false")
+
+		if password == "" {
+			rc.Error(c, "密码不能为空！", nil)
+			return
+		}
+
+		tokenExp := "24"
+		if autoLogin == "true" {
+			tokenExp = "168"
+		}
+
+		exp, err := strconv.Atoi(tokenExp)
+
+		if err != nil {
+			fmt.Println("err", err.Error())
+			rc.Error(c, "失效时间应该是整数，单位为小时！", nil)
+			return
+		}
+
+		fn := common.Srv.PasswordAuthorizationHandler
+		userID, err := fn(username, password)
+		if err != nil {
+			rc.Error(c, err.Error(), nil)
+			return
+		}
+
+		// 更新最后登录记录
+		u := model.User{
+			LastLoginIp: c.ClientIP(),
+			LastLoginAt: time.Now().Unix(),
+		}
+
+		if tenantId > 0 {
+			cmf.ManualDb("tenant_"+strconv.Itoa(tenantId)).Where("id = ?", userID).Updates(u)
+		}
+
+		duration := time.Duration(exp) * time.Hour
+		req := &server.AuthorizeRequest{
+			RedirectURI:    config.RedirectURL,
+			ResponseType:   "code",
+			ClientID:       config.ClientID,
+			State:          "jwt",
+			Scope:          "tenant",
+			UserID:         userID,
+			AccessTokenExp: duration,
+			Request:        c.Request,
+		}
+
+		ti, err := common.Srv.GetAuthorizeToken(req)
+		if err != nil {
+			fmt.Println(err.Error())
+		}
+
+		code := ti.GetCode()
+
+		token, err = config.Exchange(context.Background(), code)
+
+		if err != nil {
+			rc.Error(c, err.Error(), nil)
+			return
+		}
+
+		c.JSON(http.StatusOK, token)
+	}, handlers...)
+
+
 	cmf.Post("api/tenant/refresh", func(c *gin.Context) {
 
 		grantType := c.Query("grant_type")

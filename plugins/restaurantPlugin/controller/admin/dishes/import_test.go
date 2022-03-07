@@ -57,7 +57,7 @@ func TestFood_Import(t *testing.T) {
 
 			if k > 1 {
 				food := model.Food{}
-				tx := cmf.NewDb().Where("name = ?", v[0]).First(&food)
+				tx := cmf.Db().Where("name = ?", v[0]).First(&food)
 				food.StoreId = 2
 				food.Name = strings.TrimSpace(v[0])
 				food.Excerpt = strings.TrimSpace(v[2])
@@ -260,10 +260,10 @@ func TestFood_Import(t *testing.T) {
 
 				if tx.RowsAffected == 0 {
 					food.CreateAt = time.Now().Unix()
-					cmf.NewDb().Create(&food)
+					cmf.Db().Create(&food)
 				} else {
 					food.UpdateAt = time.Now().Unix()
-					cmf.NewDb().Save(&food)
+					cmf.Db().Save(&food)
 				}
 
 				// 规格更新
@@ -276,13 +276,13 @@ func TestFood_Import(t *testing.T) {
 						Name: name,
 					}
 
-					result := cmf.NewDb().Where("name = ?", name).First(&attrKey)
+					result := cmf.Db().Where("name = ?", name).First(&attrKey)
 					if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
 						fmt.Println("result.Error", result.Error.Error())
 					}
 
 					if result.RowsAffected == 0 {
-						cmf.NewDb().Create(&attrKey)
+						cmf.Db().Create(&attrKey)
 					}
 
 					// 获取规格key

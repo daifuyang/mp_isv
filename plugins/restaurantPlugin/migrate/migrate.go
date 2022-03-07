@@ -32,7 +32,11 @@ func AutoMigrate(dbName string) {
 		Db: cmf.ManualDb(dbName),
 	}
 
-	new(FoodOrder).AutoMigrate()
+	foodOrder := FoodOrder{
+		Db: cmf.ManualDb(dbName),
+	}
+
+	foodOrder.AutoMigrate()
 	foodCategory.AutoMigrate()
 	store.AutoMigrate()
 	desk.AutoMigrate()
@@ -40,20 +44,63 @@ func AutoMigrate(dbName string) {
 	food.AutoMigrate()
 	foodSku.AutoMigrate()
 
-	new(user).AutoMigrate()
-	new(model.Option).AutoMigrate()
-	new(model.Voucher).AutoMigrate()
-	new(model.CardTemplate).AutoMigrate()
-	new(memberCardOrder).AutoMigrate()
-	new(RechargeOrder).AutoMigrate()
-	new(model.Printer).AutoMigrate()
+	u := user{Db: cmf.ManualDb(dbName)}
+	u.AutoMigrate()
+
+	option := model.Option{
+		Db: cmf.ManualDb(dbName),
+	}
+	option.AutoMigrate()
+
+	voucher := model.Voucher{
+		Db: cmf.ManualDb(dbName),
+	}
+	voucher.AutoMigrate()
+
+	cardTemplate := model.CardTemplate{
+		Db: cmf.ManualDb(dbName),
+	}
+	cardTemplate.AutoMigrate()
+
+	mco := memberCardOrder{
+		Db: cmf.ManualDb(dbName),
+	}
+	mco.AutoMigrate()
+
+	ro := RechargeOrder{
+		Db: cmf.ManualDb(dbName),
+	}
+	ro.AutoMigrate()
+
+	printer := model.Printer{
+		Db: cmf.ManualDb(dbName),
+	}
+	printer.AutoMigrate()
+
+	address := model.Address{
+		Db: cmf.ManualDb(dbName),
+	}
 	// 地址
-	new(model.Address).AutoMigrate()
+	address.AutoMigrate()
 
-	new(QrcodePost).AutoMigrate()
+	qp := QrcodePost{
+		Db: cmf.ManualDb(dbName),
+	}
+	qp.AutoMigrate()
 
-	new(model.ImmediateDelivery).AutoMigrate()
+	immediateDelivery := model.ImmediateDelivery{
+		Db: cmf.ManualDb(dbName),
+	}
+	immediateDelivery.AutoMigrate()
 
-	new(model.ImmediateDeliveryOrder).AutoMigrate()
+	idp := model.ImmediateDeliveryPost{
+		Db:cmf.ManualDb(dbName),
+	}
+	idp.AutoMigrate()
+
+	ido := model.ImmediateDeliveryOrder{
+		Db: cmf.ManualDb(dbName),
+	}
+	ido.AutoMigrate()
 
 }

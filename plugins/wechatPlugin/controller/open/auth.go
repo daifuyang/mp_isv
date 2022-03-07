@@ -93,13 +93,13 @@ func (rest *Auth) PreAuthCode(c *gin.Context) {
 
 	key := tenantId + options.AppId + "preAuthCode"
 
-	preAuthCode, err := cmf.NewRedisDb().Get(key).Result()
+	preAuthCode, err :=cmf.RedisDb().Get(key).Result()
 
 	if err != nil {
 		preResult := new(open.Component).PreAuthCode(accessToken.(string), bizContent)
 
 		if preResult.Errcode > 0 {
-			cmf.NewRedisDb().Del("accessToken")
+			cmf.RedisDb().Del("accessToken")
 			rest.rc.Error(c, "获取失败！"+preResult.Errmsg, preResult)
 			return
 		}
@@ -107,9 +107,9 @@ func (rest *Auth) PreAuthCode(c *gin.Context) {
 		preAuthCode = preResult.PreAuthCode
 
 		if preAuthCode != "" {
-			cmf.NewRedisDb().Set(key, preAuthCode, time.Second*1700)
+			cmf.RedisDb().Set(key, preAuthCode, time.Second*1700)
 		} else {
-			cmf.NewRedisDb().Del("accessToken")
+			cmf.RedisDb().Del("accessToken")
 			rest.rc.Error(c, "获取失败！", nil)
 			return
 		}
@@ -173,7 +173,7 @@ func (rest *Auth) Redirect(c *gin.Context) {
 
 	db := "tenant_" + strconv.Itoa(tenant.TenantId)
 	mp := saasModel.MpTheme{}
-	tx = cmf.TempDb(db).Where("mid = ?", stateMap.Mid).First(&mp)
+	tx = cmf.ManualDb(db).Where("mid = ?", stateMap.Mid).First(&mp)
 	if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, tx.Error.Error(), nil)
 		return
@@ -202,7 +202,7 @@ func (rest *Auth) Redirect(c *gin.Context) {
 	authResult := new(open.Component).QueryAuth(accessToken.(string), bizContent)
 
 	if authResult.Errcode > 0 {
-		cmf.NewRedisDb().Del("accessToken")
+		cmf.RedisDb().Del("accessToken")
 		rest.rc.Error(c, "获取失败！"+authResult.Errmsg, authResult)
 		return
 	}

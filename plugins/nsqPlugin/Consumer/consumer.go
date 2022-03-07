@@ -35,7 +35,6 @@ func (rest *Nsq) Init() {
 	}
 
 	addr := nsqIp + ":" + nsqaPort
-	fmt.Println("nsq listen", addr)
 	InitConsumer("mpIsv", "mpIsv-channel", addr)
 	for {
 		time.Sleep(time.Second * 10)

@@ -1397,8 +1397,8 @@ func (model *FoodOrder) GetDeliveryFee(store Store, deliveryGoods []DeliveryGood
 		if data.Errcode != 0 {
 
 			if data.Errcode == 40001 {
-				cmf.NewRedisDb().Set("accessToken", "", 0)
-				cmf.NewRedisDb().Set("authorizerAccessToken", "", 0)
+				cmf.RedisDb().Set("accessToken", "", 0)
+				cmf.RedisDb().Set("authorizerAccessToken", "", 0)
 			}
 
 			return *model, errors.New(data.Errmsg)
@@ -1472,7 +1472,7 @@ func (model *FoodOrder) GetDeliveryFee(store Store, deliveryGoods []DeliveryGood
 
 		fmt.Println("deliveryData", string(deliveryData))
 
-		cmf.NewRedisDb().Set(model.DeliveryToken, string(deliveryData), time.Minute*5)
+		cmf.RedisDb().Set(model.DeliveryToken, string(deliveryData), time.Minute*5)
 	}
 
 	return *model, nil

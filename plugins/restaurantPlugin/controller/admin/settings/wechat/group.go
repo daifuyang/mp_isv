@@ -12,7 +12,6 @@ import (
 	"github.com/gincmf/cmf/controller"
 )
 
-
 type Group struct {
 	rc controller.Rest
 }
@@ -48,13 +47,21 @@ func (rest *Group) Get(c *gin.Context) {
 
 func (rest *Group) Edit(c *gin.Context) {
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	mid, _ := c.Get("mid")
 
-	var group resModel.Group
+	group := resModel.Group{}
 	if err := c.ShouldBindJSON(&group); err != nil {
 		c.JSON(400, gin.H{"msg": err.Error()})
 		return
 	}
+
+	group.Db = db
 
 	data, err := group.Edit(mid.(int))
 
@@ -66,4 +73,3 @@ func (rest *Group) Edit(c *gin.Context) {
 	rest.rc.Success(c, "修改成功！", data)
 
 }
-

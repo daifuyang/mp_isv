@@ -7,19 +7,13 @@ package home
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/gincmf/cmf/view"
 	"strconv"
 )
 
-type Call struct {
-	view.Template
-}
+type Call struct {}
 
 // 拨打电话
-func (v *Call) Mobile(c *gin.Context) {
-
-	iTemplate, _ := c.Get("template")
-	v.Template = iTemplate.(view.Template)
+func (web *Call) Mobile(c *gin.Context) {
 
 	// 完成业务
 	var rewrite struct {

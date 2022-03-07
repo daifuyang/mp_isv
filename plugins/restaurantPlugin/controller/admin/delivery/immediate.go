@@ -28,6 +28,13 @@ type ImmediateDelivery struct {
  **/
 func (rest *ImmediateDelivery) Get(c *gin.Context) {
 
+	typ := c.Query("type")
+
+	if typ == "" {
+		rest.rc.Error(c, "类型不能为空！", nil)
+		return
+	}
+
 	db, err := util.NewDb(c)
 	if err != nil {
 		rest.rc.Error(c, err.Error(), nil)
@@ -36,7 +43,7 @@ func (rest *ImmediateDelivery) Get(c *gin.Context) {
 
 	var immediateDelivery []model.ImmediateDelivery
 
-	tx := db.Find(&immediateDelivery)
+	tx := db.Where("type = ?", typ).Find(&immediateDelivery)
 
 	for k, _ := range immediateDelivery {
 		immediateDelivery[k].AppSecret = ""

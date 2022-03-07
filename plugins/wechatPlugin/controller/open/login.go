@@ -52,7 +52,7 @@ func (rest *Login) Login(c *gin.Context) {
 	data := new(open.Component).Code2session(params)
 
 	if data.Errcode > 0 {
-		cmf.NewRedisDb().Del("accessToken")
+		cmf.RedisDb().Del("accessToken")
 		rest.rc.Error(c, "获取失败！"+data.Errmsg, data)
 		return
 	}

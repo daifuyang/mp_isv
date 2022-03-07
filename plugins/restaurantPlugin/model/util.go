@@ -67,7 +67,7 @@ type geoCodes struct {
 	queueNo := strconv.Itoa(int(math.Floor(number + 0.5)))
 
 	// 设置当天失效时间
-	cmf.NewRedisDb().ExpireAt(insertKey, dayTime)
+	cmf.RedisDb().ExpireAt(insertKey, dayTime)
 
 	// 获取当天自增的值
 	return queueNo
@@ -98,7 +98,7 @@ func QueueNo(mid string, appointmentAt int64) string {
 	queueNo := util.SetIncr(insertKey)
 
 	// 设置当天失效时间
-	cmf.NewRedisDb().ExpireAt(insertKey, dayTime)
+	cmf.RedisDb().ExpireAt(insertKey, dayTime)
 
 	// 获取当天自增的值
 	return strconv.FormatInt(queueNo,10)

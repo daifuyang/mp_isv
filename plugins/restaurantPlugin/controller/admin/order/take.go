@@ -121,6 +121,7 @@ func (rest *Take) Show(c *gin.Context) {
 		Fee:        strconv.FormatFloat(foodOrder.TotalAmount, 'f', -1, 64),
 		CreateTime: createTime,
 		Remark:     orderRemark,
+		Db:         db,
 	}
 
 	if mpType == "wechat" && akExist {

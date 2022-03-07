@@ -6,17 +6,16 @@ package migrate
 
 import (
 	"gincmf/app/model"
-	"gorm.io/gorm"
+	cmf "github.com/gincmf/cmf/bootstrap"
 	"time"
 )
 
 type role struct {
 	Migrate
-	Db *gorm.DB
 }
 
 func (migrate *role) AutoMigrate() {
-	migrate.Db.AutoMigrate(&model.Role{})
+	cmf.Db().AutoMigrate(&model.Role{})
 
 	role := []model.Role{
 		model.Role{
@@ -26,27 +25,13 @@ func (migrate *role) AutoMigrate() {
 			CreateAt:  time.Now().Unix(),
 			UpdateAt:  time.Now().Unix(),
 		},
-		model.Role{
-			Name:      "收银员",
-			Remark:    "收银员！",
-			ListOrder: 1,
-			CreateAt:  time.Now().Unix(),
-			UpdateAt:  time.Now().Unix(),
-		},
-		model.Role{
-			Name:      "财务",
-			Remark:    "财务！",
-			ListOrder: 2,
-			CreateAt:  time.Now().Unix(),
-			UpdateAt:  time.Now().Unix(),
-		},
 	}
 
 	// 添加角色权限
 	for _, v := range role {
-		migrate.Db.Where(model.Role{Name: v.Name}).FirstOrCreate(&v)
+		cmf.Db().Where(model.Role{Name: v.Name}).FirstOrCreate(&v)
 	}
 
-	migrate.Db.AutoMigrate(&model.RoleUser{})
+	cmf.Db().AutoMigrate(&model.RoleUser{})
 
 }

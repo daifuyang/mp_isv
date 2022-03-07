@@ -505,7 +505,9 @@ func (model Store) Show(query []string, queryArgs []interface{}) (Store, error) 
 	lon := strconv.FormatFloat(longitude, 'f', -1, 64)
 	lat := strconv.FormatFloat(latitude, 'f', -1, 64)
 
-	store := Store{}
+	store := Store{
+		Db: db,
+	}
 	queryStr := strings.Join(query, " AND ")
 	result := db.Select("*", "(round(st_distance_sphere(point (longitude,latitude),point ("+lon+","+lat+"))/1000,2)) AS distance").Where(queryStr, queryArgs...).First(&store)
 

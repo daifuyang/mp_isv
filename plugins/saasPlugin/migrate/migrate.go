@@ -12,6 +12,7 @@ import (
 	"gincmf/plugins/saasPlugin/model"
 	wechatMigrate "gincmf/plugins/wechatPlugin/migrate"
 	cmf "github.com/gincmf/cmf/bootstrap"
+	"time"
 )
 
 func AutoMigrate(dbName string) {
@@ -27,6 +28,36 @@ func AutoMigrate(dbName string) {
 	cmf.ManualDb(dbName).AutoMigrate(&appModel.AdminMenu{})
 
 	cmf.ManualDb(dbName).AutoMigrate(&model.Role{})
+
+	role := []appModel.Role{
+		{
+			Name:      "超级管理员",
+			Remark:    "拥有网站最高管理员权限！",
+			ListOrder: 0,
+			CreateAt:  time.Now().Unix(),
+			UpdateAt:  time.Now().Unix(),
+		},
+		{
+			Name:      "收银员",
+			Remark:    "收银员！",
+			ListOrder: 1,
+			CreateAt:  time.Now().Unix(),
+			UpdateAt:  time.Now().Unix(),
+		},
+		{
+			Name:      "财务",
+			Remark:    "财务！",
+			ListOrder: 2,
+			CreateAt:  time.Now().Unix(),
+			UpdateAt:  time.Now().Unix(),
+		},
+	}
+
+	// 添加角色权限
+	for _, v := range role {
+		cmf.ManualDb(dbName).Where(appModel.Role{Name: v.Name}).FirstOrCreate(&v)
+	}
+
 	cmf.ManualDb(dbName).AutoMigrate(&appModel.RoleUser{})
 
 	cmf.ManualDb(dbName).AutoMigrate(&model.AuthAccess{})

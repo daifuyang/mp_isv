@@ -160,7 +160,7 @@ func (rest *Auth) Redirect(c *gin.Context) {
 
 	db := "tenant_" + strconv.Itoa(tenant.TenantId)
 	mp := saasModel.MpTheme{}
-	tx = cmf.TempDb(db).Where("mid = ?", stateMap.Mid).First(&mp)
+	tx = cmf.ManualDb(db).Where("mid = ?", stateMap.Mid).First(&mp)
 	if tx.Error != nil && !errors.Is(tx.Error, gorm.ErrRecordNotFound) {
 		rest.rc.Error(c, tx.Error.Error(), nil)
 		return

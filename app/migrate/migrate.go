@@ -37,11 +37,8 @@ func StartMigrate() {
 	new(role).AutoMigrate()
 	new(authAccess).AutoMigrate()
 	new(authRule).AutoMigrate()
-	new(PayLog).AutoMigrate()
-	new(model.AdminNotice).AutoMigrate()
-	new(model.ScoreLog).AutoMigrate()
-	new(model.ExpLog).AutoMigrate()
-	new(model.RechargeLog).AutoMigrate()
+
+	//new(model.AdminNotice).AutoMigrate()
 
 	// 主题模板
 	new(model.MpTheme).AutoMigrate()

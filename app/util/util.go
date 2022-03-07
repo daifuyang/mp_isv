@@ -167,7 +167,7 @@ func CurrentDate() (string, string, string) {
 }
 
 func SetIncr(key string) int64 {
-	val, err := cmf.NewRedisDb().Incr(key).Result()
+	val, err :=cmf.RedisDb().Incr(key).Result()
 	if err != nil {
 		_, _, line, _ := runtime.Caller(0)
 		fmt.Println("redis err"+strconv.Itoa(line), err.Error())
@@ -185,7 +185,7 @@ func DateUuid(ident string, insertKey string, date string, salt int) string {
 	// 设置当天失效时间
 	year, month, day := time.Now().Date()
 	today := time.Date(year, month, day, 23, 59, 59, 59, time.Local)
-	cmf.NewRedisDb().ExpireAt(insertKey, today)
+	cmf.RedisDb().ExpireAt(insertKey, today)
 	val := SetIncr(insertKey)
 
 	now := time.Unix(time.Now().Unix(), 0).Format("20060102")
@@ -216,7 +216,7 @@ func EncryptUuid(insertKey string, date string, salt int) string {
 	// 设置当天失效时间
 	year, month, day := time.Now().Date()
 	today := time.Date(year, month, day, 23, 59, 59, 59, time.Local)
-	cmf.NewRedisDb().ExpireAt(insertKey, today)
+	cmf.RedisDb().ExpireAt(insertKey, today)
 	val := SetIncr(insertKey)
 
 	saltStr := ""

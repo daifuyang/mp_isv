@@ -1467,6 +1467,12 @@ func (rest Food) Delete(c *gin.Context) {
 		return
 	}
 
+	db, err := util.NewDb(c)
+	if err != nil {
+		rest.rc.Error(c, err.Error(), nil)
+		return
+	}
+
 	mid, _ := c.Get("mid")
 
 	// 所在门店
@@ -1488,6 +1494,7 @@ func (rest Food) Delete(c *gin.Context) {
 			Id:  rewrite.Id,
 			Mid: mid.(int),
 		},
+		Db: db,
 	}
 
 	food, err = food.Delete()

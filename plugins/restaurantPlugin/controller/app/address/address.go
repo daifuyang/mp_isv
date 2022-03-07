@@ -49,15 +49,18 @@ func (rest *Address) Get(c *gin.Context) {
 		return
 	}
 
-	if storeNumber != "" {
-		store := model.Store{
-			Db: db,
-		}
-		store, err = store.Show([]string{"store_number = ? AND  mid = ? AND delete_at = ?"}, []interface{}{storeNumber, mid, 0})
-		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-			rest.rc.Error(c, err.Error(), nil)
-			return
-		}
+	if storeNumber == "" {
+		rest.rc.Error(c, "storeNumber不能为空！", nil)
+		return
+	}
+
+	store = model.Store{
+		Db: db,
+	}
+	store, err = store.Show([]string{"store_number = ? AND  mid = ? AND delete_at = ?"}, []interface{}{storeNumber, mid, 0})
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		rest.rc.Error(c, err.Error(), nil)
+		return
 	}
 
 	var address []model.Address

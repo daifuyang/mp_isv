@@ -281,7 +281,9 @@ func (model FoodCategory) Store() (FoodCategory, error) {
 		db = model.Db
 	}
 
-	category := FoodCategory{}
+	category := FoodCategory{
+		Db: model.Db,
+	}
 
 	query := []string{"mid = ?", "name = ?"}
 	queryArgs := []interface{}{model.Mid, model.Name}

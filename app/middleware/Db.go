@@ -6,7 +6,6 @@
 package middleware
 
 import (
-	"fmt"
 	saasModel "gincmf/plugins/saasPlugin/model"
 	"github.com/gin-gonic/gin"
 	cmf "github.com/gincmf/cmf/bootstrap"
@@ -17,8 +16,7 @@ import (
 
 // 设置主db
 func MainDb(c *gin.Context) {
-	db := cmf.ManualDb(cmf.Conf().Database.Name)
-	c.Set("DB", db)
+	c.Set("DB", cmf.Conf().Database.Name)
 	c.Next()
 }
 
@@ -41,9 +39,6 @@ func TenantDb(c *gin.Context) {
 
 	c.Set("aliasName", aliasName)
 	db := "tenant_" + strconv.Itoa(currentTenant.TenantId)
-
-	fmt.Println("tenant db", db)
-
 	c.Set("DB", db)
 
 	c.Next()

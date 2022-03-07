@@ -223,7 +223,12 @@ func (rest *Subscribe) TradeTake() error {
 
 	if rest.Type == "wechat" {
 
-		sub, err := new(model.Subscribe).Show(rest.Mid)
+		db := rest.Db
+		subscribe := model.Subscribe{
+			Db: db,
+		}
+
+		sub, err := subscribe.Show(rest.Mid)
 		if err != nil {
 			return err
 		}
