@@ -167,9 +167,7 @@ func (rest *Assets) Delete(c *gin.Context) {
 			c.JSON(400, gin.H{"msg": err.Error()})
 			return
 		}
-
-		fmt.Println("Id", rewrite.Id)
-
+		
 		result := cmf.Db().First(&asset, rewrite.Id)
 		if result.RowsAffected == 0 {
 			rest.rc.Error(c, "该内容不存在！", nil)
